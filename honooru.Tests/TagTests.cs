@@ -24,6 +24,9 @@ namespace honooru.Tests {
         [DataRow("hi\0hehe", false)]
         [DataRow("abc_()", false)]
         [DataRow("abc_(abc)", true)]
+        [DataRow("hi>yo", false)]
+        [DataRow("hi=yo", false)]
+        [DataRow("user:alice", false)]
         public void Test_Valid(string tag, bool expected) {
             Assert.AreEqual(Tag.Validate(tag), expected);
         }
