@@ -2,6 +2,7 @@
 using honooru.Models.App;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +23,7 @@ namespace honooru.Services.Db {
             _Reader = reader;
         }
 
-        public async Task<MediaAsset?> GetByID(ulong assetID) {
+        public async Task<MediaAsset?> GetByID(Guid guid) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 SELECT *
@@ -30,7 +31,7 @@ namespace honooru.Services.Db {
                     WHERE id = @ID;
             ");
 
-            cmd.AddParameter("ID", assetID);
+            cmd.AddParameter("ID", guid);
 
             await cmd.PrepareAsync();
 
@@ -63,27 +64,37 @@ namespace honooru.Services.Db {
             return asset;
         }
 
-        public async Task<ulong> Insert(MediaAsset asset) {
+        public async Task Upsert(MediaAsset asset) {
+            if (asset.Guid == Guid.Empty) {
+                throw new Exception($"not inserting a {nameof(MediaAsset)} with an empty guid");
+            }
+
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO media_asset (
-                    md5, file_name, file_location, timestamp, file_size_bytes
+                    id, md5, status, file_name, file_extension, timestamp, file_size_bytes
                 ) VALUES (
-                    @MD5, @FileName, @FileLocation, @Timestamp, @FileSizeBytes
-                ) RETURNING id;
+                    @ID, @MD5, @Status, @FileName, @FileExtension, @Timestamp, @FileSizeBytes
+                ) ON CONFLICT (id) DO UPDATE 
+                    set md5 = @MD5,
+                        status = @Status,
+                        file_name = @FileName,
+                        file_extension = @FileExtension,
+                        timestamp = @Timestamp,
+                        file_size_bytes = @FileSizeBytes;
             ");
 
-            cmd.AddParameter("md5", asset.MD5);
+            cmd.AddParameter("ID", asset.Guid);
+            cmd.AddParameter("MD5", asset.MD5);
+            cmd.AddParameter("Status", (int)asset.Status);
             cmd.AddParameter("FileName", asset.FileName);
-            cmd.AddParameter("FileLocation", asset.FileLocation);
+            cmd.AddParameter("FileExtension", asset.FileExtension);
             cmd.AddParameter("Timestamp", asset.Timestamp);
             cmd.AddParameter("FileSizeBytes", asset.FileSizeBytes);
-
             await cmd.PrepareAsync();
 
-            ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
-
-            return id;
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
         }
 
     }

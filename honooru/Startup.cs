@@ -27,10 +27,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using System.Net;
 using honooru.Code.DiscordInteractions;
 using honooru.Code;
-using watchtower.Services.Hosted.QueueProcessor;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using honooru.Models.Config;
 using honooru.Services.Parsing;
+using honooru.Services.Util;
+using honooru.Services.UploadStepHandler;
 
 namespace honooru {
 
@@ -137,12 +138,15 @@ namespace honooru {
 
             services.AddSingleton<CommandBus, CommandBus>();
 
+            services.AddUtilServices();
             services.AddAppStartupServices();
             services.AddAppQueueServices(); // queue services
             services.AddDatabasesServices(); // Db services
             services.AddAppDatabaseReadersServices(); // DB readers
             services.AddAppRepositoryServices(); // Repositories
             services.AddSearchServices();
+            services.AddAppQueueProcessorServices();
+            services.AddUploadStepHandlers();
 
             // Hosted services
             services.AddHostedService<DbCreatorStartupService>(); // Have first to ensure DBs exist
@@ -150,9 +154,6 @@ namespace honooru {
             // hosted background services
             services.AddHostedService<ExampleBackgroundService>();
             services.AddHostedService<ExampleStartupService>();
-
-            // Hosted queues
-            services.AddHostedService<ExampleQueueProcessor>();
 
             if (Configuration.GetValue<bool>("Discord:Enabled") == true) {
                 services.AddSingleton<DiscordWrapper>();
@@ -210,11 +211,29 @@ namespace honooru {
                 );
 
                 endpoints.MapControllerRoute(
+                    name: "posts",
+                    pattern: "/posts/{*.}",
+                    defaults: new { controller = "Home", action = "Posts" }
+                );
+
+                endpoints.MapControllerRoute(
+                    name: "post",
+                    pattern: "/post/{*.}",
+                    defaults: new { controller = "Home", action = "Post" }
+                );
+
+                endpoints.MapControllerRoute(
                     name: "api",
                     pattern: "/api/{controller}/{action}"
                 );
 
-                endpoints.MapHub<WorldOverviewHub>("/ws/overview");
+                endpoints.MapControllerRoute(
+                    name: "media",
+                    pattern: "/media/{*.}",
+                    defaults: new { controller = "Media", action = "Get" }
+                );
+
+                endpoints.MapHub<MediaAssetUploadHub>("/ws/upload-progress");
 
                 endpoints.MapSwagger();
             });

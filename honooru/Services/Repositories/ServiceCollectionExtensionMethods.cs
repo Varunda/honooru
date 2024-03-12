@@ -12,6 +12,11 @@ namespace honooru.Services.Repositories {
         public static void AddAppRepositoryServices(this IServiceCollection services) {
             services.AddSingleton<AppAccountPermissionRepository>();
             services.AddSingleton<AppMetadataRepository>();
+            services.AddSingleton<SearchQueryRepository>();
+            services.AddSingleton<TagRepository>();
+            services.AddSingleton<TagTypeRepository>();
+            services.AddSingleton<TagInfoRepository>();
+            services.AddSingleton<MediaAssetRepository>();
         }
 
     }

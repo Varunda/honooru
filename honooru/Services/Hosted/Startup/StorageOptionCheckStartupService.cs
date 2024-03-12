@@ -45,7 +45,25 @@ namespace honooru.Services.Hosted.Startup {
             File.Create(testFile);
 
             _Logger.LogInformation($"test file created!");
+
+            CreateFolderIfNeeded("original");
+            CreateFolderIfNeeded("180x180");
+            CreateFolderIfNeeded("upload");
+            CreateFolderIfNeeded("work");
+
             return Task.CompletedTask;
+        }
+
+        private void CreateFolderIfNeeded(string folder) {
+            string dir = _StorageOptions.Value.RootDirectory;
+            string path = Path.GetFullPath(Path.Combine(dir, folder));
+            _Logger.LogInformation($"creating folder if needed [folder={folder}] [path={path}]");
+
+            if (Directory.Exists(path)) {
+                return;
+            }
+
+            Directory.CreateDirectory(path);
         }
 
         public Task StopAsync(CancellationToken cancellationToken) {

@@ -43,14 +43,41 @@ namespace honooru.Code.ExtensionMethods {
             }
         }
 
+        public static void AddParameter(this NpgsqlCommand cmd, object? value) {
+            if (value != null) {
+                // PostgreSQL as far as I can tell, doesn't have a type for unsigned ints, so to handle this,
+                //      it's first unboxed to a uint, then cast to an int byte for byte
+                // not including the unchecked would mean values that couldn't be represents as ints,
+                //      but could be represented by uints, would throw an exception
+                if (value.GetType() == typeof(uint)) {
+                    cmd.Parameters.Add(new NpgsqlParameter() { Value = unchecked((int)((uint)value)) });
+                } else if (value.GetType() == typeof(ulong)) {
+                    cmd.Parameters.Add(new NpgsqlParameter() { Value = unchecked((long)((ulong)value)) });
+                } else {
+                    cmd.Parameters.Add(new NpgsqlParameter() { Value = value });
+                }
+            } else {
+                cmd.Parameters.Add(new NpgsqlParameter() { Value = DBNull.Value });
+            }
+        }
+
         /// <summary>
         /// Turn a command into text that's useful
         /// </summary>
         /// <param name="cmd"></param>
         /// <returns></returns>
         public static string Print(this NpgsqlCommand cmd) {
-            string s = cmd.CommandText + "\n";
 
+            string functionHeader = $"PREPARE run_query ({string.Join(", ", cmd.Parameters.Select(iter => iter.DataTypeName))}) AS \n";
+
+            string s = $"{functionHeader} {cmd.CommandText};\n";
+
+            s += $"EXECUTE run_query({string.Join(", ",cmd.Parameters.Select(iter => iter.NpgsqlValue))});";
+            s += $"DEALLOCATE run_query;";
+
+            return s;
+
+            /*
             foreach (NpgsqlParameter param in cmd.Parameters) {
                 Type? valueType = param.Value?.GetType();
 
@@ -71,8 +98,8 @@ namespace honooru.Code.ExtensionMethods {
 
                 s += "\n";
             }
-
             return s;
+            */
         }
 
         public static string IterateUnboundGeneric<T>(object o) {

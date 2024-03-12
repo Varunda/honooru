@@ -16,6 +16,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<TagDb>();
             services.AddSingleton<TagTypeDb>();
             services.AddSingleton<PostTagDb>();
+            services.AddSingleton<TagInfoDb>();
         }
 
     }

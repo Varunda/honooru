@@ -31,9 +31,11 @@ namespace honooru.Tests.Services.Parsing {
 
             Ast ast = _a(tokens);
 
-            _CheckTagNodeValue(ast.Root, input);
+            Assert.AreEqual(1, ast.Root.Children.Count);
+            _CheckTagNodeValue(ast.Root.Children[0], input);
 
             List<NodeIter> expected = new List<NodeIter>() {
+                new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, input))
             };
             _CheckNodeOrder(ast, expected);
@@ -90,14 +92,18 @@ namespace honooru.Tests.Services.Parsing {
             Ast ast = _a(tokens);
 
             _CheckNodeTree(ast.Root,
-                NodeType.OR,
+                NodeType.AND,
                 new() {
-                    (node) => _CheckTagNodeValue(node, "hi"),
-                    (node) => _CheckTagNodeValue(node, "hello"),
+                    (node) => _CheckNodeTree(node, NodeType.OR,
+                    new List<Action<Node>>() {
+                        (node) => _CheckTagNodeValue(node, "hi"),
+                        (node) => _CheckTagNodeValue(node, "hello")
+                    })
                 }
             );
 
             List<NodeIter> expected = new List<NodeIter>() {
+                new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
                 new NodeIter(NodeType.OR, new Token(TokenType.OR_START, "")),
                     new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hi")),
                     new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hello")),
@@ -184,23 +190,6 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         /// <summary>
-        ///     test
-        /// </summary>
-        [TestMethod]
-        [Timeout(5_000)]
-        public void AstBuilderTest_ToEnumerable_Not() {
-            // -1
-            List<Token> tokens = new List<Token>() {
-                new Token(TokenType.NOT, ""),
-                new Token(TokenType.WORD, "1"),
-            };
-
-            Ast ast = _a(tokens);
-
-            _CheckTagNodeValue(ast.Root, "1");
-        }
-
-        /// <summary>
         ///     check that AND ASTs are built correctly
         /// </summary>
         [TestMethod]
@@ -214,6 +203,7 @@ namespace honooru.Tests.Services.Parsing {
             };
 
             Ast ast = _a(tokens);
+            Assert.IsNull(ast.Root.Parent);
 
             List<NodeIter> expected = new() {
                 new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
@@ -241,6 +231,7 @@ namespace honooru.Tests.Services.Parsing {
             Console.WriteLine($"parsed AST: {ast.Print()}");
 
             List<NodeIter> expected = new() {
+                new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
                 new NodeIter(NodeType.OR, new Token(TokenType.OR_START, "")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hi")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "howdy"))
@@ -261,7 +252,8 @@ namespace honooru.Tests.Services.Parsing {
             Ast ast = _a(tokens);
 
             List<NodeIter> expected = new() {
-                new NodeIter(NodeType.NOT_TAG, new Token(TokenType.WORD, "hi"))
+                new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
+                new NodeIter(NodeType.NOT, new Token(TokenType.WORD, "hi"))
             };
 
             _CheckNodeOrder(ast, expected);
@@ -284,7 +276,7 @@ namespace honooru.Tests.Services.Parsing {
                 new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hi")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "howdy")),
-                new NodeIter(NodeType.NOT_TAG, new Token(TokenType.WORD, "hello")),
+                new NodeIter(NodeType.NOT, new Token(TokenType.WORD, "hello"))
             };
 
             _CheckNodeOrder(ast, expected);
@@ -314,7 +306,7 @@ namespace honooru.Tests.Services.Parsing {
                 new NodeIter(NodeType.OR, new Token(TokenType.OR_START, "")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hi")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hello")),
-                new NodeIter(NodeType.NOT_TAG, new Token(TokenType.WORD, "howdy")),
+                new NodeIter(NodeType.NOT, new Token(TokenType.WORD, "howdy")),
             };
 
             _CheckNodeOrder(ast, expected);
@@ -369,7 +361,7 @@ namespace honooru.Tests.Services.Parsing {
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_BigQuery() {
-            // 1 2 user:alice width:>1160 height:=63 3 { 4 ~ 5 ~ 6 } score:>10 7
+            // 1 2 user:alice width:>1160 height:=63 3 { 4 ~ 5 ~ 6 } score:>10 -7
             List<Token> tokens = new List<Token>() {
                 new Token(TokenType.WORD, "1"),
                 new Token(TokenType.WORD, "2"),
@@ -396,6 +388,7 @@ namespace honooru.Tests.Services.Parsing {
                 new Token(TokenType.META, ""),
                 new Token(TokenType.OPERATOR, ">"),
                 new Token(TokenType.WORD, "10"),
+                new Token(TokenType.NOT, ""),
                 new Token(TokenType.WORD, "7")
             };
 
@@ -432,7 +425,7 @@ namespace honooru.Tests.Services.Parsing {
                         (node) => _CheckNode(node, NodeType.META_OPERATOR, ">"),
                         (node) => _CheckNode(node, NodeType.META_VALUE, "10")
                     }),
-                    (node) => _CheckTagNodeValue(node, "7")
+                    (node) => _CheckNode(node, NodeType.NOT, "7")
                 }
             );
 
@@ -457,6 +450,8 @@ namespace honooru.Tests.Services.Parsing {
             Ast ast = builder.Build(tokens);
 
             Console.WriteLine($"parsed AST: {ast.Print()}");
+
+            Assert.IsNull(ast.Root.Parent);
 
             return ast;
         }
@@ -514,7 +509,7 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         private void _CheckTagNodeValue(Node node, string value) {
-            Assert.IsTrue(node.Type == NodeType.TAG || node.Type == NodeType.NOT_TAG);
+            Assert.AreEqual(NodeType.TAG, node.Type);
             Assert.AreEqual(value, node.Token.Value);
             Assert.AreEqual(0, node.Children.Count);
         }

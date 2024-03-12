@@ -1,5 +1,6 @@
 ﻿using honooru.Code.Constants;
 using System;
+using System.Text.Json.Serialization;
 
 namespace honooru.Models.Db {
 
@@ -10,28 +11,65 @@ namespace honooru.Models.Db {
         /// </summary>
         public ulong ID { get; set; }
 
+        /// <summary>
+        ///     ID of the <see cref="AppAccount"/> that posted this media
+        /// </summary>
         public ulong PosterUserID { get; set; }
 
+        /// <summary>
+        ///     when this post was created
+        /// </summary>
         public DateTime Timestamp { get; set; }
 
+        /// <summary>
+        ///     an optional title
+        /// </summary>
         public string? Title { get; set; }
 
+        /// <summary>
+        ///     an optional description
+        /// </summary>
         public string? Description { get; set; }
 
+        /// <summary>
+        ///     the ID of the last <see cref="AppAccount"/> to edit this post
+        /// </summary>
         public ulong LastEditorUserID { get; set; }
 
+        /// <summary>
+        ///     when this post was last edited
+        /// </summary>
         public DateTime? LastEdited { get; set; }
 
+        /// <summary>
+        ///     MD5 hash of the file
+        /// </summary>
+        [JsonPropertyName("md5")] // without this, it's mD5
         public string MD5 { get; set; } = "";
 
+        /// <summary>
+        ///     what this post is rated as
+        /// </summary>
         public PostRating Rating { get; set; } = PostRating.GENERAL;
 
+        /// <summary>
+        ///     original name of the file uploaded
+        /// </summary>
         public string FileName { get; set; } = "";
 
+        /// <summary>
+        ///     where this post comes from
+        /// </summary>
         public string Source { get; set; } = "";
 
-        public string FileLocation { get; set; } = "";
+        /// <summary>
+        ///     file extension, WITH a leading .
+        /// </summary>
+        public string FileExtension { get; set; } = "";
 
+        /// <summary>
+        ///     how many bytes. not sure why c# has file size signed
+        /// </summary>
         public long FileSizeBytes { get; set; }
 
     }

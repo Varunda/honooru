@@ -6,6 +6,28 @@ export const AppMenu = Vue.extend({
             <div class="navbar-collapse">
                 <ul class="navbar-nav h1">
                     <slot></slot>
+
+                    <li class="nav-item">
+                        <span class="mx-2">
+                            |
+                        </span>
+                    <li>
+
+                    <li class="nav-item">
+                        <a class="nav-link h1 p-0" href="/upload">
+                            Upload
+                        </a>
+                    </li>
+
+                    <li class="nav-item mx-2">
+                        &middot;
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link h1 p-0" href="/posts">
+                            Posts
+                        </a>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -43,19 +65,6 @@ export const MenuHomepage = Vue.extend({
     `
 });
 
-export const MenuOutfits = Vue.extend({
-    template: `
-        <li class="dropdown-submenu">
-            <span class="dropdown-item dropdown-toggle">Outfits</span>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/outfitfinder">Search</a></li>
-                <li><a class="dropdown-item" href="/report">Report</a></li>
-                <li><a class="dropdown-item" href="/outfitpop">Population</a></li>
-            </ul>
-        </li>
-    `,
-});
-
 export const MenuDropdown = Vue.extend({
     template: `
         <li class="nav-item dropdown">
@@ -63,7 +72,6 @@ export const MenuDropdown = Vue.extend({
             <ul class="dropdown-menu mt-0">
                 <slot>
                     <menu-homepage></menu-homepage>
-                    <menu-realtime></menu-realtime>
                 </slot>
             </ul>
         </li>

@@ -47,6 +47,7 @@ namespace honooru.Services.Parsing {
                     //      ^ (CURRENT TOKEN)
                     // by checking the next token
                     if (tokens.PeekNext()?.Type == TokenType.META) {
+                        _Logger.LogTrace($"next token is META, looking-ahead [iter={iter}]");
                         if (parent.Type == NodeType.OR) {
                             throw new AstParseException(iter, $"cannot have a META lookup within an OR statement");
                         }
@@ -84,6 +85,7 @@ namespace honooru.Services.Parsing {
                         _c(NodeType.META_OPERATOR, op, metaParent);
                         _c(NodeType.META_VALUE, value, metaParent);
                     } else {
+                        _Logger.LogTrace($"adding token to AND parent [iter={iter}] [parent={parent}]");
                         _c(NodeType.TAG, iter, parent);
                     }
 
@@ -119,11 +121,16 @@ namespace honooru.Services.Parsing {
                     parent = stack.Peek(); // back to whatever node was before the OR
                 } else if (iter.Type == TokenType.NOT) {
                     Token? next = tokens.GetNext();
-                    if (next == null || next.Type != TokenType.WORD) {
-                        throw new AstParseException(iter, $"failed to get WORD token after NOT");
+                    if (next == null) {
+                        throw new AstParseException(iter, $"look ahead failed: missing token after NOT");
+                    }
+                    if (next.Type != TokenType.WORD) {
+                        throw new AstParseException(iter, $"look ahead failed: needed WORD token, got {next.Type} instead");
                     }
 
-                    _c(NodeType.NOT_TAG, next, parent);
+                    _Logger.LogTrace($"found NOT token [next={next}] [parent={parent}]");
+
+                    _c(NodeType.NOT, next, parent);
                 } else if (iter.Type == TokenType.META) {
                     throw new AstParseException(iter, $"unexpected place for a META tag, was the previous token a WORD token?");
                 } else if (iter.Type == TokenType.END) {
@@ -148,6 +155,7 @@ namespace honooru.Services.Parsing {
                 throw new AstParseException(null, $"failed to get root tree node, stack had no nodes left on it (did you double pop somewhere?)");
             }
 
+            /*
             // if the root node only has a single child, we can just use that node instead,
             //      for example:
             //          INPUT:
@@ -156,9 +164,13 @@ namespace honooru.Services.Parsing {
             //              hi OR howdy AND ""
             //      which doesn't mean much really
             // instead, we can just use the OR instead
-            while (treeRoot.Children.Count == 1) {
+            while (treeRoot.Type != NodeType.NOT && treeRoot.Children.Count == 1) {
                 treeRoot = treeRoot.Children[0];
+                // remove the parent, as the root node in the tree has moved down, so it's parent can DIE
+                // (and by die i mean politely garbage collected)
+                treeRoot.Parent = null;
             }
+            */
 
             // it's fine for like a NOT node to have 0 children, as it's the only node
             if ((treeRoot.Type == NodeType.AND || treeRoot.Type == NodeType.OR) && treeRoot.Children.Count == 0) {

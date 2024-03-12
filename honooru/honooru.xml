@@ -693,17 +693,17 @@
                 The response will contain a <see cref="T:honooru.Models.Health.AppHealth"/> that represents the health of the app at the time of being called
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.MediaAssetApiController.GetByID(System.UInt64)">
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.GetByGuid(System.Guid)">
             <summary>
-                get a <see cref="T:honooru.Models.App.MediaAsset"/> by its <see cref="P:honooru.Models.App.MediaAsset.ID"/>
+                get a <see cref="T:honooru.Models.App.MediaAsset"/> by its <see cref="P:honooru.Models.App.MediaAsset.Guid"/>
             </summary>
-            <param name="assetID">ID of the <see cref="T:honooru.Models.App.MediaAsset"/> to get</param>
+            <param name="guid">ID of the <see cref="T:honooru.Models.App.MediaAsset"/> to get</param>
             <response code="200">
                 the response will contain the <see cref="T:honooru.Models.App.MediaAsset"/> with
-                <see cref="P:honooru.Models.App.MediaAsset.ID"/> of <paramref name="assetID"/>
+                <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="guid"/>
             </response>
             <response code="204">
-                no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.ID"/> of <paramref name="assetID"/> exists
+                no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="guid"/> exists
             </response>
         </member>
         <member name="M:honooru.Controllers.Api.MediaAssetApiController.Upload">
@@ -753,6 +753,38 @@
             <param name="offset"></param>
             <param name="limit"></param>
             <returns></returns>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.Search(System.String,System.Nullable{System.Int32},System.String,System.Nullable{System.Boolean})">
+            <summary>
+                search for all tags that 
+            </summary>
+            <param name="name"></param>
+            <param name="limit"></param>
+            <param name="sortBy"></param>
+            <param name="sortAscending"></param>
+            <returns></returns>
+            <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.Create(System.String,System.UInt64)">
+            <summary>
+                create a new <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="name">name of the tag to use</param>
+            <param name="typeID">ID of the <see cref="T:honooru.Models.App.TagType"/></param>
+            <response code="200">
+                the response contains the <see cref="T:honooru.Models.App.Tag"/> that was newly created,
+                with <see cref="P:honooru.Models.App.Tag.ID"/> updated
+            </response>
+            <response code="400">
+                one of the following validation errors occured:
+                <ul>
+                    <li><paramref name="name"/> is not valid for a tag name. the response will contain a string explaining why</li>
+                    <li>a <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.Name"/> of <paramref name="name"/> already exists</li>
+                </ul>
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.App.TagType"/> with <see cref="P:honooru.Models.App.TagType.ID"/> of <paramref name="typeID"/> exists
+            </response>
         </member>
         <member name="M:honooru.Controllers.Api.TestErrorApiController.DbTimeout">
             <summary>
@@ -834,9 +866,9 @@
                 The max time to process recent items in milliseconds
             </summary>
         </member>
-        <member name="P:honooru.Models.App.MediaAsset.ID">
+        <member name="P:honooru.Models.App.MediaAsset.Guid">
             <summary>
-                unique ID
+                temp guid the file is saved under
             </summary>
         </member>
         <member name="P:honooru.Models.App.MediaAsset.MD5">
@@ -844,14 +876,19 @@
                 md5 hash of the media asset
             </summary>
         </member>
+        <member name="P:honooru.Models.App.MediaAsset.Status">
+            <summary>
+                status of the media asset
+            </summary>
+        </member>
         <member name="P:honooru.Models.App.MediaAsset.FileName">
             <summary>
                 original file name
             </summary>
         </member>
-        <member name="P:honooru.Models.App.MediaAsset.FileLocation">
+        <member name="P:honooru.Models.App.MediaAsset.FileExtension">
             <summary>
-                where this file is
+                where this file is. does not include a leading period
             </summary>
         </member>
         <member name="P:honooru.Models.App.MediaAsset.Timestamp">
@@ -864,6 +901,15 @@
                 how many bytes long this fill is. not sure if a negative value is possible.
                 using a <see cref="T:System.Int64"/> gives us files over 4GB (which is what an int would limit us to)
             </summary>
+        </member>
+        <member name="M:honooru.Models.App.MediaUploadStep.IUploadStepWorker`2.Run(`0,System.Action{System.Decimal},System.Threading.CancellationToken)">
+            <summary>
+                run the worker with the parameters needed
+            </summary>
+            <param name="order"></param>
+            <param name="updateProgress"></param>
+            <param name="cancel"></param>
+            <returns></returns>
         </member>
         <member name="P:honooru.Models.App.Tag.ID">
             <summary>
@@ -878,6 +924,21 @@
         <member name="P:honooru.Models.App.Tag.TypeID">
             <summary>
                 ID of the <see cref="T:honooru.Models.App.TagType"/> this tag is for
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.TagNameValidationResult.Input">
+            <summary>
+                input name for validation
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.TagNameValidationResult.Reason">
+            <summary>
+                if <see cref="P:honooru.Models.App.TagNameValidationResult.Valid"/> is <c>false</c>, why <see cref="P:honooru.Models.App.TagNameValidationResult.Input"/> is not valid
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.TagNameValidationResult.Valid">
+            <summary>
+                if <see cref="P:honooru.Models.App.TagNameValidationResult.Input"/> is a valid tag name or not
             </summary>
         </member>
         <member name="P:honooru.Models.App.TagType.ID">
@@ -903,6 +964,66 @@
         <member name="P:honooru.Models.Db.Post.ID">
             <summary>
                 unique ID of the post
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.PosterUserID">
+            <summary>
+                ID of the <see cref="T:honooru.Models.AppAccount"/> that posted this media
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Timestamp">
+            <summary>
+                when this post was created
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Title">
+            <summary>
+                an optional title
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Description">
+            <summary>
+                an optional description
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.LastEditorUserID">
+            <summary>
+                the ID of the last <see cref="T:honooru.Models.AppAccount"/> to edit this post
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.LastEdited">
+            <summary>
+                when this post was last edited
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.MD5">
+            <summary>
+                MD5 hash of the file
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Rating">
+            <summary>
+                what this post is rated as
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.FileName">
+            <summary>
+                original name of the file uploaded
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Source">
+            <summary>
+                where this post comes from
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.FileExtension">
+            <summary>
+                file extension, WITH a leading .
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.FileSizeBytes">
+            <summary>
+                how many bytes. not sure why c# has file size signed
             </summary>
         </member>
         <member name="T:honooru.Models.Db.ExpEvent">
@@ -1267,6 +1388,21 @@
         <member name="P:honooru.Models.Queues.ExampleQueueEntry.Timestamp">
             <summary>
                 timestamp
+            </summary>
+        </member>
+        <member name="T:honooru.Models.Queues.MediaAssetReencodeQueueEntry">
+            <summary>
+                a queue entry for reencoding a <see cref="T:honooru.Models.App.MediaAsset"/> to a format that is more widely usable
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.FileName">
+            <summary>
+                md5 hash plus the file extension
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.RecreateIfNeeded">
+            <summary>
+                will the thumbnail be deleted and recreated if needed?
             </summary>
         </member>
         <member name="M:honooru.Models.Search.Ast.GetEnumerator">
@@ -1650,6 +1786,42 @@
             <returns>
                 the <see cref="P:honooru.Models.Db.Post.ID"/> of the DB entry that was just inserted
             </returns>
+        </member>
+        <member name="M:honooru.Services.Db.TagDb.GetAll(System.Threading.CancellationToken)">
+            <summary>
+                get all <see cref="T:honooru.Models.App.Tag"/>s in the DB
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Db.TagDb.GetByID(System.UInt64)">
+            <summary>
+                get a single <see cref="T:honooru.Models.App.Tag"/> by its <see cref="P:honooru.Models.App.Tag.ID"/>
+            </summary>
+            <param name="ID"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Db.TagDb.GetByName(System.String)">
+            <summary>
+                get a <see cref="T:honooru.Models.App.Tag"/> by its <see cref="P:honooru.Models.App.Tag.Name"/>, which is unique
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Db.TagDb.Insert(honooru.Models.App.Tag)">
+            <summary>
+                Insert a new <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="tag"></param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="M:honooru.Services.Db.TagDb.Update(honooru.Models.App.Tag)">
+            <summary>
+                update an existing <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="tag"></param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentException"></exception>
         </member>
         <member name="T:honooru.Services.DiscordWrapper">
             <summary>
@@ -2123,6 +2295,73 @@
             <param name="value"></param>
             <returns></returns>
         </member>
+        <member name="M:honooru.Services.Repositories.TagRepository._GetDictionary">
+            <summary>
+                get the list of <see cref="T:honooru.Models.App.Tag"/>s but as a dictionary
+            </summary>
+            <returns></returns>
+            <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetByID(System.UInt64)">
+            <summary>
+                get a <see cref="T:honooru.Models.App.Tag"/> by its <see cref="P:honooru.Models.App.Tag.ID"/>
+            </summary>
+            <param name="tagID">ID of the <see cref="T:honooru.Models.App.Tag"/> to get</param>
+            <returns>
+                the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/>,
+                or <c>null</c> if it does not exist
+            </returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetByIDs(System.Collections.Generic.IEnumerable{System.UInt64})">
+            <summary>
+                get all <see cref="T:honooru.Models.App.Tag"/>s with an <see cref="P:honooru.Models.App.Tag.ID"/> in <paramref name="tagIds"/>
+            </summary>
+            <param name="tagIds"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.SearchByName(System.String,System.Threading.CancellationToken)">
+            <summary>
+                perform a search for tags based on name. searching is based on 
+                if the tag name contains <paramref name="name"/>, or the levenshtein dist
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.ValidateTagName(System.String)">
+            <summary>
+                perform a validation on a name
+            </summary>
+            <param name="tagName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.Insert(honooru.Models.App.Tag)">
+            <summary>
+                insert a new <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="tag"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.Update(honooru.Models.App.Tag)">
+            <summary>
+                update an existing <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="tag"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.DamerauLevenshteinDistance(System.String,System.String,System.Int32)">
+            <summary>
+            Computes the Damerau-Levenshtein Distance between two strings, represented as arrays of
+            integers, where each integer represents the code point of a character in the source string.
+            Includes an optional threshhold which can be used to indicate the maximum allowable distance.
+            </summary>
+            <remarks>
+                copied from https://stackoverflow.com/questions/9453731/how-to-calculate-distance-similarity-measure-of-given-2-strings/9454016#9454016 
+            </remarks>
+            <param name="source">An array of the code points of the first string</param>
+            <param name="target">An array of the code points of the second string</param>
+            <param name="threshold">Maximum allowable distance</param>
+            <returns>Int.MaxValue if threshhold exceeded; otherwise the Damerau-Leveshteim distance between the strings</returns>
+        </member>
         <member name="M:honooru.Services.ServiceHealthMonitorExtensions.GetOrCreate(honooru.Services.ServiceHealthMonitor,System.String)">
             <summary>
                 Get the <see cref="T:honooru.Models.ServiceHealthEntry"/> with <see cref="P:honooru.Models.ServiceHealthEntry.Name"/> of <paramref name="serviceName"/>,
@@ -2130,6 +2369,13 @@
             </summary>
             <param name="monitor"></param>
             <param name="serviceName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Util.FileExtensionService.IsValid(System.String)">
+            <summary>
+                check if an extension is valid or not
+            </summary>
+            <param name="extension"></param>
             <returns></returns>
         </member>
     </members>

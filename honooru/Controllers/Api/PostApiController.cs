@@ -1,19 +1,26 @@
 ﻿using honooru.Code.Constants;
 using honooru.Models;
+using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Models.Config;
 using honooru.Models.Db;
+using honooru.Models.Queues;
+using honooru.Models.Search;
 using honooru.Services;
 using honooru.Services.Db;
 using honooru.Services.Parsing;
+using honooru.Services.Queues;
+using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
+using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -34,17 +41,22 @@ namespace honooru.Controllers.Api {
         private readonly AppCurrentAccount _CurrentAccount;
         private readonly PostDb _PostDb;
         private readonly MediaAssetDb _MediaAssetDb;
-        private readonly TagDb _TagDb;
+        private readonly TagRepository _TagRepository;
         private readonly TagTypeDb _TagTypeDb;
         private readonly PostTagDb _PostTagDb;
 
+        private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailCreationQueue;
+
+        private readonly SearchQueryRepository _SearchQueryRepository;
         private readonly SearchQueryParser _SearchQueryParser;
 
         public PostApiController(ILogger<PostApiController> logger,
             IOptions<StorageOptions> storageOptions,
             PostDb postDb, AppCurrentAccount currentAccount,
             MediaAssetDb mediaAssetDb, TagDb tagDb,
-            TagTypeDb tagTypeDb, PostTagDb postTagDb) {
+            TagTypeDb tagTypeDb, PostTagDb postTagDb,
+            SearchQueryRepository searchQueryRepository, SearchQueryParser searchQueryParser,
+            BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository) {
 
             _Logger = logger;
 
@@ -53,9 +65,13 @@ namespace honooru.Controllers.Api {
             _PostDb = postDb;
             _CurrentAccount = currentAccount;
             _MediaAssetDb = mediaAssetDb;
-            _TagDb = tagDb;
             _TagTypeDb = tagTypeDb;
             _PostTagDb = postTagDb;
+            _TagRepository = tagRepository;
+
+            _SearchQueryRepository = searchQueryRepository;
+            _SearchQueryParser = searchQueryParser;
+            _ThumbnailCreationQueue = thumbnailCreationQueue;
         }
 
         /// <summary>
@@ -88,22 +104,40 @@ namespace honooru.Controllers.Api {
         /// <param name="limit"></param>
         /// <returns></returns>
         [HttpGet("search")]
-        public async Task<ApiResponse<List<Post>>> Search(
+        public async Task<ApiResponse<SearchResults>> Search(
             [FromQuery] string q,
             [FromQuery] uint offset = 0,
             [FromQuery] uint limit = 100
             ) {
 
             if (limit > 500) {
-                return ApiBadRequest<List<Post>>($"{nameof(limit)} cannot be higher than 500");
+                return ApiBadRequest<SearchResults>($"{nameof(limit)} cannot be higher than 500");
             }
 
-            return ApiOk(new List<Post>());
+            Stopwatch timer = Stopwatch.StartNew();
+            Ast searchAst = _SearchQueryParser.Parse(q);
+            long parseMs = timer.ElapsedMilliseconds; timer.Restart();
+
+            SearchQuery query = new(searchAst);
+            query.Offset = offset;
+            query.Limit = limit;
+
+            timer.Start();
+            List<Post> posts = await _PostDb.Search(query);
+            long dbMs = timer.ElapsedMilliseconds; timer.Restart();
+
+            SearchResults results = new(query);
+            results.Results = posts;
+
+            results.Timings.Add($"parseMs={parseMs}");
+            results.Timings.Add($"dbMs={dbMs}");
+
+            return ApiOk(results);
         }
 
         [HttpPost("{assetID}")]
         //[Authorize]
-        public async Task<ApiResponse<Post>> Create(ulong assetID, 
+        public async Task<ApiResponse<Post>> Create(Guid assetID, 
             [FromQuery] string tags,
             [FromQuery] string rating,
             [FromQuery] string? title = null,
@@ -137,9 +171,13 @@ namespace honooru.Controllers.Api {
                 return ApiNotFound<Post>($"{nameof(MediaAsset)} {assetID}");
             }
 
+            if (asset.Status != MediaAssetStatus.DONE) {
+                return ApiBadRequest<Post>($"{nameof(MediaAsset)} {assetID} is still processing, try again later");
+            }
+
             post.MD5 = asset.MD5;
-            post.FileLocation = asset.FileLocation;
             post.FileName = asset.FileName;
+            post.FileExtension = asset.FileExtension;
             post.FileSizeBytes = asset.FileSizeBytes;
 
             // tag parsing!
@@ -182,7 +220,7 @@ namespace honooru.Controllers.Api {
                 }
 
                 // get the tag, create it if it doesn't exist
-                Tag? tagObj = await _TagDb.GetByName(iter);
+                Tag? tagObj = await _TagRepository.GetByName(iter);
                 if (tagObj == null) { // tag doesn't exist, make it
                     _Logger.LogDebug($"creating new tag [tag={iter}] [typeID={tagTypeObj.ID}]");
                     tagObj = new Tag() {
@@ -190,7 +228,7 @@ namespace honooru.Controllers.Api {
                         TypeID = tagTypeObj.ID
                     };
 
-                    tagObj.ID = await _TagDb.Insert(tagObj);
+                    tagObj.ID = await _TagRepository.Insert(tagObj);
                     _Logger.LogDebug($"created new tag [tag={tagObj.Name}] [tagID={tagObj.ID}]");
                 } else {
                     // check if the type has changed, for example if the tag varunda has a type of general,
@@ -199,7 +237,7 @@ namespace honooru.Controllers.Api {
                     if (tagObj.TypeID != tagTypeObj.ID) {
                         _Logger.LogDebug($"updating tag type [tag={tagObj.ID}/{tagObj.Name}] [tagType={tagTypeObj.ID}/{tagTypeObj.Name}]");
                         tagObj.TypeID = tagTypeObj.ID;
-                        await _TagDb.Update(tagObj);
+                        await _TagRepository.Update(tagObj);
                     }
                 }
 
@@ -211,6 +249,11 @@ namespace honooru.Controllers.Api {
             }
 
             post.ID = await _PostDb.Insert(post);
+
+            ThumbnailCreationQueueEntry entry = new() {
+                FileName = post.MD5 + post.FileExtension
+            };
+            _ThumbnailCreationQueue.Queue(entry);
 
             _Logger.LogDebug($"inserting tags for new post [postID={post.ID}] [tag count={tagIds.Count}]");
             foreach (ulong tagID in tagIds) {

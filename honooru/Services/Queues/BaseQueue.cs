@@ -33,7 +33,7 @@ namespace honooru.Services.Queues {
         internal long _ProcessedCount = 0;
 
         public BaseQueue(ILoggerFactory factory) {
-            _Logger = factory.CreateLogger($"watchtower.Services.Queues.BaseQueue<{typeof(T).Name}>");
+            _Logger = factory.CreateLogger($"honooru.Services.Queues.BaseQueue<{typeof(T).Name}>");
         }
 
         /// <summary>

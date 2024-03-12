@@ -1,0 +1,4 @@
+{
+    "BinaryFolder": "./ffmpeg",
+    "TemporaryFilesFolder": "./ffmpeg/temp"
+}

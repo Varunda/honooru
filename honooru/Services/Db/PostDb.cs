@@ -1,6 +1,7 @@
 ﻿using honooru.Code.ExtensionMethods;
 using honooru.Models.Api;
 using honooru.Models.Db;
+using honooru.Services.Repositories;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Collections.Generic;
@@ -15,30 +16,33 @@ namespace honooru.Services.Db {
         private readonly IDataReader<Post> _Reader;
         private readonly IDbHelper _DbHelper;
 
+        private readonly SearchQueryRepository _SearchQueryRepository;
+
         public PostDb(ILogger<PostDb> logger,
-            IDataReader<Post> reader, IDbHelper dbHelper) {
+            IDataReader<Post> reader, IDbHelper dbHelper,
+            SearchQueryRepository searchQueryRepository) {
 
             _Logger = logger;
             _Reader = reader;
             _DbHelper = dbHelper;
+
+            _SearchQueryRepository = searchQueryRepository;
         }
 
         public async Task<List<Post>> Search(SearchQuery query) {
             using NpgsqlConnection conn = _DbHelper.Connection();
-            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
-                SELECT *
-                    FROM post
-                    WHERE id = @ID;
-            ");
 
-            //cmd.AddParameter("ID", ID);
+            NpgsqlCommand cmd = await _SearchQueryRepository.Compile(query.QueryAst);
+            cmd.Connection = conn;
+            cmd.CommandText += $" LIMIT {query.Limit} OFFSET {query.Offset} ";
+            await cmd.Connection.OpenAsync();
 
-            await cmd.PrepareAsync();
+            _Logger.LogDebug(cmd.Print());
 
-            Post? post = await _Reader.ReadSingle(cmd);
+            List<Post> post = await _Reader.ReadList(cmd);
             await conn.CloseAsync();
 
-            return new List<Post>();
+            return post;
         }
 
         /// <summary>
@@ -104,9 +108,9 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
-                    poster_user_id, timestamp, title, description, last_editor_user_id, md5, rating, file_name, source, file_location, file_size_bytes
+                    poster_user_id, timestamp, title, description, last_editor_user_id, md5, rating, file_name, source, file_extension, file_size_bytes
                 ) VALUES (
-                    @PosterUserID, @Timestamp, @Title, @Description, 0, @MD5, @Rating, @FileName, @Source, @FileLocation, @FileSizeBytes
+                    @PosterUserID, @Timestamp, @Title, @Description, 0, @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes
                 ) RETURNING id;
             ");
 
@@ -118,7 +122,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Rating", (short) post.Rating);
             cmd.AddParameter("FileName", post.FileName);
             cmd.AddParameter("Source", post.Source);
-            cmd.AddParameter("FileLocation", post.FileLocation);
+            cmd.AddParameter("FileExtension", post.FileExtension);
             cmd.AddParameter("FileSizeBytes", post.FileSizeBytes);
             await cmd.PrepareAsync();
 

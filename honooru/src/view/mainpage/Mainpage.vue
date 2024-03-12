@@ -37,6 +37,8 @@
     import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
 
+    import "filters/MomentFilter";
+
     export const Mainpage = Vue.extend({
         props: {
 

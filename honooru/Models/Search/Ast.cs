@@ -46,10 +46,6 @@ namespace honooru.Models.Search {
                 return node.Token.Value;
             }
 
-            if (node.Type == NodeType.NOT_TAG) {
-                return $"NOT ({node.Token.Value})";
-            }
-
             StringBuilder sb = new();
             sb.Append(node.Type.ToString().ToUpper());
             sb.Append(' ');

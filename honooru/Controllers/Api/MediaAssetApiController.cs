@@ -1,10 +1,19 @@
-﻿using honooru.Models;
+﻿using FFMpegCore.Enums;
+using honooru.Code.ExtensionMethods;
+using honooru.Code.Hubs;
+using honooru.Code.Hubs.Implementations;
+using honooru.Models;
 using honooru.Models.App;
+using honooru.Models.App.MediaUploadStep;
 using honooru.Models.Config;
 using honooru.Models.Db;
 using honooru.Services;
 using honooru.Services.Db;
+using honooru.Services.Repositories;
+using honooru.Services.UploadStepHandler;
+using honooru.Services.Util;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,6 +23,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Controllers.Api {
@@ -26,38 +36,48 @@ namespace honooru.Controllers.Api {
 
         private readonly IOptions<StorageOptions> _StorageOptions;
 
+        private readonly IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> _MediaAssetHub;
+
         private readonly AppCurrentAccount _CurrentAccount;
         private readonly PostDb _PostDb;
-        private readonly MediaAssetDb _MediaAssetDb;
+        private readonly MediaAssetRepository _MediaAssetRepository;
+        private readonly FileExtensionService _FileExtensionHelper;
+        private readonly UploadStepsProcessor _UploadStepsHandler;
 
         public MediaAssetApiController(ILogger<MediaAssetApiController> logger,
             IOptions<StorageOptions> storageOptions,
             PostDb postDb, AppCurrentAccount currentAccount,
-            MediaAssetDb mediaAssetDb) {
+            MediaAssetRepository mediaAssetRepository, FileExtensionService fileExtensionHelper,
+            IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> mediaAssetHub,
+            UploadStepsProcessor uploadStepsHandler) {
 
             _Logger = logger;
 
             _StorageOptions = storageOptions;
 
+            _MediaAssetHub = mediaAssetHub;
+
             _PostDb = postDb;
             _CurrentAccount = currentAccount;
-            _MediaAssetDb = mediaAssetDb;
+            _MediaAssetRepository = mediaAssetRepository;
+            _FileExtensionHelper = fileExtensionHelper;
+            _UploadStepsHandler = uploadStepsHandler;
         }
 
         /// <summary>
-        ///     get a <see cref="MediaAsset"/> by its <see cref="MediaAsset.ID"/>
+        ///     get a <see cref="MediaAsset"/> by its <see cref="MediaAsset.Guid"/>
         /// </summary>
-        /// <param name="assetID">ID of the <see cref="MediaAsset"/> to get</param>
+        /// <param name="guid">ID of the <see cref="MediaAsset"/> to get</param>
         /// <response code="200">
         ///     the response will contain the <see cref="MediaAsset"/> with
-        ///     <see cref="MediaAsset.ID"/> of <paramref name="assetID"/>
+        ///     <see cref="MediaAsset.Guid"/> of <paramref name="guid"/>
         /// </response>
         /// <response code="204">
-        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.ID"/> of <paramref name="assetID"/> exists
+        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="guid"/> exists
         /// </response>
-        [HttpGet("{assetID}")]
-        public async Task<ApiResponse<MediaAsset>> GetByID(ulong assetID) {
-            MediaAsset? asset = await _MediaAssetDb.GetByID(assetID);
+        [HttpGet("{guid}")]
+        public async Task<ApiResponse<MediaAsset>> GetByGuid(Guid guid) {
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(guid);
 
             if (asset == null) {
                 return ApiNoContent<MediaAsset>();
@@ -104,96 +124,137 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<MediaAsset>($"boundary from ContentType '{Request.ContentType}' was is null or empty ({type}) ({type.Boundary})");
             }
 
-            MediaAsset asset = new();
-
             string originalName = "";
-            string safeName = "";
             byte[] file = Array.Empty<byte>();
 
             MultipartReader reader = new(boundary, Request.Body);
             MultipartSection? part = await reader.ReadNextSectionAsync();
 
-            while (part != null) {
-                bool hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(part.ContentDisposition, out ContentDispositionHeaderValue? contentDisposition);
-                if (hasContentDispositionHeader) {
-                    if (contentDisposition == null) {
-                        return ApiInternalError<MediaAsset>($"failed to get {nameof(contentDisposition)} from {part.ContentDisposition}");
-                    }
+            Guid assetID = Guid.NewGuid();
 
-                    if (HasFileContentDisposition(contentDisposition)) {
+            // perform a timeout if the upload takes longer than 60 seconds for some reason
+            ApiResponse<MediaAsset> r = await Task.Run(async () => {
+                MediaAsset asset = new();
+
+                while (part != null) {
+                    bool hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(part.ContentDisposition, out ContentDispositionHeaderValue? contentDisposition);
+                    if (hasContentDispositionHeader) {
+                        if (contentDisposition == null) {
+                            return ApiInternalError<MediaAsset>($"failed to get {nameof(contentDisposition)} from {part.ContentDisposition}");
+                        }
+
+                        if (!HasFileContentDisposition(contentDisposition)) {
+                            _Logger.LogError($"not a file content disposition");
+                            continue;
+                        }
+
                         originalName = contentDisposition.FileName.Value;
-                        safeName = WebUtility.HtmlEncode(originalName);
-                        asset.FileName = safeName;
 
                         string? extension = HeaderUtilities.RemoveQuotes(Path.GetExtension(originalName)).Value;
                         if (string.IsNullOrWhiteSpace(extension)) {
                             return ApiBadRequest<MediaAsset>($"extension from name {originalName} is null or empty");
                         }
 
-                        // a valid extension can only have one '.', and can only be alphanumeric
-                        if (extension.Any(iter => !char.IsLetterOrDigit(iter) && iter != '.')
-                                || extension.Count(iter => iter == '.') > 1) {
+                        extension = extension[1..]; // remove the leading .
 
+                        if (_FileExtensionHelper.IsValid(extension) == false) {
                             _Logger.LogWarning($"disallowing invalid extension [extension={extension}] [originalName={originalName}]");
-                            return ApiBadRequest<MediaAsset>($"invalid extension '{extension}'");
+                            return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (invalid)");
                         }
 
-                        _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}]");
-
-                        using MemoryStream stream = new();
-                        await part.Body.CopyToAsync(stream);
-
-                        if (stream.Length == 0) {
-                            _Logger.LogError($"file is of length 0");
+                        string? fileType = _FileExtensionHelper.GetFileType(extension);
+                        if (fileType == null) {
+                            _Logger.LogWarning($"failed to get file type from extension [extension={extension}]");
+                            return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (failed to get file type)");
                         }
 
-                        file = stream.ToArray();
+                        _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}] [fileType={fileType}]");
 
-                        byte[] md5 = MD5.Create().ComputeHash(file);
-                        string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2")));
-                        asset.MD5 = md5Str;
-                        _Logger.LogInformation($"hash of file: {md5Str}");
+                        string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", assetID + "." + extension);
+                        _Logger.LogInformation($"writing new upload [filePath={filePath}]");
+                        using FileStream targetFile = System.IO.File.Create(filePath);
+                        await part.Body.CopyToAsync(targetFile);
+                        asset.FileSizeBytes = targetFile.Position;
+
+                        // IMPORTANT: move back to the start of the file so the md5 hashing uses the whole file stream
+                        targetFile.Seek(0, SeekOrigin.Begin);
+                        byte[] md5 = await MD5.Create().ComputeHashAsync(targetFile);
+                        targetFile.Close(); // IMPORTANT: if this is not closed, the handle is left open, and the file cannot be moved
+                        string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
+                        _Logger.LogInformation($"computed hash [md5={md5Str}] [filePath={filePath}]");
 
                         // if a post with the md5 of this upload already exists, don't proceed
-                        Post? existingPost = await _PostDb.GetByMD5(asset.MD5);
+                        Post? existingPost = await _PostDb.GetByMD5(md5Str);
                         if (existingPost != null) {
-                            return ApiRedirectFound<MediaAsset>($"/post/{existingPost.ID}");
+                            _Logger.LogDebug($"media asset is already a post [md5Str={md5Str}] [post={existingPost.ID}]");
+                            try {
+                                System.IO.File.Delete(filePath);
+                            } catch (Exception ex) {
+                                _Logger.LogError(ex, $"failed to delete existing media asset (post already exists) [filePath={filePath}]");
+                            }
+
+                            return ApiBadRequest<MediaAsset>($"post {existingPost.ID} matched the md5 hash");
                         }
 
                         // if a media asset with the md5 of the upload already exists, don't make a new one
-                        MediaAsset? existingAsset = await _MediaAssetDb.GetByMD5(asset.MD5);
+                        MediaAsset? existingAsset = await _MediaAssetRepository.GetByMD5(md5Str);
                         if (existingAsset != null) {
-                            return ApiRedirectFound<MediaAsset>($"/media_asset/{existingAsset.ID}");
+                            _Logger.LogDebug($"media asset already pending, returning that one instead [md5Str={md5Str}] [existingAsset={existingAsset.Guid}]");
+                            try {
+                                System.IO.File.Delete(filePath);
+                            } catch (Exception ex) {
+                                _Logger.LogError(ex, $"failed to delete existing media asset (post already exists) [filePath={filePath}]");
+                            }
+                            return ApiOk(existingAsset);
                         }
 
-                        // extension includes the '.' already
-                        string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, md5Str + extension);
-                        asset.FileLocation = filePath;
+                        asset.Guid = assetID;
+                        asset.FileExtension = extension;
+                        asset.MD5 = md5Str;
+                        asset.FileName = WebUtility.HtmlEncode(originalName);
+                        asset.Timestamp = DateTime.UtcNow;
+                        asset.Status = MediaAssetStatus.PROCESSING;
 
-                        if (System.IO.File.Exists(filePath)) {
-                            _Logger.LogInformation($"file {filePath} for {originalName} already exists");
-                        } else {
-                            using var targetFile = System.IO.File.Create(filePath);
-                            await targetFile.WriteAsync(file);
+                        string moveInputPath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.Guid + "." + asset.FileExtension);
+                        string moveOutputPath = Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
+                        _Logger.LogInformation($"moving uploaded file to work directory [input={moveInputPath}] [output={moveOutputPath}");
+                        System.IO.File.Move(moveInputPath, moveOutputPath);
 
-                            _Logger.LogInformation($"wrote {targetFile.Position} bytes to {filePath}");
-                            asset.FileSizeBytes = targetFile.Position;
-                            asset.Timestamp = DateTime.UtcNow;
-                            asset.ID = await _MediaAssetDb.Insert(asset);
+                        await _MediaAssetRepository.Upsert(asset);
+
+                        UploadSteps steps = new(asset, _StorageOptions.Value);
+
+                        if (asset.FileExtension == "mkv") {
+                            steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
                         }
-                    } else {
-                        _Logger.LogError($"not a file content disposition");
+
+                        steps.AddFinalMoveStep();
+
+                        _Logger.LogDebug($"all done! [steps.Count={steps.Steps.Count}]");
+
+                        new Thread(async () => {
+                            try {
+                                CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
+
+                                _Logger.LogInformation($"starting to process {asset.Guid} in a background thread");
+                                await _UploadStepsHandler.Run(steps, cts.Token);
+                            } catch (Exception ex) {
+                                _Logger.LogError(ex, "failed in thread to run upload steps");
+                            }
+                        }).Start();
+                    }
+
+                    part = await reader.ReadNextSectionAsync();
+
+                    if (part != null) {
+                        _Logger.LogInformation($"expected part to be null here?");
                     }
                 }
 
-                part = await reader.ReadNextSectionAsync();
+                return ApiOk(asset);
+            }).TimeoutWithThrow(TimeSpan.FromSeconds(60));
 
-                if (part != null) {
-                    _Logger.LogInformation($"expected part to be null here?");
-                }
-            }
-
-            return ApiOk(asset);
+            return r;
         }
 
         public static bool HasFileContentDisposition(ContentDispositionHeaderValue contentDisposition) {

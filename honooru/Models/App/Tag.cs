@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace honooru.Models.App {
 
@@ -24,7 +25,6 @@ namespace honooru.Models.App {
                     (c == '(' || c == ')')
                     || (c >= 'a' && c <= 'z')
                     || (c >= '0' && c <= '9')
-                    || (c >= 'A' && c <= 'Z')
                     || c == '_'
                     || c == '\''
                     || c == '.'

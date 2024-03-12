@@ -37,5 +37,18 @@ namespace honooru.Controllers {
             return View();
         }
 
+
+        public IActionResult Posts() {
+            return View();
+        }
+
+        public IActionResult Upload() {
+            return View();
+        }
+
+        public IActionResult Post() {
+            return View();
+        }
+
     }
 }

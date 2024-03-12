@@ -30,7 +30,7 @@ namespace honooru.Services.Db.Readers {
 
             post.FileName = reader.GetString("file_name");
             post.Source = reader.GetString("source");
-            post.FileLocation = reader.GetString("file_location");
+            post.FileExtension = reader.GetString("file_extension");
             post.FileSizeBytes = reader.GetInt64("file_size_bytes");
 
             return post;

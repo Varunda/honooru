@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace honooru.Models.Search {
 
@@ -20,7 +21,8 @@ namespace honooru.Models.Search {
             }
         }
 
-        public Node? Parent { get; }
+        [JsonIgnore]
+        public Node? Parent { get; set;  }
 
         public NodeType Type { get; set; }
 
@@ -47,7 +49,11 @@ namespace honooru.Models.Search {
 
                 return _Depth.Value;
             }
-        } 
+        }
+
+        public override string ToString() {
+            return $"<{nameof(Node)} [{nameof(Type)}={Type}] [Token={Token}] [Children.count={Children.Count}] [has parent={Parent != null}]>";
+        }
 
     }
 
@@ -59,7 +65,7 @@ namespace honooru.Models.Search {
 
         OR,
 
-        NOT_TAG,
+        NOT,
 
         META,
 

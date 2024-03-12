@@ -127,10 +127,12 @@ export default class ApiWrapper<T> {
         }
 	}
 
-	public async postReplyForm<U>(url: string, body: any, reader: ApiReader<U>): Promise<Loading<U>> {
+	public async postReplyForm<U>(url: string, body: any, reader: ApiReader<U>, extraConfig?: axios.AxiosRequestConfig): Promise<Loading<U>> {
 		try {
 			const response: axios.AxiosResponse<any> = await axios.default.post(url, body, {
-				validateStatus: () => true
+				validateStatus: () => true,
+				maxRedirects: 0,
+				...extraConfig
 			});
 
             if (response.status == 204) {

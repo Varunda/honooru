@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using honooru.Models.Queues;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace honooru.Services.Queues {
 
@@ -10,7 +11,9 @@ namespace honooru.Services.Queues {
         /// <param name="services">Extension instance</param>
         public static void AddAppQueueServices(this IServiceCollection services) {
             services.AddSingleton<DiscordMessageQueue>();
-            services.AddSingleton<ExampleQueue>();
+
+            services.AddSingleton<BaseQueue<ThumbnailCreationQueueEntry>, ThumbnailCreationQueue>();
+            services.AddSingleton<BaseQueue<MediaAssetReencodeQueueEntry>, MediaAssetReencodeQueue>();
         }
 
     }

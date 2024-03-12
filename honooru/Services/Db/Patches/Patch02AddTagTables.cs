@@ -23,7 +23,7 @@ namespace honooru.Services.Db.Patches {
                     md5 varchar NOT NULL,
                     rating smallint NOT NULL,
                     file_name varchar NOT NULL,
-                    file_location varchar NOT NULL,
+                    file_extension varchar NOT NULL,
                     source varchar NOT NULL,
                     file_size_bytes bigint NOT NULL
                 );
@@ -85,10 +85,11 @@ namespace honooru.Services.Db.Patches {
                 ON CONFLICT (id) DO NOTHING;
 
                 CREATE TABLE IF NOT EXISTS media_asset (
-                    id bigint NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1),
+                    id UUID NOT NULL PRIMARY KEY,
                     md5 varchar NOT NULL,
+                    status int NOT NULL,
                     file_name varchar NOT NULL,
-                    file_location varchar NOT NULL,
+                    file_extension varchar NOT NULL,
                     timestamp timestamptz NOT NULL,
                     file_size_bytes bigint NOT NULL,
 
@@ -96,6 +97,13 @@ namespace honooru.Services.Db.Patches {
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_media_asset_md5 ON media_asset(md5);
+
+                CREATE TABLE IF NOT EXISTS tag_info (
+                    id bigint NOT NULL PRIMARY KEY,
+                    uses bigint NOT NULL,
+                    description varchar NULL
+                );
+
             ");
 
         }

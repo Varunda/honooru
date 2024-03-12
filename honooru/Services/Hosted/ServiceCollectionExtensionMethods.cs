@@ -1,4 +1,5 @@
-﻿using honooru.Services.Hosted.Startup;
+﻿using honooru.Services.Hosted.QueueProcessor;
+using honooru.Services.Hosted.Startup;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace honooru.Services.Hosted {
@@ -11,6 +12,11 @@ namespace honooru.Services.Hosted {
 
         public static void AddAppHostedServices(this IServiceCollection services) {
             services.AddSingleton<ExampleBackgroundService>();
+        }
+
+        public static void AddAppQueueProcessorServices(this IServiceCollection services) {
+            services.AddHostedService<ThumbnailCreationQueueProcessor>();
+            services.AddHostedService<MediaAssetReencodeQueueProcessor>();
         }
 
     }

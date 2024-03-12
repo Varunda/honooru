@@ -3,6 +3,7 @@ using honooru.Models.App;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,34 @@ namespace honooru.Services.Db {
             _Reader = reader;
         }
 
+        /// <summary>
+        ///     get all <see cref="Tag"/>s in the DB
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<Tag>> GetAll(CancellationToken cancel) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM tag;
+            ");
+
+            await cmd.PrepareAsync(cancel);
+
+            List<Tag> tags = await _Reader.ReadList(cmd, cancel);
+            await conn.CloseAsync();
+
+            return tags;
+        }
+
+        public Task<List<Tag>> GetAll() {
+            return GetAll(CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     get a single <see cref="Tag"/> by its <see cref="Tag.ID"/>
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <returns></returns>
         public async Task<Tag?> GetByID(ulong ID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -40,6 +69,11 @@ namespace honooru.Services.Db {
             return tag;
         }
 
+        /// <summary>
+        ///     get a <see cref="Tag"/> by its <see cref="Tag.Name"/>, which is unique
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public async Task<Tag?> GetByName(string name) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -58,6 +92,12 @@ namespace honooru.Services.Db {
             return tag;
         }
 
+        /// <summary>
+        ///     Insert a new <see cref="Tag"/>
+        /// </summary>
+        /// <param name="tag"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public async Task<ulong> Insert(Tag tag) {
             if (Tag.Validate(tag.Name) == false) {
                 throw new ArgumentException($"not upserting tag with invalid name '{tag.Name}'");
@@ -84,6 +124,12 @@ namespace honooru.Services.Db {
             return id;
         }
 
+        /// <summary>
+        ///     update an existing <see cref="Tag"/>
+        /// </summary>
+        /// <param name="tag"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public async Task<Tag> Update(Tag tag) {
             if (Tag.Validate(tag.Name) == false) {
                 throw new ArgumentException($"not upserting tag with invalid name '{tag.Name}'");
