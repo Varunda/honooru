@@ -1,7 +1,9 @@
 ﻿using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
+using honooru.Models.Queues;
 using honooru.Services.Db;
+using honooru.Services.Queues;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -22,15 +24,18 @@ namespace honooru.Controllers.Api {
         private readonly TagTypeRepository _TagTypeRepository;
         private readonly TagInfoRepository _TagInfoRepository;
 
+        private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
+
         public TagApiController(ILogger<TagApiController> logger,
             TagRepository tagRepository, TagTypeRepository tagTypeRepository,
-            TagInfoRepository tagInfoRepository) {
+            TagInfoRepository tagInfoRepository, BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue) {
 
             _Logger = logger;
 
             _TagRepository = tagRepository;
             _TagTypeRepository = tagTypeRepository;
             _TagInfoRepository = tagInfoRepository;
+            _TagInfoUpdateQueue = tagInfoUpdateQueue;
         }
 
         [HttpGet("{tagID}")]
@@ -41,6 +46,30 @@ namespace honooru.Controllers.Api {
             }
 
             return ApiOk(tag);
+        }
+
+        [HttpGet("{tagID}/extended")]
+        public async Task<ApiResponse<ExtendedTag>> GetExtenedByID(ulong tagID) {
+            Tag? tag = await _TagRepository.GetByID(tagID);
+            if (tag == null) {
+                return ApiNoContent<ExtendedTag>();
+            }
+
+            TagInfo? info = await _TagInfoRepository.GetByID(tagID);
+            TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
+
+            ExtendedTag et = new();
+            et.ID = tag.ID;
+            et.Name = tag.Name;
+            et.TypeID = tag.TypeID;
+
+            et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
+            et.HexColor = type?.HexColor ?? "000000";
+
+            et.Uses = info?.Uses ?? 0;
+            et.Description = info?.Description;
+
+            return ApiOk(et);
         }
 
         /// <summary>
@@ -172,6 +201,60 @@ namespace honooru.Controllers.Api {
             newTag.ID = await _TagRepository.Insert(newTag);
 
             return ApiOk(newTag);
+        }
+
+        [HttpPost("{tagID}")]
+        public async Task<ApiResponse<Tag>> Update(ulong tagID, [FromBody] ExtendedTag tag) {
+            Tag? etag = await _TagRepository.GetByID(tagID);
+            if (etag == null) {
+                return ApiNotFound<Tag>($"{nameof(Tag)} {tagID}");
+            }
+
+            tag.Name = tag.Name.ToLower().Trim();
+
+            TagNameValidationResult nameValidation = _TagRepository.ValidateTagName(tag.Name);
+            if (nameValidation.Valid == false) {
+                return ApiBadRequest<Tag>($"name validation failed: {nameValidation.Reason}");
+            }
+
+            Tag? existingTagByName = await _TagRepository.GetByName(tag.Name);
+            if (existingTagByName != null && existingTagByName.ID != tag.ID) {
+                return ApiBadRequest<Tag>($"cannot update {tagID}: tag with name of {tag.Name} already exists ({existingTagByName.ID})");
+            }
+
+            TagType? tagType = await _TagTypeRepository.GetByID(tag.TypeID);
+            if (tagType == null) {
+                return ApiBadRequest<Tag>($"cannot update {tagID}: no {nameof(TagType)} with ID of {tag.TypeID} exists");
+            }
+
+            if (etag.Name != tag.Name || etag.TypeID != tag.TypeID) {
+                etag.Name = tag.Name;
+                etag.TypeID = tag.TypeID;
+                await _TagRepository.Update(etag);
+            }
+
+            TagInfo tagInfo = await _TagInfoRepository.GetOrCreateByID(tagID);
+            if (tagInfo.Description != tag.Description) {
+                tagInfo.Description = tag.Description;
+                await _TagInfoRepository.Upsert(tagInfo);
+            }
+
+            return ApiOk(etag);
+        }
+
+        [HttpPost("{tagID}/recount")]
+        public async Task<ApiResponse> RecountTagUsage(ulong tagID) {
+            Tag? tag = await _TagRepository.GetByID(tagID);
+            if (tag == null) {
+                return ApiNotFound($"{nameof(Tag)} {tagID}");
+            }
+
+            _Logger.LogInformation($"manually inserted tag for update [tagID={tagID}]");
+            _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
+                TagID = tagID
+            });
+
+            return ApiOk();
         }
 
     }

@@ -223,6 +223,12 @@ namespace honooru {
                 );
 
                 endpoints.MapControllerRoute(
+                    name: "tag",
+                    pattern: "/tag/{*.}",
+                    defaults: new { controller = "Home", action = "Tag" }
+                );
+
+                endpoints.MapControllerRoute(
                     name: "api",
                     pattern: "/api/{controller}/{action}"
                 );

@@ -45,7 +45,7 @@ export const MenuImage = Vue.extend({
         <li class="nav-item">
             <a class="nav-link dropdown-toggle h1 p-0" href="/" data-toggle="dropdown">
                 <img :src="'/img/logo' + this.ID + '.png'" style="height: 100%; width: 48px;" title="homepage" />
-                App
+                PLAP
             </a>
         </li>
     `,
@@ -60,6 +60,9 @@ export const MenuImage = Vue.extend({
 export const MenuHomepage = Vue.extend({
     template: `
         <li>
+            <a class="dropdown-item" href="/">Homepage</a>
+            <a class="dropdown-item" href="/posts">Posts</a>
+            <a class="dropdown-item" href="/upload">Upload</a>
             <a class="dropdown-item" href="/">Homepage</a>
         </li>
     `

@@ -37,7 +37,6 @@ namespace honooru.Controllers {
             return View();
         }
 
-
         public IActionResult Posts() {
             return View();
         }
@@ -47,6 +46,10 @@ namespace honooru.Controllers {
         }
 
         public IActionResult Post() {
+            return View();
+        }
+
+        public IActionResult Tag() {
             return View();
         }
 

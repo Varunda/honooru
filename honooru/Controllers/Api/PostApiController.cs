@@ -1,4 +1,5 @@
-﻿using honooru.Code.Constants;
+﻿using FFMpegCore;
+using honooru.Code.Constants;
 using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
@@ -11,6 +12,8 @@ using honooru.Services.Db;
 using honooru.Services.Parsing;
 using honooru.Services.Queues;
 using honooru.Services.Repositories;
+using honooru.Services.Util;
+using ImageMagick;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -40,12 +43,14 @@ namespace honooru.Controllers.Api {
 
         private readonly AppCurrentAccount _CurrentAccount;
         private readonly PostDb _PostDb;
-        private readonly MediaAssetDb _MediaAssetDb;
+        private readonly MediaAssetRepository _MediaAssetRepository;
         private readonly TagRepository _TagRepository;
         private readonly TagTypeDb _TagTypeDb;
         private readonly PostTagDb _PostTagDb;
+        private readonly FileExtensionService _FileExtensionHelper;
 
         private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailCreationQueue;
+        private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
 
         private readonly SearchQueryRepository _SearchQueryRepository;
         private readonly SearchQueryParser _SearchQueryParser;
@@ -53,10 +58,11 @@ namespace honooru.Controllers.Api {
         public PostApiController(ILogger<PostApiController> logger,
             IOptions<StorageOptions> storageOptions,
             PostDb postDb, AppCurrentAccount currentAccount,
-            MediaAssetDb mediaAssetDb, TagDb tagDb,
+            MediaAssetRepository mediaAssetDb, TagDb tagDb,
             TagTypeDb tagTypeDb, PostTagDb postTagDb,
             SearchQueryRepository searchQueryRepository, SearchQueryParser searchQueryParser,
-            BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository) {
+            BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository,
+            BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue, FileExtensionService fileExtensionHelper) {
 
             _Logger = logger;
 
@@ -64,7 +70,7 @@ namespace honooru.Controllers.Api {
 
             _PostDb = postDb;
             _CurrentAccount = currentAccount;
-            _MediaAssetDb = mediaAssetDb;
+            _MediaAssetRepository = mediaAssetDb;
             _TagTypeDb = tagTypeDb;
             _PostTagDb = postTagDb;
             _TagRepository = tagRepository;
@@ -72,6 +78,8 @@ namespace honooru.Controllers.Api {
             _SearchQueryRepository = searchQueryRepository;
             _SearchQueryParser = searchQueryParser;
             _ThumbnailCreationQueue = thumbnailCreationQueue;
+            _TagInfoUpdateQueue = tagInfoUpdateQueue;
+            _FileExtensionHelper = fileExtensionHelper;
         }
 
         /// <summary>
@@ -142,7 +150,7 @@ namespace honooru.Controllers.Api {
             [FromQuery] string rating,
             [FromQuery] string? title = null,
             [FromQuery] string? description = null,
-            [FromQuery] string source = ""
+            [FromQuery] string? source = ""
             ) {
 
             Post post = new();
@@ -150,7 +158,7 @@ namespace honooru.Controllers.Api {
             post.Timestamp = DateTime.UtcNow;
             post.Title = title;
             post.Description = description;
-            post.Source = source;
+            post.Source = source ?? ""; 
 
             if (string.IsNullOrEmpty(source)) {
                 tags += " missing_source";
@@ -166,7 +174,7 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<Post>($"invalid rating '{rating}'");
             }
 
-            MediaAsset? asset = await _MediaAssetDb.GetByID(assetID);
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(assetID);
             if (asset == null) {
                 return ApiNotFound<Post>($"{nameof(MediaAsset)} {assetID}");
             }
@@ -180,18 +188,63 @@ namespace honooru.Controllers.Api {
             post.FileExtension = asset.FileExtension;
             post.FileSizeBytes = asset.FileSizeBytes;
 
+            try {
+                string? fileType = _FileExtensionHelper.GetFileType(post.FileExtension);
+                string p = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension);
+
+                string newTags = "";
+
+                if (fileType == "image") {
+                    _Logger.LogDebug($"analyze upload as an image [path={p}]");
+                    using FileStream imageFile = System.IO.File.Open(p, FileMode.Open);
+
+                    MagickImage mImage = new(imageFile);
+                    int height = mImage.BaseHeight;
+                    int width = mImage.BaseWidth;
+
+                    if (height >= 10_000 || width >= 10_000) { newTags += " incredibly_absurdres"; }
+                    if (height >= 3200 || width >= 3200) { newTags += " absurdres";  }
+                    if (height >= 1600 || width >= 1600) { newTags += " highres"; }
+                    if (height <= 500 && width <= 500) { newTags += " lowres"; }
+                    if (width >= 1024 && (width * 4 > height)) { newTags += " wide_image"; }
+                    if (height >= 1024 && (height * 4 > width)) { newTags += " tall_image"; }
+
+                } else if (fileType == "video") {
+                    _Logger.LogDebug($"analyzing upload as a video [path={p}]");
+                    tags += " video animated";
+
+                    IMediaAnalysis analysis = await FFProbe.AnalyseAsync(p);
+                    if (analysis.PrimaryAudioStream != null) { newTags += " sound"; }
+                    if (analysis.Duration >= TimeSpan.FromMinutes(10)) { newTags += " long_video"; }
+
+                } else {
+                    _Logger.LogWarning($"unchecked filetype when automatically adding tags [FileExtension={post.FileExtension}] [fileType={fileType}]");
+                }
+
+                if (newTags.Length > 0) {
+                    tags += newTags;
+                    _Logger.LogInformation($"adding automatic tags to post [newTags={newTags}]");
+                }
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"failed to auto generated tags for post [MD5={post.MD5}] [FileExtension={post.FileExtension}]");
+            }
+
             // tag parsing!
-            List<string> tag = tags.ToLower().Split(" ").ToList();
+            List<string> tag = tags.ToLower().Trim().Split(" ").ToList();
+            _Logger.LogDebug($"tags found [tags=[{string.Join(" ", tag)}]]");
             HashSet<ulong> tagIds = new(); // list of tag IDs to insert
             foreach (string t in tag) {
-                string iter = t.ToLower();
+                string iter = t.ToLower().Trim();
+                if (iter.Length == 0) {
+                    continue;
+                }
+
                 string tagType = "General";
 
                 // for inputs like art:varunda_(artist), create the tag as a certain type
                 int colonCount = t.Count(iter => iter == ':');
                 if (colonCount == 1) {
                     string[] parts = t.Split(":");
-
                     if (parts.Length != 2) {
                         throw new Exception($"failed to split {t} into two parts from ':'");
                     }
@@ -251,9 +304,11 @@ namespace honooru.Controllers.Api {
             post.ID = await _PostDb.Insert(post);
 
             ThumbnailCreationQueueEntry entry = new() {
-                FileName = post.MD5 + post.FileExtension
+                MD5 = post.MD5,
+                FileExtension = post.FileExtension
             };
             _ThumbnailCreationQueue.Queue(entry);
+
 
             _Logger.LogDebug($"inserting tags for new post [postID={post.ID}] [tag count={tagIds.Count}]");
             foreach (ulong tagID in tagIds) {
@@ -261,9 +316,31 @@ namespace honooru.Controllers.Api {
                 postTag.PostID = post.ID;
                 postTag.TagID = tagID;
                 await _PostTagDb.Insert(postTag);
+                _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
+                    TagID = tagID
+                });
             }
 
+            await _MediaAssetRepository.Delete(assetID);
+
             return ApiOk(post);
+        }
+
+        [HttpPost("{postID}/remake-thumbnail")]
+        public async Task<ApiResponse> RemakeThumbnail(ulong postID) {
+            Post? post = await _PostDb.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            ThumbnailCreationQueueEntry entry = new() {
+                MD5 = post.MD5,
+                FileExtension = post.FileExtension,
+                RecreateIfNeeded = true
+            };
+            _ThumbnailCreationQueue.Queue(entry);
+
+            return ApiOk();
         }
 
     }

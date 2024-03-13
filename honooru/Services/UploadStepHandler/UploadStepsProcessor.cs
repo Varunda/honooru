@@ -25,17 +25,21 @@ namespace honooru.Services.UploadStepHandler {
         private readonly IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> _UploadHub;
 
         private readonly MediaAssetRepository _MediaAssetRepository;
+        private readonly UploadStepProgressRepository _UploadProgressRepository;
 
-        private Dictionary<Guid, UploadStepEntry> _Progress = new();
+        //private Dictionary<Guid, UploadStepEntry> _Progress = new();
 
         public UploadStepsProcessor(ILogger<UploadStepsProcessor> logger,
             IServiceProvider services, MediaAssetRepository mediaAssetRepository,
-            IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> uploadHub) {
+            IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> uploadHub,
+            UploadStepProgressRepository uploadProgressRepository) {
 
             _Logger = logger;
+
             _Services = services;
             _MediaAssetRepository = mediaAssetRepository;
             _UploadHub = uploadHub;
+            _UploadProgressRepository = uploadProgressRepository;
         }
 
         public async Task Run(UploadSteps steps, CancellationToken cancel) {
@@ -44,6 +48,11 @@ namespace honooru.Services.UploadStepHandler {
             _Logger.LogInformation($"processing upload steps [Guid={steps.Asset.Guid}] [steps.Count={steps.Steps.Count}]");
 
             UploadStepEntry entry = new();
+            entry.MediaAssetID = steps.Asset.Guid;
+            _UploadProgressRepository.Add(entry);
+
+            steps.Asset.Status = MediaAssetStatus.PROCESSING;
+            await _MediaAssetRepository.Upsert(steps.Asset);
 
             IMediaAssetUploadHub group = _UploadHub.Clients.Group($"MediaAsset.Upload.{steps.Asset.Guid}");
             int order = 0;
@@ -126,6 +135,7 @@ namespace honooru.Services.UploadStepHandler {
             await _MediaAssetRepository.Upsert(asset);
 
             await group.Finish(asset);
+            _UploadProgressRepository.Remove(entry.MediaAssetID);
         }
 
     }

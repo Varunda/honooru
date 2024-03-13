@@ -28,11 +28,11 @@ namespace honooru.Services.Hosted.QueueProcessor {
         }
 
         protected override async Task<bool> _ProcessQueueEntry(ThumbnailCreationQueueEntry entry, CancellationToken cancel) {
-            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", entry.FileName);
-            _Logger.LogInformation($"processing thumbnail creation [entry.FileName={entry.FileName}] [path={path}]");
+            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", entry.MD5 + "." + entry.FileExtension);
+            _Logger.LogInformation($"processing thumbnail creation [entry.MD5={entry.MD5}] [entry.FileExtension={entry.FileExtension}] [path={path}]");
 
             if (File.Exists(path) == false) {
-                _Logger.LogError($"failed to find file to create a thumbnail of [entry.FileName={entry.FileName}] [path={path}]");
+                _Logger.LogError($"failed to find file to create a thumbnail of [entry.MD5={entry.MD5}] [entry.FileExtension={entry.FileExtension}] [path={path}]");
                 return false;
             }
 
@@ -69,7 +69,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
                 throw new System.Exception($"unhandled file type: '{fileType}'");
             }
 
-            _Logger.LogInformation($"successfully created thumbnail [entry.FileName={entry.FileName}] [thumbnailPath={thumbnailPath}]");
+            _Logger.LogInformation($"successfully created thumbnail [path={path}] [thumbnailPath={thumbnailPath}]");
 
             return true;
         }

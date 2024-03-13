@@ -42,11 +42,6 @@ namespace honooru.Services.Repositories {
                 _Cache.Set(CACHE_KEY_ALL_LIST, tags, new MemoryCacheEntryOptions() {
                     SlidingExpiration = TimeSpan.FromMinutes(30)
                 });
-
-                Dictionary<ulong, Tag> dict = tags.ToDictionary(iter => iter.ID);
-                _Cache.Set(CACHE_KEY_ALL_DICT, dict, new MemoryCacheEntryOptions() {
-                    SlidingExpiration = TimeSpan.FromMinutes(30)
-                });
             }
 
             return tags;
@@ -63,11 +58,12 @@ namespace honooru.Services.Repositories {
         /// <exception cref="Exception"></exception>
         private async Task<Dictionary<ulong, Tag>> _GetDictionary() {
             if (_Cache.TryGetValue(CACHE_KEY_ALL_DICT, out Dictionary<ulong, Tag> dict) == false) {
-                await GetAll();
-            }
+                List<Tag> tags = await GetAll();
 
-            if (_Cache.TryGetValue(CACHE_KEY_ALL_DICT, out dict) == false) {
-                throw new Exception($"calling {nameof(GetAll)} did NOT cache the dictionary");
+                dict = tags.ToDictionary(iter => iter.ID);
+                _Cache.Set(CACHE_KEY_ALL_DICT, dict, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(30)
+                });
             }
 
             return dict;

@@ -2,6 +2,8 @@
 using honooru.Services.Db;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -18,6 +20,14 @@ namespace honooru.Services.Repositories {
             _MediaAssetDb = mediaAssetDb;
         }
 
+        public Task<List<MediaAsset>> GetAll() {
+            return _MediaAssetDb.GetAll();
+        }
+
+        public async Task<List<MediaAsset>> GetByStatus(MediaAssetStatus status) {
+            return (await GetAll()).Where(iter => iter.Status == status).ToList();
+        }
+
         public Task<MediaAsset?> GetByID(Guid assetID) {
             return _MediaAssetDb.GetByID(assetID);
         }
@@ -28,6 +38,10 @@ namespace honooru.Services.Repositories {
 
         public Task Upsert(MediaAsset asset) {
             return _MediaAssetDb.Upsert(asset);
+        }
+
+        public Task Delete(Guid assetID) {
+            return _MediaAssetDb.Delete(assetID);
         }
 
     }

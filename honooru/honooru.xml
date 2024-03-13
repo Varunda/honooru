@@ -866,6 +866,46 @@
                 The max time to process recent items in milliseconds
             </summary>
         </member>
+        <member name="T:honooru.Models.Api.UploadStepProgress">
+            <summary>
+                represents the state of a single <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/>
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepProgress.Name">
+            <summary>
+                name of the <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/>
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepProgress.Order">
+            <summary>
+                in what order this <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/> will be performed
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepProgress.Percent">
+            <summary>
+                what percent of this step is completed
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepProgress.Finished">
+            <summary>
+                if this step is done or not
+            </summary>
+        </member>
+        <member name="T:honooru.Models.Api.UploadStepEntry">
+            <summary>
+                represents the progress of a single <see cref="T:honooru.Models.App.MediaUploadStep.UploadSteps"/>
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepEntry.Current">
+            <summary>
+                what step is currently being processed
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Api.UploadStepEntry.Progress">
+            <summary>
+                the progress on each step
+            </summary>
+        </member>
         <member name="P:honooru.Models.App.MediaAsset.Guid">
             <summary>
                 temp guid the file is saved under
@@ -902,13 +942,33 @@
                 using a <see cref="T:System.Int64"/> gives us files over 4GB (which is what an int would limit us to)
             </summary>
         </member>
+        <member name="F:honooru.Models.App.MediaAssetStatus.DEFAULT">
+            <summary>
+                this media asset is in the default state and has not been processed yet
+            </summary>
+        </member>
+        <member name="F:honooru.Models.App.MediaAssetStatus.QUEUED">
+            <summary>
+                this media asset has been queued for processing
+            </summary>
+        </member>
+        <member name="F:honooru.Models.App.MediaAssetStatus.PROCESSING">
+            <summary>
+                this media asset is currently being processed
+            </summary>
+        </member>
+        <member name="F:honooru.Models.App.MediaAssetStatus.DONE">
+            <summary>
+                this media asset is done and ready for tagging to become a post
+            </summary>
+        </member>
         <member name="M:honooru.Models.App.MediaUploadStep.IUploadStepWorker`2.Run(`0,System.Action{System.Decimal},System.Threading.CancellationToken)">
             <summary>
                 run the worker with the parameters needed
             </summary>
-            <param name="order"></param>
-            <param name="updateProgress"></param>
-            <param name="cancel"></param>
+            <param name="order">what <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/> to work on</param>
+            <param name="updateProgress">useful for long running tasks (such as reencoding), use this callback to update the progress of the step</param>
+            <param name="cancel">cancellation token</param>
             <returns></returns>
         </member>
         <member name="P:honooru.Models.App.Tag.ID">
@@ -1390,14 +1450,19 @@
                 timestamp
             </summary>
         </member>
-        <member name="T:honooru.Models.Queues.MediaAssetReencodeQueueEntry">
+        <member name="T:honooru.Models.Queues.TagInfoUpdateQueueEntry">
             <summary>
-                a queue entry for reencoding a <see cref="T:honooru.Models.App.MediaAsset"/> to a format that is more widely usable
+                entry to perform an update on a <see cref="T:honooru.Models.App.TagInfo"/>
             </summary>
         </member>
-        <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.FileName">
+        <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.MD5">
             <summary>
-                md5 hash plus the file extension
+                md5 hash 
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.FileExtension">
+            <summary>
+                file extension without a leading .
             </summary>
         </member>
         <member name="P:honooru.Models.Queues.ThumbnailCreationQueueEntry.RecreateIfNeeded">
@@ -1751,11 +1816,34 @@
                 A new <see cref="T:Npgsql.NpgsqlCommand"/> ready to be used
             </returns>
         </member>
+        <member name="M:honooru.Services.Db.MediaAssetDb.GetAll">
+            <summary>
+                get all <see cref="T:honooru.Models.App.MediaAsset"/>s
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Db.MediaAssetDb.GetByID(System.Guid)">
+            <summary>
+                get a single <see cref="T:honooru.Models.App.MediaAsset"/> by it's <see cref="P:honooru.Models.App.MediaAsset.Guid"/>
+            </summary>
+            <param name="guid">Guid of the <see cref="T:honooru.Models.App.MediaAsset"/> to get</param>
+            <returns>
+                the <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="guid"/>,
+                or <c>null</c> if it does not exist
+            </returns>
+        </member>
         <member name="M:honooru.Services.Db.MediaAssetDb.GetByMD5(System.String)">
             <summary>
                 get a <see cref="T:honooru.Models.App.MediaAsset"/> by <see cref="P:honooru.Models.App.MediaAsset.MD5"/>
             </summary>
             <param name="md5">md5 hash</param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Db.MediaAssetDb.Delete(System.Guid)">
+            <summary>
+                delete a <see cref="T:honooru.Models.App.MediaAsset"/> from the DB
+            </summary>
+            <param name="assetID"></param>
             <returns></returns>
         </member>
         <member name="M:honooru.Services.Db.PostDb.GetByID(System.UInt64)">
@@ -1985,26 +2073,6 @@
                 the newly created node
             </returns>
         </member>
-        <member name="F:honooru.Services.Queues.BasePendingQueue`2._Items">
-            <summary>
-                queue of the items to be pulled out
-            </summary>
-        </member>
-        <member name="F:honooru.Services.Queues.BasePendingQueue`2._Signal">
-            <summary>
-                a signal for when an item is in the queue
-            </summary>
-        </member>
-        <member name="F:honooru.Services.Queues.BasePendingQueue`2._ProcessTime">
-            <summary>
-                how long it takes each item in the queue to be processed in some way
-            </summary>
-        </member>
-        <member name="F:honooru.Services.Queues.BasePendingQueue`2._ProcessedCount">
-            <summary>
-                how many items have been processed in this queue
-            </summary>
-        </member>
         <member name="F:honooru.Services.Queues.BasePendingQueue`2._Pending">
             <summary>
                 Set of pending entries to be updated
@@ -2044,38 +2112,6 @@
             <summary>
                 Queue a new entry into the queue
             </summary>
-        </member>
-        <member name="M:honooru.Services.Queues.BasePendingQueue`2.AddProcessTime(System.Int64)">
-            <summary>
-                Add some basic metrics about how long it took to process "something" in the queue
-            </summary>
-            <param name="ms">How many milliseconds it took to process something that came from this queue</param>
-        </member>
-        <member name="M:honooru.Services.Queues.BasePendingQueue`2.GetProcessTime">
-            <summary>
-                Get a copy of a list that contains how many milliseconds it took to process data in this queue
-            </summary>
-            <returns>
-                A newly allocated list whose elements represent how long it took to process data from this queue
-            </returns>
-        </member>
-        <member name="M:honooru.Services.Queues.BasePendingQueue`2.Count">
-            <summary>
-                Get how many entries are in the queue
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:honooru.Services.Queues.BasePendingQueue`2.Processed">
-            <summary>
-                Return how many items have been removed from this queue
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:honooru.Services.Queues.BasePendingQueue`2.ToList">
-            <summary>
-                Allocate a copy of the items in the list
-            </summary>
-            <returns>A newly allocated list that contains a shallow-reference to the items in the list</returns>
         </member>
         <member name="M:honooru.Services.Queues.BasePendingQueue`2.GetEntryID(`0)">
             <summary>

@@ -4,28 +4,14 @@
             <app-menu class="flex-grow-1">
                 <menu-dropdown></menu-dropdown>
             </app-menu>
-
-            <div>
-                <table class="table table-sm">
-                    <tr>
-                        <td>Socket status:</td>
-                        <td>{{socketState}}</td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            Last socket update:
-                            <info-hover text="When the last data was received from the server"></info-hover>
-                        </td>
-                        <td>
-                            {{lastUpdate | moment("YYYY-MM-DD hh:mm:ssA ZZ")}}
-                        </td>
-                    </tr>
-                </table>
-            </div>
         </div>
 
         <hr class="border" />
+
+        <div>
+            <h1>PLAP</h1>
+            <h3>Planetside 2 Lore Archive Project</h3>
+        </div>
 
     </div>
 </template>

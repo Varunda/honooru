@@ -9,6 +9,7 @@ using honooru.Models.Config;
 using honooru.Models.Db;
 using honooru.Services;
 using honooru.Services.Db;
+using honooru.Services.Queues;
 using honooru.Services.Repositories;
 using honooru.Services.UploadStepHandler;
 using honooru.Services.Util;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -42,14 +44,18 @@ namespace honooru.Controllers.Api {
         private readonly PostDb _PostDb;
         private readonly MediaAssetRepository _MediaAssetRepository;
         private readonly FileExtensionService _FileExtensionHelper;
+        private readonly BaseQueue<UploadSteps> _UploadStepsQueue;
         private readonly UploadStepsProcessor _UploadStepsHandler;
+
+        private readonly MoveUploadStep.Worker _MoveWorker;
 
         public MediaAssetApiController(ILogger<MediaAssetApiController> logger,
             IOptions<StorageOptions> storageOptions,
             PostDb postDb, AppCurrentAccount currentAccount,
             MediaAssetRepository mediaAssetRepository, FileExtensionService fileExtensionHelper,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> mediaAssetHub,
-            UploadStepsProcessor uploadStepsHandler) {
+            UploadStepsProcessor uploadStepsHandler, MoveUploadStep.Worker moveWorker,
+            BaseQueue<UploadSteps> uploadStepsQueue) {
 
             _Logger = logger;
 
@@ -62,6 +68,8 @@ namespace honooru.Controllers.Api {
             _MediaAssetRepository = mediaAssetRepository;
             _FileExtensionHelper = fileExtensionHelper;
             _UploadStepsHandler = uploadStepsHandler;
+            _MoveWorker = moveWorker;
+            _UploadStepsQueue = uploadStepsQueue;
         }
 
         /// <summary>
@@ -84,6 +92,21 @@ namespace honooru.Controllers.Api {
             }
 
             return ApiOk(asset);
+        }
+
+        [HttpGet("processing")]
+        public async Task<ApiResponse<List<MediaAsset>>> GetProcessing() {
+            List<MediaAsset> assets = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.PROCESSING);
+            List<MediaAsset> queued = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.QUEUED);
+
+            assets.AddRange(queued);
+            return ApiOk(assets);
+        }
+
+        [HttpGet("ready")]
+        public async Task<ApiResponse<List<MediaAsset>>> GetReady() {
+            List<MediaAsset> assets = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.DONE);
+            return ApiOk(assets);
         }
 
         /// <summary>
@@ -225,23 +248,24 @@ namespace honooru.Controllers.Api {
                         UploadSteps steps = new(asset, _StorageOptions.Value);
 
                         if (asset.FileExtension == "mkv") {
+                            _Logger.LogTrace($"asset is an mkv, adding a reencode step [asset.Guid={asset.Guid}]");
                             steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
                         }
 
                         steps.AddFinalMoveStep();
 
+                        if (steps.Steps.Count > 1) {
+                            asset.Status = MediaAssetStatus.QUEUED;
+                            await _MediaAssetRepository.Upsert(asset);
+
+                            _Logger.LogInformation($"queueing for processing [MediaAssetID={steps.Asset.Guid}]");
+                            _UploadStepsQueue.Queue(steps);
+                        } else {
+                            _Logger.LogInformation($"running final move step right away");
+                            await _UploadStepsHandler.Run(steps, CancellationToken.None);
+                        }
+
                         _Logger.LogDebug($"all done! [steps.Count={steps.Steps.Count}]");
-
-                        new Thread(async () => {
-                            try {
-                                CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
-
-                                _Logger.LogInformation($"starting to process {asset.Guid} in a background thread");
-                                await _UploadStepsHandler.Run(steps, cts.Token);
-                            } catch (Exception ex) {
-                                _Logger.LogError(ex, "failed in thread to run upload steps");
-                            }
-                        }).Start();
                     }
 
                     part = await reader.ReadNextSectionAsync();

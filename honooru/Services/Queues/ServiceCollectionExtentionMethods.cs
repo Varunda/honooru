@@ -1,4 +1,5 @@
-﻿using honooru.Models.Queues;
+﻿using honooru.Models.App.MediaUploadStep;
+using honooru.Models.Queues;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace honooru.Services.Queues {
@@ -13,7 +14,8 @@ namespace honooru.Services.Queues {
             services.AddSingleton<DiscordMessageQueue>();
 
             services.AddSingleton<BaseQueue<ThumbnailCreationQueueEntry>, ThumbnailCreationQueue>();
-            services.AddSingleton<BaseQueue<MediaAssetReencodeQueueEntry>, MediaAssetReencodeQueue>();
+            services.AddSingleton<BaseQueue<UploadSteps>, UploadStepsQueue>();
+            services.AddSingleton<BaseQueue<TagInfoUpdateQueueEntry>, TagInfoUpdateQueue>();
         }
 
     }

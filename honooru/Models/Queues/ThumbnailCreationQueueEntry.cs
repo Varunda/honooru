@@ -3,9 +3,14 @@
     public class ThumbnailCreationQueueEntry {
 
         /// <summary>
-        ///     md5 hash plus the file extension
+        ///     md5 hash 
         /// </summary>
-        public string FileName { get; set; } = "";
+        public string MD5 { get; set; } = "";
+
+        /// <summary>
+        ///     file extension without a leading .
+        /// </summary>
+        public string FileExtension { get; set; } = "";
 
         /// <summary>
         ///     will the thumbnail be deleted and recreated if needed?

@@ -1,13 +1,9 @@
 ﻿
 <template>
     <div>
-        <label>
-            Search
-        </label>
-
-        <div class="input-group">
+        <div v-if="type == 'input'" class="input-group">
             <input class="form-control pr-0" placeholder="search..." v-model="search" id="search-input"
-                @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst"
+                @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord"
             />
 
             <span class="input-group-append">
@@ -16,6 +12,10 @@
                 </button>
             </span>
         </div>
+
+        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control"
+                  @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" >
+        </textarea>
 
         <div>
             <div v-if="searchResults.state == 'loaded'" class="list-group list-group-sm">
@@ -43,7 +43,8 @@
 
     export const PostSearch = Vue.extend({
         props: {
-
+            type: { type: String, required: false, default: "input" },
+            value: { type: String, required: false }
         },
 
         data: function() {
@@ -62,6 +63,8 @@
         },
 
         mounted: function(): void {
+            this.search = this.value;
+
             this.$nextTick(() => {
                 this.searchInput = document.getElementById("search-input") as any;
                 if (this.searchInput == null || this.searchInput == undefined) {
@@ -73,6 +76,16 @@
         methods: {
             performSearch: function(): void {
                 this.$emit("do-search", this.search.trim());
+            },
+
+            emitCurrentWord: function(): void {
+                const w: string = this.getCurrentWord();
+                if (w.length > 0) {
+                    console.log(`emitting current word ${w}`);
+                    this.$emit("added-tag", this.getCurrentWord());
+                } else {
+                    console.log(`word length is 0, not emitting`);
+                }
             },
 
             keyUp: function(): void {
@@ -154,6 +167,8 @@
 
         watch: {
             search: function(): void {
+                this.$emit("input", this.search);
+
                 const cursorStart = (this.searchInput as any).selectionStart as number;
                 const cursorEnd = (this.searchInput as any).selectionEnd as number;
 
@@ -164,6 +179,8 @@
 
                 const s: string = this.search;
 
+                // if at the end of the input, or the next character is a space
+                // there would be space there if the user is editing a previously input tag
                 let doSearch: boolean = cursorEnd == s.length || s.at(cursorEnd + 1) == " ";
                 if (doSearch == false) {
                     return;

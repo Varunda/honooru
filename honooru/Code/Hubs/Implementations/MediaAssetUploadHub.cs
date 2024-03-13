@@ -5,15 +5,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using honooru.Services.Repositories;
+using honooru.Services.UploadStepHandler;
+using honooru.Models.Api;
 
 namespace honooru.Code.Hubs.Implementations {
 
     public class MediaAssetUploadHub : Hub<IMediaAssetUploadHub> {
 
         private readonly ILogger<MediaAssetUploadHub> _Logger;
+        private readonly UploadStepProgressRepository _UploadProgressRepository;
 
-        public MediaAssetUploadHub(ILogger<MediaAssetUploadHub> logger) {
+        public MediaAssetUploadHub(ILogger<MediaAssetUploadHub> logger, 
+            UploadStepProgressRepository uploadProgressRepository) {
+
             _Logger = logger;
+
+            _UploadProgressRepository = uploadProgressRepository;
         }
 
         public override async Task OnConnectedAsync() {
@@ -30,6 +37,11 @@ namespace honooru.Code.Hubs.Implementations {
             _Logger.LogInformation($"new subscriber to media asset [connID={connID}] [Guid={guid}] [groupName={groupName}]");
 
             await Groups.AddToGroupAsync(connID, groupName);
+
+            UploadStepEntry? entry = _UploadProgressRepository.GetByMediaAssetID(guid);
+            if (entry != null) {
+                await Clients.Caller.UpdateProgress(entry);
+            }
         }
 
     }

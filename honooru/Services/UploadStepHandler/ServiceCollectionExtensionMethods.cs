@@ -7,6 +7,7 @@ namespace honooru.Services.UploadStepHandler {
 
         public static void AddUploadStepHandlers(this IServiceCollection services) {
             services.AddSingleton<UploadStepsProcessor>();
+            services.AddSingleton<UploadStepProgressRepository>();
 
             services.AddScoped<ReencodeUploadStep.Worker>();
             services.AddScoped<MoveUploadStep.Worker>();

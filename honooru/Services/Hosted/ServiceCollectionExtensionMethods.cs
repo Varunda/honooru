@@ -12,11 +12,14 @@ namespace honooru.Services.Hosted {
 
         public static void AddAppHostedServices(this IServiceCollection services) {
             services.AddSingleton<ExampleBackgroundService>();
+
+            services.AddHostedService<HostedUploadStepProgressBroadcast>();
         }
 
         public static void AddAppQueueProcessorServices(this IServiceCollection services) {
             services.AddHostedService<ThumbnailCreationQueueProcessor>();
-            services.AddHostedService<MediaAssetReencodeQueueProcessor>();
+            services.AddHostedService<UploadStepsQueueProcessor>();
+            services.AddHostedService<TagInfoUpdateQueueProcessor>();
         }
 
     }

@@ -33,9 +33,9 @@ namespace honooru.Models.App.MediaUploadStep {
         /// <summary>
         ///     run the worker with the parameters needed
         /// </summary>
-        /// <param name="order"></param>
-        /// <param name="updateProgress"></param>
-        /// <param name="cancel"></param>
+        /// <param name="order">what <see cref="IUploadStep"/> to work on</param>
+        /// <param name="updateProgress">useful for long running tasks (such as reencoding), use this callback to update the progress of the step</param>
+        /// <param name="cancel">cancellation token</param>
         /// <returns></returns>
         Task Run(TOrder order, Action<decimal> updateProgress, CancellationToken cancel);
     

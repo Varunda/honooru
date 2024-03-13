@@ -41,4 +41,18 @@ namespace honooru.Services.Repositories {
         }
 
     }
+
+    public static class TagInfoRepositoryExtensionMethods {
+
+        public static async Task<TagInfo> GetOrCreateByID(this TagInfoRepository repo, ulong tagID) {
+            return (await repo.GetByID(tagID)) ?? new TagInfo() {
+                ID = tagID,
+                Uses = 0,
+                Description = null
+            };
+        }
+
+    }
+
+
 }

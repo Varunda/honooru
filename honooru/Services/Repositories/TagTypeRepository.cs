@@ -19,6 +19,10 @@ namespace honooru.Services.Repositories {
             _TagTypeDb = tagTypeDb;
         }
 
+        public Task<List<TagType>> GetAll() {
+            return _TagTypeDb.GetAll();
+        }
+
         public Task<TagType?> GetByID(ulong typeID) {
             return _TagTypeDb.GetByID(typeID);
         }

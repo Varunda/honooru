@@ -16,24 +16,11 @@
 
             <div style="display: grid; grid-template-columns: 300px 1fr; gap: 1rem;">
                 <div>
-                    <post-search @do-search="performSearch"></post-search>
+                    <post-search v-model="query" @do-search="performSearch"></post-search>
                 </div>
 
                 <div>
-                    <div v-if="posts.state == 'idle'"></div>
-
-                    <div v-else-if="posts.state == 'loading'">
-                        Loading...
-                    </div>
-
-                    <div v-else-if="posts.state == 'loaded'">
-                        <post-list :posts="posts.data.results"></post-list>
-
-                    </div>
-
-                    <div v-else-if="posts.state == 'error'">
-                        <api-error :error="posts.problem"></api-error>
-                    </div>
+                    <post-list :q="search"></post-list>
                 </div>
             </div>
         </div>
@@ -48,10 +35,7 @@
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import PostSearch from "components/app/PostSearch.vue";
-
-    import PostList from "./components/PostList.vue";
-
-    import { Post, SearchResults, PostApi } from "api/PostApi";
+    import PostList from "components/app/PostList.vue";
 
     export const Posts = Vue.extend({
         props: {
@@ -61,8 +45,7 @@
         data: function() {
             return {
                 query: "" as string,
-
-                posts: Loadable.idle() as Loading<SearchResults>,
+                search: "" as string,
             }
         },
 
@@ -73,26 +56,17 @@
             } else {
                 this.query = "sort:id_desc";
             }
-        },
-
-        mounted: function(): void {
-            this.search();
+            this.search = this.query;
         },
 
         methods: {
-            search: async function(): Promise<void> {
-                console.log(`searching [query=${this.query}]`);
-                this.posts = Loadable.loading();
-                this.posts = await PostApi.search(this.query);
-            },
-
             performSearch: function(query: string): void {
-                this.query = query;
-                this.search();
-
                 const url = new URL(location.href);
-                url.searchParams.set("q", this.query);
+                url.searchParams.set("q", query.trim());
                 history.pushState({ path: url.href }, "", `/posts?${url.searchParams.toString()}`);
+
+                this.search = query;
+                this.query = this.search;
             }
         },
 

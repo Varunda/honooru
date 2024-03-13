@@ -62,8 +62,29 @@ export class PostApi extends ApiWrapper<Post> {
         return PostApi.get().readSingle(`/api/post/${postID}`, PostApi.parse);
     }
 
-    public static async search(q: string): Promise<Loading<SearchResults>> {
-        return PostApi.get().readSingle(`/api/post/search?q=${encodeURI(q)}`, PostApi.parseSearchResults);
+    public static async search(q: string, limit: number = 100): Promise<Loading<SearchResults>> {
+        return PostApi.get().readSingle(`/api/post/search?q=${encodeURI(q)}&limit=${limit}`, PostApi.parseSearchResults);
+    }
+
+    public static async upload(mediaAssetID: string, tags: string, rating: string,
+        title: string | null, description: string | null, source: string): Promise<Loading<Post>> {
+
+        let url: string = `/api/post/${mediaAssetID}`;
+        url += `?tags=${encodeURI(tags)}`;
+        url += `&rating=${rating}`;
+        url += `&source=${encodeURI(source)}`;
+        if (title != null) {
+            url += `&title=${encodeURI(title)}`;
+        }
+        if (description != null) {
+            url += `&description=${encodeURI(description)}`;
+        }
+
+        return PostApi.get().postReply(url, PostApi.parse);
+    }
+
+    public static async remakeThumbnail(postID: number): Promise<Loading<void>> {
+        return PostApi.get().post(`/api/post/${postID}/remake-thumbnail`);
     }
 
 }

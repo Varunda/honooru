@@ -46,12 +46,24 @@ namespace honooru.Models.App {
 
     public enum MediaAssetStatus {
 
+        /// <summary>
+        ///     this media asset is in the default state and has not been processed yet
+        /// </summary>
         DEFAULT = 0,
 
-        UPLOADING = 1,
+        /// <summary>
+        ///     this media asset has been queued for processing
+        /// </summary>
+        QUEUED = 1,
 
+        /// <summary>
+        ///     this media asset is currently being processed
+        /// </summary>
         PROCESSING = 2,
 
+        /// <summary>
+        ///     this media asset is done and ready for tagging to become a post
+        /// </summary>
         DONE = 3
 
     }

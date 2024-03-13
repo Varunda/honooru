@@ -3,6 +3,7 @@ using honooru.Models.App;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,6 +24,33 @@ namespace honooru.Services.Db {
             _Reader = reader;
         }
 
+        /// <summary>
+        ///     get all <see cref="MediaAsset"/>s
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<MediaAsset>> GetAll() {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM media_asset;
+            ");
+
+            await cmd.PrepareAsync();
+
+            List<MediaAsset> assets = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return assets;
+        }
+
+        /// <summary>
+        ///     get a single <see cref="MediaAsset"/> by it's <see cref="MediaAsset.Guid"/>
+        /// </summary>
+        /// <param name="guid">Guid of the <see cref="MediaAsset"/> to get</param>
+        /// <returns>
+        ///     the <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="guid"/>,
+        ///     or <c>null</c> if it does not exist
+        /// </returns>
         public async Task<MediaAsset?> GetByID(Guid guid) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -91,6 +119,27 @@ namespace honooru.Services.Db {
             cmd.AddParameter("FileExtension", asset.FileExtension);
             cmd.AddParameter("Timestamp", asset.Timestamp);
             cmd.AddParameter("FileSizeBytes", asset.FileSizeBytes);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
+
+        /// <summary>
+        ///     delete a <see cref="MediaAsset"/> from the DB
+        /// </summary>
+        /// <param name="assetID"></param>
+        /// <returns></returns>
+        public async Task Delete(Guid assetID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE FROM
+                    media_asset
+                WHERE
+                    id = @AssetID;
+            ");
+
+            cmd.AddParameter("AssetID", assetID);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

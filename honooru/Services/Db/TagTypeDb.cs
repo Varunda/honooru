@@ -2,6 +2,7 @@
 using honooru.Models.App;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,21 @@ namespace honooru.Services.Db {
 
             _Reader = reader;
             _DbHelper = dbHelper;
+        }
+
+        public async Task<List<TagType>> GetAll() {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM tag_type;
+            ");
+
+            await cmd.PrepareAsync();
+
+            List<TagType> types = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return types;
         }
 
         public async Task<TagType?> GetByID(ulong ID) {

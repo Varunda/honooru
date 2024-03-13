@@ -39,6 +39,23 @@ namespace honooru.Services.Db {
             return tags;
         }
 
+        public async Task<List<PostTag>> GetByTagID(ulong tagID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM post_tag
+                    WHERE tag_id = @TagID;
+            ");
+
+            cmd.AddParameter("TagID", tagID);
+            await cmd.PrepareAsync();
+
+            List<PostTag> tags = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return tags;
+        }
+
         public async Task Insert(PostTag tag) {
             if (tag.TagID == 0) {
 
@@ -51,6 +68,24 @@ namespace honooru.Services.Db {
                 ) VALUES (
                     @PostID, @TagID
                 );
+            ");
+
+            cmd.AddParameter("PostID", tag.PostID);
+            cmd.AddParameter("TagID", tag.TagID);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
+
+        public async Task Delete(PostTag tag) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE FROM 
+                    post_tag
+                WHERE 
+                    post_id = @PostID
+                    AND tag_id = @TagID;
             ");
 
             cmd.AddParameter("PostID", tag.PostID);
