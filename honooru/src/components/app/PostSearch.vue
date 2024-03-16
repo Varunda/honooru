@@ -78,6 +78,12 @@
                 this.$emit("do-search", this.search.trim());
             },
 
+            focus: function(): void {
+                this.$nextTick(() => {
+                    this.searchInput.focus();
+                });
+            },
+
             emitCurrentWord: function(): void {
                 const w: string = this.getCurrentWord();
                 if (w.length > 0) {

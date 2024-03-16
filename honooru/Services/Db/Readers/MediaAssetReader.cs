@@ -12,7 +12,7 @@ namespace honooru.Services.Db.Readers {
             MediaAsset asset = new();
 
             asset.Guid = reader.GetGuid("id");
-            asset.MD5 = reader.GetNullableString("md5");
+            asset.MD5 = reader.GetString("md5");
 
             int statusID = reader.GetInt32("status");
             if (Enum.IsDefined((MediaAssetStatus) statusID)) {

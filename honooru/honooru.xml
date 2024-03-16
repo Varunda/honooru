@@ -117,7 +117,7 @@
             <summary>
                 example embed
             </summary>
-            <param name="worldID">ID of the world</param>
+            <param name="previousValue">ID of the world</param>
         </member>
         <member name="T:honooru.Code.DiscordInteractions.PermissionSlashCommand">
             <summary>
@@ -585,12 +585,11 @@
                 A list of all <see cref="T:honooru.Models.AppAccount"/>s
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.AppAccountApiController.CreateAccount(System.String,System.String,System.UInt64)">
+        <member name="M:honooru.Controllers.Api.AppAccountApiController.CreateAccount(System.String,System.UInt64)">
             <summary>
                 Create a new account
             </summary>
             <param name="name"></param>
-            <param name="email"></param>
             <param name="discordID"></param>
             <response code="200">
                 The <see cref="P:honooru.Models.AppAccount.ID"/> of the <see cref="T:honooru.Models.AppAccount"/> that was created using the parameters passed
@@ -599,9 +598,7 @@
                 One of the following validation errors occured:
                 <ul>
                     <li><paramref name="name"/> was empty or whitespace</li>
-                    <li><paramref name="email"/> was empty or whitespace</li>
                     <li><paramref name="discordID"/> was 0</li>
-                    <li><paramref name="email"/> is already in use</li>
                 </ul>
             </response>
         </member>
@@ -617,19 +614,19 @@
                 <paramref name="accountID"/> was 1, which is the system account, which is not allowed
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.AppAccountPermissionApiController.GetByAccountID(System.UInt64)">
+        <member name="M:honooru.Controllers.Api.AppGroupPermissionApiController.GetByGroupID(System.UInt64)">
             <summary>
                 Get the permissions an account has
             </summary>
-            <param name="accountID">ID of the account</param>
+            <param name="groupID">ID of the group</param>
             <response code="200">
                 The response will contain a list of permissions an account has
             </response>
             <response code="404">
-                No <see cref="T:honooru.Models.AppAccount"/> with <see cref="P:honooru.Models.AppAccount.ID"/> of <paramref name="accountID"/> exists
+                No <see cref="T:honooru.Models.AppAccount"/> with <see cref="P:honooru.Models.AppAccount.ID"/> of <paramref name="groupID"/> exists
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.AppAccountPermissionApiController.RemoveByID(System.Int64)">
+        <member name="M:honooru.Controllers.Api.AppGroupPermissionApiController.RemoveByID(System.Int64)">
             <summary>
                 Remove a permission from an account
             </summary>
@@ -643,11 +640,11 @@
                 of <paramref name="accPermID"/> exists
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.AppAccountPermissionApiController.AddPermission(System.UInt64,System.String)">
+        <member name="M:honooru.Controllers.Api.AppGroupPermissionApiController.AddPermission(System.UInt64,System.String)">
             <summary>
-                Insert a new permission for an account
+                Insert a new permission for a group
             </summary>
-            <param name="accountID">ID of the account to add the permission to</param>
+            <param name="groupID">ID of the group to add the permission to</param>
             <param name="permission">Permission to be added to the account</param>
             <response code="200">
                 The reponse will contain the ID of the <see cref="T:honooru.Models.AppGroupPermission"/> that was just created
@@ -659,7 +656,7 @@
             <response code="404">
                 One of the following objects count not be found:
                 <ul>
-                    <li><see cref="T:honooru.Models.AppAccount"/> with <see cref="P:honooru.Models.AppAccount.ID"/> of <paramref name="accountID"/></li>
+                    <li><see cref="T:honooru.Models.Internal.AppGroup"/> with <see cref="P:honooru.Models.Internal.AppGroup.ID"/> of <paramref name="groupID"/></li>
                     <li><see cref="T:honooru.Models.Internal.AppPermission"/> with <see cref="P:honooru.Models.Internal.AppPermission.ID"/> of <paramref name="permission"/></li>
                 </ul>
             </response>
@@ -749,10 +746,95 @@
             <summary>
                 search for posts
             </summary>
-            <param name="q"></param>
-            <param name="offset"></param>
-            <param name="limit"></param>
-            <returns></returns>
+            <param name="q">input search query</param>
+            <param name="offset">offset into the search</param>
+            <param name="limit">how many search results to return, max 500</param>
+            <response code="200">
+                the response will contain a <see cref="T:honooru.Models.Api.SearchResults"/> for the search performed
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.Create(System.Guid,System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+                create a new <see cref="T:honooru.Models.Db.Post"/> from a <see cref="T:honooru.Models.App.MediaAsset"/> that is ready to be used
+            </summary>
+            <remarks>
+                if any <see cref="T:honooru.Models.App.Tag"/>s from <paramref name="tags"/> do not exist, then they are created.
+                tags are space separated, and can contain a colon before the tag to change what <see cref="T:honooru.Models.App.TagType"/>
+                the tag has, for both inserting and updating.
+                <br/>
+                <br/>
+                examples:<br/>
+                    <code>
+            player:varunda base:indar_excavation_site montage youtube 
+                    </code>
+                    will create each tag if needed, and will set the type of 'varunda' to player,
+                    and the type of indar_excavation_site to base, if the type is already set.
+                    the types of montage and youtube will not be changed, or if the tags do not exist, 
+                    will be set to general
+            </remarks>
+            <param name="assetID">The <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of the <see cref="T:honooru.Models.App.MediaAsset"/> to use</param>
+            <param name="tags">a string containing all the <see cref="T:honooru.Models.App.Tag"/>s that will be added to this post</param>
+            <param name="rating">what the <see cref="P:honooru.Models.Db.Post.Rating"/> will be. valid values are: 'g', 'u' and 'e' (or any string that starts with those)</param>
+            <param name="title">optional <see cref="P:honooru.Models.Db.Post.Title"/></param>
+            <param name="description">optional <see cref="P:honooru.Models.Db.Post.Description"/></param>
+            <param name="source">where the <see cref="T:honooru.Models.Db.Post"/> comes from</param>
+            
+            <response code="200">
+                the response will contain the newly created <see cref="T:honooru.Models.Db.Post"/> using
+                the parameters passed
+            </response>
+            
+            <response code="400">
+                one of the following validation errors occured:
+                <ul>
+                    <li>
+                        an invalid <paramref name="rating"/> was passed.
+                        valid values are: 'g', 'u', and 'e' (or any string that starts with those letters)
+                    </li>
+                    <li>
+                        the <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/>
+                        was not fully processed (according to <see cref="P:honooru.Models.App.MediaAsset.Status"/>, which is was not <see cref="F:honooru.Models.App.MediaAssetStatus.DONE"/>)
+                    </li>
+                    <li>
+                        one of the space deliminated tags from <paramref name="tags"/> was invalid.
+                        a tag can be invalid if one of the following conditions is met:
+                        <ul>
+                            <li>the tag contained more than one ':' (which are used to change the <see cref="T:honooru.Models.App.TagType"/> of a tag)</li>
+                            <li>the tag contained invalid characters</li>
+                            <li>when creating a new tag, and a <see cref="T:honooru.Models.App.TagType"/> is specified by using a ':', the <see cref="T:honooru.Models.App.TagType"/> could not be found</li>
+                        </ul>
+                    </li>
+                </ul>
+            </response>
+            
+            <response code="404">
+                no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/> exists
+            </response>
+            
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.RemakeThumbnail(System.UInt64)">
+            <summary>
+                enter a <see cref="T:honooru.Models.Db.Post"/> into the thumbnail creation queue for a forced-remake
+            </summary>
+            <param name="postID">ID of the <see cref="T:honooru.Models.Db.Post"/> to update</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/>
+                successfully had it's thumbnail queued for recreation.
+                NOTE: this does NOT MEAN the thumbnail was recreated
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/> exists
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagAliasApiController.GetByTagID(System.UInt64)">
+            <summary>
+                get the <see cref="T:honooru.Models.App.TagAlias"/>es of a specific <see cref="T:honooru.Models.App.Tag"/>
+            </summary>
+            <param name="tagID">ID of the <see cref="T:honooru.Models.App.Tag"/> to get the aliases of</param>
+            <response code="200">
+                the response will contain a list of <see cref="T:honooru.Models.App.TagAlias"/> with <see cref="P:honooru.Models.App.TagAlias.TagID"/>
+                of <paramref name="tagID"/>
+            </response>
         </member>
         <member name="M:honooru.Controllers.Api.TagApiController.Search(System.String,System.Nullable{System.Int32},System.String,System.Nullable{System.Boolean})">
             <summary>
@@ -986,6 +1068,16 @@
                 ID of the <see cref="T:honooru.Models.App.TagType"/> this tag is for
             </summary>
         </member>
+        <member name="P:honooru.Models.App.TagAlias.Alias">
+            <summary>
+                unique alias that maps to another tag
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.TagAlias.TagID">
+            <summary>
+                id of the <see cref="T:honooru.Models.App.Tag"/> this alias is for
+            </summary>
+        </member>
         <member name="P:honooru.Models.App.TagNameValidationResult.Input">
             <summary>
                 input name for validation
@@ -1086,6 +1178,21 @@
                 how many bytes. not sure why c# has file size signed
             </summary>
         </member>
+        <member name="P:honooru.Models.Db.Post.DurationSeconds">
+            <summary>
+                how many seconds long this piece of media is. is set to 0 for images
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Height">
+            <summary>
+                height of the post
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.Width">
+            <summary>
+                width of the post
+            </summary>
+        </member>
         <member name="T:honooru.Models.Db.ExpEvent">
             <summary>
                 When a Discord user would like to get notifications about a session ending, they will have one of these
@@ -1116,39 +1223,19 @@
                 If Discord features are enabled or not
             </summary>
         </member>
-        <member name="P:honooru.Models.DiscordOptions.ChannelId">
-            <summary>
-                What channel Spark will send messages to
-            </summary>
-        </member>
-        <member name="P:honooru.Models.DiscordOptions.ReservationChannelId">
-            <summary>
-                What channel reservations will be posted to by users to be parsed by Spark
-            </summary>
-        </member>
-        <member name="P:honooru.Models.DiscordOptions.ParsedChannelId">
-            <summary>
-                What channel Spark will post parsed reservations to
-            </summary>
-        </member>
-        <member name="P:honooru.Models.DiscordOptions.GuildId">
-            <summary>
-                What Guild Spark is at "home" in
-            </summary>
-        </member>
-        <member name="P:honooru.Models.DiscordOptions.Key">
+        <member name="P:honooru.Models.DiscordOptions.ClientId">
             <summary>
                 Client key
+            </summary>
+        </member>
+        <member name="P:honooru.Models.DiscordOptions.ClientSecret">
+            <summary>
+                client secret
             </summary>
         </member>
         <member name="P:honooru.Models.DiscordOptions.RegisterGlobalCommands">
             <summary>
                 Will the global commands be registered globally? Or just in the test server
-            </summary>
-        </member>
-        <member name="P:honooru.Models.DiscordOptions.SessionEndSubscriptionDuration">
-            <summary>
-                How many seconds long a ps2 session must be in to qualify to be sent to the user
             </summary>
         </member>
         <member name="P:honooru.Models.InstanceOptions.Host">
@@ -1278,11 +1365,6 @@
         <member name="P:honooru.Models.AppAccount.Timestamp">
             <summary>
                 Timestamp of when the account was created
-            </summary>
-        </member>
-        <member name="P:honooru.Models.AppAccount.Email">
-            <summary>
-                Email of the account owner
             </summary>
         </member>
         <member name="P:honooru.Models.AppAccount.DiscordID">
@@ -1536,17 +1618,6 @@
                 A list of all <see cref="T:honooru.Models.AppAccount"/>s, including ones that are deactivated
             </returns>
         </member>
-        <member name="M:honooru.Services.Db.AppAccountDbStore.GetByEmail(System.String,System.Threading.CancellationToken)">
-            <summary>
-                Get a <see cref="T:honooru.Models.AppAccount"/> by <see cref="P:honooru.Models.AppAccount.Email"/>
-            </summary>
-            <param name="email">Email to get the account of</param>
-            <param name="cancel">Cancellation token</param>
-            <returns>
-                The <see cref="T:honooru.Models.AppAccount"/> with <see cref="P:honooru.Models.AppAccount.Email"/> of <paramref name="email"/>,
-                or <c>null</c> if it does not exist
-            </returns>
-        </member>
         <member name="M:honooru.Services.Db.AppAccountDbStore.GetByDiscordID(System.UInt64,System.Threading.CancellationToken)">
             <summary>
                 Get a <see cref="T:honooru.Models.AppAccount"/> by <see cref="P:honooru.Models.AppAccount.DiscordID"/>
@@ -1588,19 +1659,28 @@
                 
             </returns>
         </member>
-        <member name="M:honooru.Services.Db.AppAccountPermissionDbStore.GetByID(System.Int64)">
+        <member name="M:honooru.Services.Db.AppAccountGroupMembershipDbStore.GetByGroupID(System.UInt64)">
             <summary>
-                Get a single account permission by its ID
+                get the group memberships a user is a part of
+            </summary>
+            <param name="groupID">ID of the group to get the memberships of</param>
+            <returns>
+                
+            </returns>
+        </member>
+        <member name="M:honooru.Services.Db.AppGroupPermissionDbStore.GetByID(System.Int64)">
+            <summary>
+                Get a single group permission by its ID
             </summary>
             <param name="ID">ID of the specific permission to get</param>
         </member>
-        <member name="M:honooru.Services.Db.AppAccountPermissionDbStore.GetByGroupID(System.UInt64)">
+        <member name="M:honooru.Services.Db.AppGroupPermissionDbStore.GetByGroupID(System.UInt64)">
             <summary>
-                Get the account permissions of an account
+                Get the account permissions of a group
             </summary>
-            <param name="accountID">ID of the account</param>
+            <param name="groupID">ID of the group</param>
         </member>
-        <member name="M:honooru.Services.Db.AppAccountPermissionDbStore.Insert(honooru.Models.AppGroupPermission)">
+        <member name="M:honooru.Services.Db.AppGroupPermissionDbStore.Insert(honooru.Models.AppGroupPermission)">
             <summary>
                 Insert a new <see cref="T:honooru.Models.AppGroupPermission"/>
             </summary>
@@ -1608,7 +1688,7 @@
             <returns>The ID the row was given in the table</returns>
             <exception cref="T:System.ArgumentException">If one of the fields in <paramref name="perm"/> was invalid</exception>
         </member>
-        <member name="M:honooru.Services.Db.AppAccountPermissionDbStore.DeleteByID(System.Int64)">
+        <member name="M:honooru.Services.Db.AppGroupPermissionDbStore.DeleteByID(System.Int64)">
             <summary>
                 Delete a specific <see cref="T:honooru.Models.AppGroupPermission"/> by its ID
             </summary>
@@ -2004,14 +2084,6 @@
             <param name="args"></param>
             <returns></returns>
         </member>
-        <member name="M:honooru.Services.Hosted.DiscordService.Message_Created(DSharpPlus.DiscordClient,DSharpPlus.EventArgs.MessageCreateEventArgs)">
-            <summary>
-                Event handler for when a message is posted to the reservation channel in PSB discord
-            </summary>
-            <param name="client"></param>
-            <param name="args"></param>
-            <returns></returns>
-        </member>
         <member name="M:honooru.Services.Hosted.DiscordService.ConvertMentionable(honooru.Models.Discord.DiscordMention)">
             <summary>
                 Convert the app wrapper for a discord mention into whatever library we're using
@@ -2220,78 +2292,6 @@
             </summary>
             <param name="services">Extension instance</param>
         </member>
-        <member name="T:honooru.Services.Repositories.AppAccountPermissionRepository">
-            <summary>
-                Repository to interact with <see cref="T:honooru.Models.AppGroupPermission"/>s
-            </summary>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepository.GetByID(System.Int64)">
-            <summary>
-                Get a specific <see cref="T:honooru.Models.AppGroupPermission"/> by its ID, or null if it doens't exist
-            </summary>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepository.GetByGroupID(System.UInt64)">
-            <summary>
-                Get the <see cref="T:honooru.Models.AppGroupPermission"/>s for a user
-            </summary>
-            <param name="accountID">ID of the account</param>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepository.Insert(honooru.Models.AppGroupPermission)">
-            <summary>
-                Insert a new <see cref="T:honooru.Models.AppGroupPermission"/>, returning the ID it has after being inserted
-            </summary>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepository.DeleteByID(System.Int64)">
-            <summary>
-                Delete a <see cref="T:honooru.Models.AppGroupPermission"/>
-            </summary>
-            <param name="ID"></param>
-            <returns></returns>
-        </member>
-        <member name="T:honooru.Services.Repositories.AppAccountPermissionRepositoryExtensionMethods">
-            <summary>
-                Useful extensions method for a <see cref="T:honooru.Services.Repositories.AppAccountPermissionRepository"/>
-            </summary>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepositoryExtensionMethods.GetPermissionByAccount(honooru.Services.Repositories.AppAccountPermissionRepository,honooru.Models.AppAccount,System.String[])">
-            <summary>
-                Get the <see cref="T:honooru.Models.AppGroupPermission"/> for a <see cref="T:honooru.Models.AppAccount"/> based on a list of permissions
-            </summary>
-            <param name="repo">Extension instance</param>
-            <param name="account">Account to get the permission of</param>
-            <param name="permissions">Permissions to return</param>
-            <returns>
-                The first <see cref="T:honooru.Models.AppGroupPermission"/> that the account <paramref name="account"/> has that matches
-                one of the permission keys in <paramref name="permissions"/>.
-                Or <c>null</c> if the user does not have any of those permissions
-            </returns>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepositoryExtensionMethods.GetPermissionByGroup(honooru.Services.Repositories.AppAccountPermissionRepository,honooru.Models.Internal.AppGroup,System.String[])">
-            <summary>
-                Get the <see cref="T:honooru.Models.AppGroupPermission"/> for a <see cref="T:honooru.Models.AppAccount"/> based on a list of permissions
-            </summary>
-            <param name="repo">Extension instance</param>
-            <param name="account">Account to get the permission of</param>
-            <param name="permissions">Permissions to return</param>
-            <returns>
-                The first <see cref="T:honooru.Models.AppGroupPermission"/> that the account <paramref name="account"/> has that matches
-                one of the permission keys in <paramref name="permissions"/>.
-                Or <c>null</c> if the user does not have any of those permissions
-            </returns>
-        </member>
-        <member name="M:honooru.Services.Repositories.AppAccountPermissionRepositoryExtensionMethods.GetPermissionByGroupID(honooru.Services.Repositories.AppAccountPermissionRepository,System.UInt64,System.String[])">
-            <summary>
-                Get the <see cref="T:honooru.Models.AppGroupPermission"/> for a <see cref="T:honooru.Models.AppAccount"/> based on a list of permissions
-            </summary>
-            <param name="repo">Extension instance</param>
-            <param name="accountID">ID of the account to get the permission of</param>
-            <param name="permissions">Permissions to return</param>
-            <returns>
-                The first <see cref="T:honooru.Models.AppGroupPermission"/> that the account with <see cref="P:honooru.Models.AppAccount.ID"/>
-                of <paramref name="accountID"/> has that matches one of the permission keys in <paramref name="permissions"/>.
-                Or <c>null</c> if the user does not have any of those permissions
-            </returns>
-        </member>
         <member name="M:honooru.Services.Repositories.AppMetadataRepository.Get(System.String)">
             <summary>
                 Get a metadata value
@@ -2331,6 +2331,83 @@
             <param name="value"></param>
             <returns></returns>
         </member>
+        <member name="T:honooru.Services.Repositories.AppPermissionRepository">
+            <summary>
+                Repository to interact with <see cref="T:honooru.Models.AppGroupPermission"/>s
+            </summary>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppPermissionRepository.GetByID(System.Int64)">
+            <summary>
+                Get a specific <see cref="T:honooru.Models.AppGroupPermission"/> by its ID, or null if it doens't exist
+            </summary>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppPermissionRepository.GetByGroupID(System.UInt64)">
+            <summary>
+                Get the <see cref="T:honooru.Models.AppGroupPermission"/>s of a group
+            </summary>
+            <param name="groupID">ID of the group</param>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppPermissionRepository.Insert(honooru.Models.AppGroupPermission)">
+            <summary>
+                Insert a new <see cref="T:honooru.Models.AppGroupPermission"/>, returning the ID it has after being inserted
+            </summary>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppPermissionRepository.DeleteByID(System.Int64)">
+            <summary>
+                Delete a <see cref="T:honooru.Models.AppGroupPermission"/>
+            </summary>
+            <param name="ID"></param>
+            <returns></returns>
+        </member>
+        <member name="T:honooru.Services.Repositories.AppGroupPermissionRepositoryExtensionMethods">
+            <summary>
+                Useful extensions method for a <see cref="T:honooru.Services.Repositories.AppPermissionRepository"/>
+            </summary>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppGroupPermissionRepositoryExtensionMethods.GetPermissionByGroup(honooru.Services.Repositories.AppPermissionRepository,honooru.Models.Internal.AppGroup,System.String[])">
+            <summary>
+                Get the <see cref="T:honooru.Models.AppGroupPermission"/> for a <see cref="T:honooru.Models.AppAccount"/> based on a list of permissions
+            </summary>
+            <param name="repo">Extension instance</param>
+            <param name="group">group to get the permission of</param>
+            <param name="permissions">Permissions to return</param>
+            <returns>
+                The first <see cref="T:honooru.Models.AppGroupPermission"/> that the account <paramref name="group"/> has that matches
+                one of the permission keys in <paramref name="permissions"/>.
+                Or <c>null</c> if the user does not have any of those permissions
+            </returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.AppGroupPermissionRepositoryExtensionMethods.GetPermissionByGroupID(honooru.Services.Repositories.AppPermissionRepository,System.UInt64,System.String[])">
+            <summary>
+                Get the <see cref="T:honooru.Models.AppGroupPermission"/> for a <see cref="T:honooru.Models.AppAccount"/> based on a list of permissions
+            </summary>
+            <param name="repo">Extension instance</param>
+            <param name="groupID">ID of the group to get the permission of</param>
+            <param name="permissions">Permissions to return</param>
+            <returns>
+                The first <see cref="T:honooru.Models.AppGroupPermission"/> that the account with <see cref="P:honooru.Models.AppAccount.ID"/>
+                of <paramref name="groupID"/> has that matches one of the permission keys in <paramref name="permissions"/>.
+                Or <c>null</c> if the user does not have any of those permissions
+            </returns>
+        </member>
+        <member name="T:honooru.Services.Repositories.TagRepository">
+            <summary>
+                repository service for managing <see cref="T:honooru.Models.App.Tag"/>s
+            </summary>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetAll(System.Threading.CancellationToken)">
+            <summary>
+                get a list of all <see cref="T:honooru.Models.App.Tag"/>s
+            </summary>
+            <param name="cancel">cancellation token</param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetAll">
+            <summary>
+                get a list of all <see cref="T:honooru.Models.App.Tag"/>s
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:honooru.Services.Repositories.TagRepository._GetDictionary">
             <summary>
                 get the list of <see cref="T:honooru.Models.App.Tag"/>s but as a dictionary
@@ -2355,12 +2432,32 @@
             <param name="tagIds"></param>
             <returns></returns>
         </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetByName(System.String)">
+            <summary>
+                get an existing <see cref="T:honooru.Models.App.Tag"/> by its <see cref="P:honooru.Models.App.Tag.Name"/>,
+                or <c>null</c> if it does not exist
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.GetOrCreateByName(System.String,honooru.Models.App.TagType)">
+            <summary>
+                get an existing <see cref="T:honooru.Models.App.Tag"/> by <see cref="P:honooru.Models.App.Tag.Name"/>,
+                and optionally update the <see cref="P:honooru.Models.App.Tag.TypeID"/> to match <paramref name="type"/>,
+                or create a new one with a <see cref="P:honooru.Models.App.Tag.TypeID"/> from <paramref name="type"/>, (default to 1)
+                if it does not exist
+            </summary>
+            <param name="name"></param>
+            <param name="type"></param>
+            <returns></returns>
+        </member>
         <member name="M:honooru.Services.Repositories.TagRepository.SearchByName(System.String,System.Threading.CancellationToken)">
             <summary>
                 perform a search for tags based on name. searching is based on 
                 if the tag name contains <paramref name="name"/>, or the levenshtein dist
             </summary>
             <param name="name"></param>
+            <param name="cancel"></param>
             <returns></returns>
         </member>
         <member name="M:honooru.Services.Repositories.TagRepository.ValidateTagName(System.String)">
@@ -2397,6 +2494,16 @@
             <param name="target">An array of the code points of the second string</param>
             <param name="threshold">Maximum allowable distance</param>
             <returns>Int.MaxValue if threshhold exceeded; otherwise the Damerau-Leveshteim distance between the strings</returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagTypeRepository.GetByNameOrAlias(System.String)">
+            <summary>
+                get a <see cref="T:honooru.Models.App.TagType"/> by its <see cref="P:honooru.Models.App.TagType.Name"/> or <see cref="P:honooru.Models.App.TagType.Alias"/>
+            </summary>
+            <param name="name">name or alias of the <see cref="T:honooru.Models.App.TagType"/> to get</param>
+            <returns>
+                the <see cref="T:honooru.Models.App.TagType"/> with either <see cref="P:honooru.Models.App.TagType.Name"/> or <see cref="P:honooru.Models.App.TagType.Alias"/>
+                of <paramref name="name"/>, or <c>null</c> if it does not exist
+            </returns>
         </member>
         <member name="M:honooru.Services.ServiceHealthMonitorExtensions.GetOrCreate(honooru.Services.ServiceHealthMonitor,System.String)">
             <summary>

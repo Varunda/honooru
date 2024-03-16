@@ -5,10 +5,10 @@ namespace honooru.Services.Db {
     public static class ServiceCollectionExtensionMethods {
 
         public static void AddDatabasesServices(this IServiceCollection services) {
-            services.AddSingleton<ExpEventDbStore>();
-            services.AddSingleton<AppAccountDbStore>();
-            services.AddSingleton<AppAccountPermissionDbStore>();
             services.AddSingleton<AppMetadataDbStore>();
+            services.AddSingleton<AppAccountDbStore>();
+            services.AddSingleton<AppGroupDbStore>();
+            services.AddSingleton<AppGroupPermissionDbStore>();
             services.AddSingleton<AppAccountGroupMembershipDbStore>();
 
             services.AddSingleton<PostDb>();
@@ -17,6 +17,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<TagTypeDb>();
             services.AddSingleton<PostTagDb>();
             services.AddSingleton<TagInfoDb>();
+            services.AddSingleton<TagAliasDb>();
         }
 
     }

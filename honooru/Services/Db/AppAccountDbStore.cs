@@ -62,28 +62,6 @@ namespace honooru.Services.Db {
         }
 
         /// <summary>
-        ///     Get a <see cref="AppAccount"/> by <see cref="AppAccount.Email"/>
-        /// </summary>
-        /// <param name="email">Email to get the account of</param>
-        /// <param name="cancel">Cancellation token</param>
-        /// <returns>
-        ///     The <see cref="AppAccount"/> with <see cref="AppAccount.Email"/> of <paramref name="email"/>,
-        ///     or <c>null</c> if it does not exist
-        /// </returns>
-        public async Task<AppAccount?> GetByEmail(string email, CancellationToken cancel) {
-            using NpgsqlConnection conn = _DbHelper.Connection();
-            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
-                SELECT *
-                    FROM app_account
-                    WHERE email = @Email;
-            ");
-
-            cmd.AddParameter("Email", email);
-
-            return await cmd.ExecuteReadSingle(_Reader, cancel);
-        }
-
-        /// <summary>
         ///     Get a <see cref="AppAccount"/> by <see cref="AppAccount.DiscordID"/>
         /// </summary>
         /// <param name="discordID">ID of the discord account to get the account of</param>
@@ -117,14 +95,13 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO app_account (
-                    name, email, discord_id, timestamp 
+                    name, discord_id, timestamp 
                 ) VALUES (
-                    @Name, @Email, @DiscordID, NOW() AT TIME ZONE 'utc'
+                    @Name, @DiscordID, NOW() AT TIME ZONE 'utc'
                 ) RETURNING id;
             ");
 
             cmd.AddParameter("Name", param.Name);
-            cmd.AddParameter("Email", param.Email);
             cmd.AddParameter("DiscordID", param.DiscordID);
 
             return await cmd.ExecuteInt64(cancel);

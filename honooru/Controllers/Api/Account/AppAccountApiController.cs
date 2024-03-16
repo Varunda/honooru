@@ -22,10 +22,10 @@ namespace honooru.Controllers.Api {
         private readonly AppCurrentAccount _CurrentUser;
 
         private readonly AppAccountDbStore _AccountDb;
-        private readonly AppAccountPermissionRepository _PermissionRepository;
+        private readonly AppPermissionRepository _PermissionRepository;
 
         public AppAccountApiController(ILogger<AppAccountApiController> logger, AppCurrentAccount currentUser,
-            AppAccountPermissionRepository permissionRepository, AppAccountDbStore accountDb) {
+            AppPermissionRepository permissionRepository, AppAccountDbStore accountDb) {
 
             _Logger = logger;
             _CurrentUser = currentUser;
@@ -62,7 +62,6 @@ namespace honooru.Controllers.Api {
         /// </response>
         [HttpGet]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
-        [Authorize]
         public async Task<ApiResponse<List<AppAccount>>> GetAll() {
             List<AppAccount> accounts = await _AccountDb.GetAll(CancellationToken.None);
 
@@ -73,7 +72,6 @@ namespace honooru.Controllers.Api {
         ///     Create a new account
         /// </summary>
         /// <param name="name"></param>
-        /// <param name="email"></param>
         /// <param name="discordID"></param>
         /// <response code="200">
         ///     The <see cref="AppAccount.ID"/> of the <see cref="AppAccount"/> that was created using the parameters passed
@@ -82,34 +80,23 @@ namespace honooru.Controllers.Api {
         ///     One of the following validation errors occured:
         ///     <ul>
         ///         <li><paramref name="name"/> was empty or whitespace</li>
-        ///         <li><paramref name="email"/> was empty or whitespace</li>
         ///         <li><paramref name="discordID"/> was 0</li>
-        ///         <li><paramref name="email"/> is already in use</li>
         ///     </ul>
         /// </response>
         [HttpPost("create")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
-        [Authorize]
-        public async Task<ApiResponse<long>> CreateAccount([FromQuery] string name, [FromQuery] string email, [FromQuery] ulong discordID) {
+        public async Task<ApiResponse<long>> CreateAccount([FromQuery] string name, [FromQuery] ulong discordID) {
             List<string> errors = new();
 
-            if (string.IsNullOrWhiteSpace(name)) { errors.Add($"Missing {nameof(name)}"); }
-            if (string.IsNullOrWhiteSpace(email)) { errors.Add($"Missing {nameof(email)}"); }
-
-            if (discordID == 0) { errors.Add($"Missing {nameof(discordID)}"); }
+            if (string.IsNullOrWhiteSpace(name)) { errors.Add($"missing {nameof(name)}"); }
+            if (discordID == 0) { errors.Add($"missing {nameof(discordID)}"); }
 
             if (errors.Count > 0) {
-                return ApiBadRequest<long>($"Validation errors: {string.Join("\n", errors)}");
-            }
-
-            AppAccount? existingAccount = await _AccountDb.GetByEmail(email, CancellationToken.None);
-            if (existingAccount != null) {
-                return ApiBadRequest<long>($"Account for email {email} already exists");
+                return ApiBadRequest<long>($"validation errors: {string.Join("\n", errors)}");
             }
 
             AppAccount acc = new();
             acc.Name = name;
-            acc.Email = email;
             acc.DiscordID = discordID;
             acc.Timestamp = DateTime.UtcNow;
 
@@ -130,7 +117,6 @@ namespace honooru.Controllers.Api {
         /// </response>
         [HttpDelete("{accountID}")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
-        [Authorize]
         public async Task<ApiResponse> DeactiviateAccount(long accountID) {
             if (accountID == 1) {
                 return ApiBadRequest($"Cannot deactivate account ID 1, which is the system account");

@@ -1,6 +1,8 @@
-﻿using honooru.Models;
+﻿using honooru.Code;
+using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
+using honooru.Models.Internal;
 using honooru.Services.Db;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +38,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpGet("post/{postID}")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<List<ExtendedTag>>> GetByPostID(ulong postID) {
             List<PostTag> postTags = await _PostTagDb.GetByPostID(postID);
 

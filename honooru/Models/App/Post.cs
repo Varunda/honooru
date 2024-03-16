@@ -72,5 +72,20 @@ namespace honooru.Models.Db {
         /// </summary>
         public long FileSizeBytes { get; set; }
 
+        /// <summary>
+        ///     how many seconds long this piece of media is. is set to 0 for images
+        /// </summary>
+        public long DurationSeconds { get; set; }
+
+        /// <summary>
+        ///     height of the post
+        /// </summary>
+        public long Height { get; set; }
+
+        /// <summary>
+        ///     width of the post
+        /// </summary>
+        public long Width { get; set; }
+
     }
 }

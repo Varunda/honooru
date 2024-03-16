@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using honooru.Code.Converters;
+using System.Text.Json.Serialization.Metadata;
 
 namespace honooru.Models {
 
@@ -80,30 +81,28 @@ namespace honooru.Models {
 
         private readonly Func<Stream, Encoding, TextWriter> _Writer;
 
-        private static readonly JsonSerializerOptions _JsonOptions;
+        private static readonly JsonSerializerOptions _JsonOptions = new() {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
 
         static ApiResponseExecutor() {
-            _JsonOptions = new JsonSerializerOptions();
-
-            _JsonOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             _JsonOptions.Converters.Add(new DateTimeJsonConverter());
         }
 
         public ApiResponseExecutor(ILoggerFactory logger, IHttpResponseStreamWriterFactory writerFactory) { 
-
             _Logger = logger.CreateLogger<ApiResponseExecutor>();
 
             _Writer = writerFactory.CreateWriter;
         }
 
         public Task ExecuteAsync(ActionContext context, ApiResponse result) {
-            if (context == null) { throw new ArgumentNullException(nameof(context)); }
-            if (result == null) { throw new ArgumentNullException(nameof(result)); }
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(result);
 
-            OutputFormatterWriteContext formatterContext =
-                new OutputFormatterWriteContext(context.HttpContext, _Writer, typeof(object), result.Data!); // Force is safe, cause null is a valid object
+            OutputFormatterWriteContext formatterContext = new(context.HttpContext, _Writer, typeof(object), result.Data!); // Force is safe, cause null is a valid object
 
-            IOutputFormatter formatter = new SystemTextJsonOutputFormatter(_JsonOptions);//, ArrayPool<char>.Shared);
+            SystemTextJsonOutputFormatter formatter = new(_JsonOptions);//, ArrayPool<char>.Shared);
 
             if (context.HttpContext.Response.HasStarted == true) {
                 _Logger.LogError("Response to {ConnectionID} at {URL} has already started. From {IPv4}",

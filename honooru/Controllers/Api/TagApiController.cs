@@ -1,6 +1,8 @@
-﻿using honooru.Models;
+﻿using honooru.Code;
+using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
+using honooru.Models.Internal;
 using honooru.Models.Queues;
 using honooru.Services.Db;
 using honooru.Services.Queues;
@@ -39,6 +41,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpGet("{tagID}")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<Tag>> GetByID(ulong tagID) {
             Tag? tag = await _TagRepository.GetByID(tagID);
             if (tag == null) {
@@ -49,6 +52,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpGet("{tagID}/extended")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<ExtendedTag>> GetExtenedByID(ulong tagID) {
             Tag? tag = await _TagRepository.GetByID(tagID);
             if (tag == null) {
@@ -82,6 +86,7 @@ namespace honooru.Controllers.Api {
         /// <returns></returns>
         /// <exception cref="System.Exception"></exception>
         [HttpGet("search")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<TagSearchResults>> Search(
             [FromQuery] string name,
             [FromQuery] int? limit = 20,
@@ -176,6 +181,7 @@ namespace honooru.Controllers.Api {
         ///     no <see cref="TagType"/> with <see cref="TagType.ID"/> of <paramref name="typeID"/> exists
         /// </response>
         [HttpPost]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse<Tag>> Create([FromQuery] string name, [FromQuery] ulong typeID) {
             name = name.ToLower();
 
@@ -204,6 +210,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpPost("{tagID}")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse<Tag>> Update(ulong tagID, [FromBody] ExtendedTag tag) {
             Tag? etag = await _TagRepository.GetByID(tagID);
             if (etag == null) {
@@ -243,6 +250,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpPost("{tagID}/recount")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse> RecountTagUsage(ulong tagID) {
             Tag? tag = await _TagRepository.GetByID(tagID);
             if (tag == null) {

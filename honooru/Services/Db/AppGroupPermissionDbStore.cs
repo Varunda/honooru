@@ -9,13 +9,13 @@ using honooru.Models;
 
 namespace honooru.Services.Db {
 
-    public class AppAccountPermissionDbStore {
+    public class AppGroupPermissionDbStore {
 
-        private readonly ILogger<AppAccountPermissionDbStore> _Logger;
+        private readonly ILogger<AppGroupPermissionDbStore> _Logger;
         private readonly IDbHelper _DbHelper;
         private readonly IDataReader<AppGroupPermission> _Reader;
 
-        public AppAccountPermissionDbStore(ILogger<AppAccountPermissionDbStore> logger,
+        public AppGroupPermissionDbStore(ILogger<AppGroupPermissionDbStore> logger,
             IDbHelper dbHelper, IDataReader<AppGroupPermission> reader) {
 
             _Logger = logger;
@@ -24,14 +24,14 @@ namespace honooru.Services.Db {
         }
 
         /// <summary>
-        ///     Get a single account permission by its ID
+        ///     Get a single group permission by its ID
         /// </summary>
         /// <param name="ID">ID of the specific permission to get</param>
         public async Task<AppGroupPermission?> GetByID(long ID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 SELECT *
-                    FROM app_account_permission
+                    FROM app_group_permission
                     WHERE id = @ID;
             ");
 
@@ -44,14 +44,14 @@ namespace honooru.Services.Db {
         }
 
         /// <summary>
-        ///     Get the account permissions of an account
+        ///     Get the account permissions of a group
         /// </summary>
-        /// <param name="accountID">ID of the account</param>
+        /// <param name="groupID">ID of the group</param>
         public async Task<List<AppGroupPermission>> GetByGroupID(ulong groupID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 SELECT *
-                    FROM app_account_permission
+                    FROM app_group_permission
                     WHERE group_id = @GroupID;
             ");
 
@@ -79,7 +79,7 @@ namespace honooru.Services.Db {
 
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
-                INSERT INTO app_account_permission (
+                INSERT INTO app_group_permission (
                     group_id, permission, timestamp, granted_by_id
                 ) VALUES (
                     @GroupID, @Permission, @Timestamp, @GrantedByID 
@@ -104,7 +104,7 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 DELETE 
-                    FROM app_account_permission
+                    FROM app_group_permission
                     WHERE id = @ID;
             ");
 

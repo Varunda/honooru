@@ -2,12 +2,6 @@
     <div>
         <app-menu class="flex-grow-1">
             <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Posts
-            </li>
         </app-menu>
 
         <hr class="border" />

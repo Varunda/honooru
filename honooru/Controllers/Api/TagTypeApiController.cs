@@ -1,5 +1,7 @@
-﻿using honooru.Models;
+﻿using honooru.Code;
+using honooru.Models;
 using honooru.Models.App;
+using honooru.Models.Internal;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -23,6 +25,7 @@ namespace honooru.Controllers.Api {
         }
 
         [HttpGet]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<List<TagType>>> GetAll() {
             return ApiOk(await _TagTypeRepository.GetAll());
         }

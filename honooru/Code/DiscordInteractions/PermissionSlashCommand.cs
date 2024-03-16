@@ -4,6 +4,7 @@ using honooru.Code.ExtensionMethods;
 using honooru.Models;
 using honooru.Services;
 using honooru.Services.Repositories;
+using System.Linq;
 
 namespace honooru.Code.DiscordInteractions {
 
@@ -13,7 +14,7 @@ namespace honooru.Code.DiscordInteractions {
     public class PermissionSlashCommand : ApplicationCommandModule {
 
         public AppCurrentAccount _CurrentUser { internal get; set; } = default!;
-        public AppAccountPermissionRepository _PermissionRepository { internal get; set; } = default!;
+        public AppPermissionRepository _PermissionRepository { internal get; set; } = default!;
 
         /// <summary>
         ///     Check if a Discord user performing a slash command has the correct account permission
@@ -32,7 +33,7 @@ namespace honooru.Code.DiscordInteractions {
                 return false;
             }
 
-            AppGroupPermission? neededPerm = await _PermissionRepository.GetPermissionByAccount(user, permissions);
+            AppGroupPermission? neededPerm = (await _PermissionRepository.GetByAccountID(user.ID)).FirstOrDefault(iter => permissions.Contains(iter.Permission));
             if (neededPerm == null) {
                 await ctx.CreateImmediateText("You lack the correct permission");
                 return false;

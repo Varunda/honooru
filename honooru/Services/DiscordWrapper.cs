@@ -31,12 +31,6 @@ namespace honooru.Services {
             _Logger = logger;
 
             _DiscordOptions = discordOptions;
-            if (_DiscordOptions.Value.GuildId == 0) {
-                throw new ArgumentException($"GuildId is 0, must be set. Try running dotnet user-secrets set Discord:GuildId $VALUE");
-            }
-            if (_DiscordOptions.Value.ChannelId == 0) {
-                throw new ArgumentException($"ChannelId is 0, must be set. Try running dotnet user-secrets set Discord:ChannelId $VALUE");
-            }
 
             try {
                 _Discord = new DiscordClient(new DiscordConfiguration() {

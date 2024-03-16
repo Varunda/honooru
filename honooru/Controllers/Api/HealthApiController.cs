@@ -42,7 +42,7 @@ namespace honooru.Controllers.Api {
         /// </response>
         [HttpGet]
         public ApiResponse<AppHealth> GetRealtimeHealth() {
-            if (_Cache.TryGetValue("App.Health", out AppHealth health) == false) {
+            if (_Cache.TryGetValue("App.Health", out AppHealth? health) == false || health == null) {
                 health = new AppHealth();
                 health.Timestamp = DateTime.UtcNow;
 

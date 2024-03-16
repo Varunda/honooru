@@ -2,3 +2,9 @@
 
 # CS8618: Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 dotnet_diagnostic.CS8618.severity = error
+
+# IDE0017: Simplify object initialization
+dotnet_style_object_initializer = false
+
+# IDE0290: Use primary constructor
+csharp_style_prefer_primary_constructors = true

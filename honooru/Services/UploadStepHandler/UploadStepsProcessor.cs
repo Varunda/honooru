@@ -102,23 +102,7 @@ namespace honooru.Services.UploadStepHandler {
                         cancel
                     })!;
 
-                    Thread t = new(async () => {
-                        try {
-                            while (task.IsCompleted == false) {
-                                await group.UpdateProgress(entry);
-                                await Task.Delay(TimeSpan.FromSeconds(5), cancel);
-                            }
-                        } catch (Exception ex) {
-                            _Logger.LogError(ex, $"background updates will not occur");
-                        }
-                    });
-
-                    t.Start();
-                    _Logger.LogDebug($"starting update thread");
-
                     await task;
-                    _Logger.LogDebug($"task completed, joining to update thread");
-                    t.Join();
 
                     _Logger.LogInformation($"took {timer.ElapsedMilliseconds}ms to process {workerType.FullName}");
                     if (entry.Current != null) {

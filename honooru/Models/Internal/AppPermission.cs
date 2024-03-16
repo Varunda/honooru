@@ -38,5 +38,13 @@ namespace honooru.Models.Internal {
         public const string APP_ACCOUNT_GETALL = "App.Account.GetAll";
         public readonly static AppPermission AppAccountGetAll = new(APP_ACCOUNT_GETALL, "Get all accounts");
 
+        public const string APP_VIEW = "App.View";
+        public readonly static AppPermission AppView = new(APP_VIEW, "view Honooru");
+
+        public const string APP_UPLOAD = "App.Upload";
+        public readonly static AppPermission AppUpload = new(APP_UPLOAD, "upload posts");
+
+        public const string APP_TAG_EDIT = "App.Tag.Edit";
+
     }
 }

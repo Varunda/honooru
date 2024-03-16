@@ -78,7 +78,11 @@ namespace honooru.Services.Db {
             await conn.CloseAsync();
         }
 
-        public async Task Delete(PostTag tag) {
+        public Task Delete(PostTag tag) {
+            return Delete(tag.PostID, tag.TagID);
+        }
+
+        public async Task Delete(ulong postID, ulong tagID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 DELETE FROM 
@@ -88,8 +92,8 @@ namespace honooru.Services.Db {
                     AND tag_id = @TagID;
             ");
 
-            cmd.AddParameter("PostID", tag.PostID);
-            cmd.AddParameter("TagID", tag.TagID);
+            cmd.AddParameter("PostID", postID);
+            cmd.AddParameter("TagID", tagID);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

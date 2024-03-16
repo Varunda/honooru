@@ -40,5 +40,29 @@ namespace honooru.Services.Repositories {
             return types;
         }
 
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.Name"/> or <see cref="TagType.Alias"/>
+        /// </summary>
+        /// <param name="name">name or alias of the <see cref="TagType"/> to get</param>
+        /// <returns>
+        ///     the <see cref="TagType"/> with either <see cref="TagType.Name"/> or <see cref="TagType.Alias"/>
+        ///     of <paramref name="name"/>, or <c>null</c> if it does not exist
+        /// </returns>
+        public async Task<TagType?> GetByNameOrAlias(string name) {
+            List<TagType> types = await GetAll();
+
+            foreach (TagType type in types) {
+                if (type.Name.ToLower() == name.ToLower()) {
+                    return type;
+                }
+
+                if (type.Alias.ToLower() == name.ToLower()) {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
     }
 }

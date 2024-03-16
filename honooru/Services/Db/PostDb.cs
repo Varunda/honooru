@@ -108,9 +108,9 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
-                    poster_user_id, timestamp, title, description, last_editor_user_id, md5, rating, file_name, source, file_extension, file_size_bytes
+                    poster_user_id, timestamp, title, description, last_editor_user_id, md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height
                 ) VALUES (
-                    @PosterUserID, @Timestamp, @Title, @Description, 0, @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes
+                    @PosterUserID, @Timestamp, @Title, @Description, 0, @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height
                 ) RETURNING id;
             ");
 
@@ -124,6 +124,9 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Source", post.Source);
             cmd.AddParameter("FileExtension", post.FileExtension);
             cmd.AddParameter("FileSizeBytes", post.FileSizeBytes);
+            cmd.AddParameter("DurationSeconds", post.DurationSeconds);
+            cmd.AddParameter("Width", post.Width);
+            cmd.AddParameter("Height", post.Height);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
@@ -133,6 +136,29 @@ namespace honooru.Services.Db {
             return id;
         }
 
+        public async Task Update(ulong postID, Post post) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                UPDATE 
+                    post
+                SET title = @Title,
+                    description = @Description,
+                    rating = @Rating,
+                    source = @Source
+                WHERE
+                    id = @ID;
+            ");
+
+            cmd.AddParameter("ID", postID);
+            cmd.AddParameter("Title", post.Title);
+            cmd.AddParameter("Description", post.Description);
+            cmd.AddParameter("Rating", (short) post.Rating);
+            cmd.AddParameter("Source", post.Source);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
 
     }
 }

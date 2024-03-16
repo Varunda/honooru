@@ -5,22 +5,28 @@ using Microsoft.Extensions.Logging;
 using honooru.Code;
 using honooru.Models.Internal;
 using honooru.Services;
+using System.Threading.Tasks;
+using honooru.Models;
 
 namespace honooru.Controllers {
 
+    [PermissionNeeded(AppPermission.APP_VIEW)]
     public class HomeController : Controller {
 
         private readonly ILogger<HomeController> _Logger;
 
         private readonly IHttpContextAccessor _HttpContextAccessor;
         private readonly HttpUtilService _HttpUtil;
+        private readonly AppCurrentAccount _CurrentUser;
 
         public HomeController(ILogger<HomeController> logger,
-            IHttpContextAccessor httpContextAccessor, HttpUtilService httpUtil) {
+            IHttpContextAccessor httpContextAccessor, HttpUtilService httpUtil,
+            AppCurrentAccount currentUser) {
 
             _HttpContextAccessor = httpContextAccessor;
             _HttpUtil = httpUtil;
             _Logger = logger;
+            _CurrentUser = currentUser;
         }
 
         public IActionResult Index() {
@@ -28,7 +34,6 @@ namespace honooru.Controllers {
         }
 
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
-        [Authorize]
         public IActionResult AccountManagement() {
             return View();
         }

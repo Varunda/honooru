@@ -4,6 +4,8 @@ using Npgsql;
 using System.Threading.Tasks;
 using honooru.Models;
 using honooru.Services.Db;
+using System;
+using honooru.Code.ExtensionMethods;
 
 namespace honooru.Controllers.Api {
 
@@ -39,6 +41,17 @@ namespace honooru.Controllers.Api {
             await cmd.ExecuteNonQueryAsync();
 
             return ApiOk(0);
+        }
+
+        [HttpGet("timeout")]
+        public async Task<ApiResponse<long>> TimeoutException() {
+            long r = await Task.Run(async () => {
+                await Task.Delay(2000);
+                _Logger.LogDebug($"done!");
+                return (new Random()).NextInt64();
+            }).TimeoutWithThrow(TimeSpan.FromSeconds(5));
+
+            return ApiOk(r);
         }
 
     }

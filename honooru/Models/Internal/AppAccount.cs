@@ -28,11 +28,6 @@ namespace honooru.Models {
         public DateTime Timestamp { get; set; }
 
         /// <summary>
-        ///     Email of the account owner
-        /// </summary>
-        public string Email { get; set; } = "";
-
-        /// <summary>
         ///     Discord ID of the account owner
         /// </summary>
         public ulong DiscordID { get; set; }

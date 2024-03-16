@@ -15,8 +15,8 @@ namespace honooru.Tests.Util {
             _ClassPrefix = typeof(T).FullName ?? typeof(T).Name;
         }
 
-        public IDisposable BeginScope<TState>(TState state) {
-            return default!;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull {
+            return default;
         }
 
         public bool IsEnabled(LogLevel logLevel) {

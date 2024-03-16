@@ -65,5 +65,30 @@ namespace honooru.Services.Db {
             return members;
         }
 
+        /// <summary>
+        ///     get the group memberships a user is a part of
+        /// </summary>
+        /// <param name="groupID">ID of the group to get the memberships of</param>
+        /// <returns>
+        ///     
+        /// </returns>
+        public async Task<List<AppAccountGroupMembership>> GetByGroupID(ulong groupID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM app_account_group_membership
+                    WHERE group_id = @GroupID;
+            ");
+
+            cmd.AddParameter("GroupID", groupID);
+
+            await cmd.PrepareAsync();
+
+            List<AppAccountGroupMembership> members = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return members;
+        }
+
     }
 }

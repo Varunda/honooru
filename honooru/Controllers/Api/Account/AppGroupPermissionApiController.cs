@@ -16,18 +16,18 @@ using honooru.Services.Repositories;
 namespace honooru.Controllers.Api {
     
     [ApiController]
-    [Route("/api/account-permission")]
-    public class AppAccountPermissionApiController : ApiControllerBase {
+    [Route("/api/group-permission")]
+    public class AppGroupPermissionApiController : ApiControllerBase {
 
-        private readonly ILogger<AppAccountPermissionApiController> _Logger;
+        private readonly ILogger<AppGroupPermissionApiController> _Logger;
         private readonly AppCurrentAccount _CurrentAccount;
 
         private readonly AppAccountDbStore _AccountDb;
         private readonly AppGroupDbStore _GroupDb;
-        private readonly AppAccountPermissionRepository _PermissionRepository;
+        private readonly AppPermissionRepository _PermissionRepository;
 
-        public AppAccountPermissionApiController(ILogger<AppAccountPermissionApiController> logger,
-            AppAccountDbStore accountDb, AppAccountPermissionRepository permissionRepository,
+        public AppGroupPermissionApiController(ILogger<AppGroupPermissionApiController> logger,
+            AppAccountDbStore accountDb, AppPermissionRepository permissionRepository,
             AppCurrentAccount currentAccount, AppGroupDbStore groupDb) {
 
             _Logger = logger;
@@ -38,20 +38,29 @@ namespace honooru.Controllers.Api {
             _GroupDb = groupDb;
         }
 
+
+        [HttpGet("account/{accountID}")]
+        [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
+        public async Task<ApiResponse<List<AppGroupPermission>>> GetByAccountID(ulong accountID) {
+            List<AppGroupPermission> perms = await _PermissionRepository.GetByAccountID(accountID);
+
+            return ApiOk(perms);
+        }
+
         /// <summary>
         ///     Get the permissions an account has
         /// </summary>
-        /// <param name="accountID">ID of the account</param>
+        /// <param name="groupID">ID of the group</param>
         /// <response code="200">
         ///     The response will contain a list of permissions an account has
         /// </response>
         /// <response code="404">
-        ///     No <see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="accountID"/> exists
+        ///     No <see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="groupID"/> exists
         /// </response>
-        [HttpGet("{accountID}")]
+        [HttpGet("{groupID}")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         [Authorize]
-        public async Task<ApiResponse<List<AppGroupPermission>>> GetByAccountID(ulong groupID) {
+        public async Task<ApiResponse<List<AppGroupPermission>>> GetByGroupID(ulong groupID) {
             AppGroup? group = await _GroupDb.GetByID(groupID);
             if (group == null) {
                 return ApiNotFound<List<AppGroupPermission>>($"{nameof(AppGroup)} {group}");
@@ -89,9 +98,9 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
-        ///     Insert a new permission for an account
+        ///     Insert a new permission for a group
         /// </summary>
-        /// <param name="accountID">ID of the account to add the permission to</param>
+        /// <param name="groupID">ID of the group to add the permission to</param>
         /// <param name="permission">Permission to be added to the account</param>
         /// <response code="200">
         ///     The reponse will contain the ID of the <see cref="AppGroupPermission"/> that was just created
@@ -103,17 +112,17 @@ namespace honooru.Controllers.Api {
         /// <response code="404">
         ///     One of the following objects count not be found:
         ///     <ul>
-        ///         <li><see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="accountID"/></li>
+        ///         <li><see cref="AppGroup"/> with <see cref="AppGroup.ID"/> of <paramref name="groupID"/></li>
         ///         <li><see cref="AppPermission"/> with <see cref="AppPermission.ID"/> of <paramref name="permission"/></li>
         ///     </ul>
         /// </response>
         /// <exception cref="SystemException"></exception>
-        [HttpPost("{accountID}")]
+        [HttpPost("{groupID}")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         [Authorize]
         public async Task<ApiResponse<ulong>> AddPermission(ulong groupID, [FromQuery] string permission) {
-            AppGroup? account = await _GroupDb.GetByID(groupID);
-            if (account == null) {
+            AppGroup? group = await _GroupDb.GetByID(groupID);
+            if (group == null) {
                 return ApiNotFound<ulong>($"{nameof(AppGroup)} {groupID}");
             }
 

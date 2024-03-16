@@ -1,5 +1,4 @@
-﻿
-<template>
+﻿<template>
     <div>
         <app-menu class="flex-grow-1">
             <menu-dropdown></menu-dropdown>
@@ -58,13 +57,13 @@
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0"><strong>name</strong></label>
+                        <label class="mb-0 h5"><strong>name</strong></label>
                         <input v-if="editing" class="form-control" v-model="tagCopy.name" />
                         <input v-else disabled readonly class="form-control-plaintext" v-model="tagCopy.name" />
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0"><strong>type</strong></label>
+                        <label class="mb-0 h5"><strong>type</strong></label>
                         <input v-if="!editing"  disabled readonly class="form-control-plaintext" v-model="tagCopy.typeName" />
 
                         <template v-else>
@@ -91,6 +90,63 @@
                         <button class="btn btn-success" @click="saveEdit">
                             save
                         </button>
+                    </div>
+
+                    <hr class="border" />
+
+                    <div>
+                        <div class="mb-3">
+                            <h4 class="mb-0">
+                                aliases
+                                <span v-if="aliases.state == 'loaded'" class="text-muted">
+                                    ({{aliases.data.length}})
+                                </span>
+                            </h4>
+                            <h6 class="text-muted">
+                                aliases are words that are equivalent to this tag. when creating tags, any tag with these words will instead use this tag
+                            </h6>
+                        </div>
+
+                        <div class="mb-3">
+                            <div v-if="aliases.state == 'idle'"></div>
+                            <div v-else-if="aliases.state == 'loading'">
+                                loading...
+                            </div>
+
+                            <div v-else-if="aliases.state == 'loaded'">
+                                <div v-for="a in aliases.data">
+                                    <button v-if="del.alias == a.alias" class="btn btn-danger" @click="deleteAlias">
+                                        {{a.alias}}
+                                    </button>
+
+                                    <button v-else class="btn btn-info" @click="del.alias = a.alias">
+                                        {{a.alias}}
+                                    </button>
+
+                                    <span v-if="del.alias == a.alias" class="text-danger">
+                                        click again to delete
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div v-else-if="aliases.state == 'error'">
+                                <api-error :error="aliases.problem"></api-error>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mb-0">create new</label>
+                            <div class="input-group">
+                                <input class="form-control" v-model="input.alias" @keyup.enter="createAlias" />
+                                <span class="input-group-append">
+                                    <button class="btn btn-primary" @click="createAlias">
+                                        insert
+                                    </button>
+                                </span>
+                            </div>
+
+                            <api-error v-if="pending.alias.state == 'error'" :error="pending.alias.problem"></api-error>
+                        </div>
                     </div>
 
                     <hr class="border" />
@@ -132,6 +188,7 @@
     import { Tag, ExtendedTag, TagApi } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
     import { TagTypeApi, TagType } from "api/TagTypeApi";
+    import { TagAlias, TagAliasApi } from "api/TagAliasApi";
 
     export const ViewTag = Vue.extend({
         props: {
@@ -146,7 +203,21 @@
 
                 editing: false as boolean,
 
-                tagTypes: Loadable.idle() as Loading<TagType[]>
+                tagTypes: Loadable.idle() as Loading<TagType[]>,
+
+                aliases: Loadable.idle() as Loading<TagAlias[]>,
+
+                input: {
+                    alias: "" as string
+                },
+
+                pending: {
+                    alias: Loadable.idle() as Loading<void>
+                },
+
+                del: {
+                    alias: "" as string
+                }
             }
         },
 
@@ -177,6 +248,8 @@
                 this.tag = Loadable.loading();
                 this.tag = await TagApi.getExtendedByID(this.tagID);
 
+                this.getTagAliases(this.tagID);
+
                 if (this.tag.state == "loaded") {
                     this.tagCopy = { ...this.tag.data };
                 }
@@ -185,6 +258,11 @@
             getTagTypes: async function(): Promise<void> {
                 this.tagTypes = Loadable.loading();
                 this.tagTypes = await TagTypeApi.getAll();
+            },
+
+            getTagAliases: async function(tagID: number): Promise<void> {
+                this.aliases = Loadable.loading();
+                this.aliases = await TagAliasApi.getByTagID(tagID);
             },
 
             saveEdit: async function(): Promise<void> {
@@ -205,6 +283,24 @@
 
                 if (this.tag.state == "loaded") {
                     this.tagCopy = { ...this.tag.data };
+                }
+            },
+
+            createAlias: async function(): Promise<void> {
+                this.pending.alias = Loadable.loading();
+                this.pending.alias = await TagAliasApi.insert(this.input.alias, this.tagID);
+
+                if (this.pending.alias.state == "loaded") {
+                    this.getTagAliases(this.tagID);
+                }
+            },
+
+            deleteAlias: async function(): Promise<void> {
+                const r: Loading<void> = await TagAliasApi.delete(this.del.alias);
+                if (r.state == "loaded") {
+                    Toaster.add(`alias deleted`, `successfully deleted the alias '${this.del.alias}'`, "success");
+
+                    this.getTagAliases(this.tagID);
                 }
             },
 

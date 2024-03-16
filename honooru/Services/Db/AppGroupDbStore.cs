@@ -2,6 +2,7 @@
 using honooru.Models.Internal;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,21 @@ namespace honooru.Services.Db {
 
             _Reader = reader;
             _DbHelper = dbHelper;
+        }
+
+        public async Task<List<AppGroup>> GetAll() {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM app_group;
+            ");
+
+            await cmd.PrepareAsync();
+
+            List<AppGroup> groups = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return groups;
         }
 
         public async Task<AppGroup?> GetByID(ulong groupID) {

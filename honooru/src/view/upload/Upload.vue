@@ -144,6 +144,10 @@
                     <button class="btn btn-primary" @click="makePost">
                         upload
                     </button>
+
+                    <div v-if="posting.post.state == 'error'">
+                        <api-error :error="posting.post.problem"></api-error>
+                    </div>
                 </div>
 
                 <file-view :md5="mediaAsset.md5" :file-extension="mediaAsset.fileExtension"></file-view>

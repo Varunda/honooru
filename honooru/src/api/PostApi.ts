@@ -83,6 +83,30 @@ export class PostApi extends ApiWrapper<Post> {
         return PostApi.get().postReply(url, PostApi.parse);
     }
 
+    public static async update(postID: number, tags?: string, rating?: string, source?: string, title?: string, description?: string): Promise<Loading<void>> {
+        let url: string = `/api/post/${postID}?`;
+
+        const parms: URLSearchParams = new URLSearchParams();
+
+        if (tags) {
+            parms.set("tags", tags);
+        }
+        if (rating) {
+            parms.set("rating", rating);
+        }
+        if (source) {
+            parms.set("source", encodeURI(source));
+        }
+        if (title) {
+            parms.set("title", encodeURI(title));
+        }
+        if (description) {
+            parms.set("description", encodeURI(description));
+        }
+
+        return PostApi.get().post(`/api/post/${postID}?${parms.toString()}`);
+    }
+
     public static async remakeThumbnail(postID: number): Promise<Loading<void>> {
         return PostApi.get().post(`/api/post/${postID}/remake-thumbnail`);
     }

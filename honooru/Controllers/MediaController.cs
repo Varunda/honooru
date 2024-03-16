@@ -1,5 +1,8 @@
-﻿using honooru.Models.Config;
+﻿using honooru.Code;
+using honooru.Models.Config;
+using honooru.Models.Internal;
 using honooru.Services.Util;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,6 +28,7 @@ namespace honooru.Controllers {
             _FileExtensionHelper = fileExtensionHelper;
         }
 
+        [PermissionNeeded(AppPermission.APP_VIEW)]
         public IActionResult Get() {
             string? urlPath = Request.Path.Value;
             if (urlPath == null) {

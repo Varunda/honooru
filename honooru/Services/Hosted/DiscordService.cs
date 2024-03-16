@@ -50,20 +50,11 @@ namespace honooru.Services.Hosted {
 
             _DiscordOptions = discordOptions;
 
-            if (_DiscordOptions.Value.GuildId == 0) {
-                throw new ArgumentException($"GuildId is 0, must be set. Try running dotnet user-secrets set Discord:GuildId $VALUE");
-            }
-
-            if (_DiscordOptions.Value.ChannelId == 0) {
-                throw new ArgumentException($"ChannelId is 0, must be set. Try running dotnet user-secrets set Discord:ChannelId $VALUE");
-            }
-
             _Discord = discord;
 
             _Discord.Get().Ready += Client_Ready;
             _Discord.Get().InteractionCreated += Generic_Interaction_Created;
             _Discord.Get().ContextMenuInteractionCreated += Generic_Interaction_Created;
-            _Discord.Get().MessageCreated += Message_Created;
             _Discord.Get().GuildAvailable += Guild_Available;
 
             _SlashCommands = _Discord.Get().UseSlashCommands(new SlashCommandsConfiguration() {
@@ -74,15 +65,15 @@ namespace honooru.Services.Hosted {
             _SlashCommands.ContextMenuErrored += Context_Menu_Errored;
 
             // these commands can only be used in the "home guild", for live it's currently PSB
-            _SlashCommands.RegisterCommands<PingSlashCommand>(_DiscordOptions.Value.GuildId);
-            _SlashCommands.RegisterCommands<AppAccountSlashCommand>(_DiscordOptions.Value.GuildId);
+            //_SlashCommands.RegisterCommands<PingSlashCommand>(_DiscordOptions.Value.GuildId);
+            //_SlashCommands.RegisterCommands<AppAccountSlashCommand>(_DiscordOptions.Value.GuildId);
 
             // these commands are global when ran in live, but to test them locally
             //      they are setup in the home server as well (quicker to update)
             if (_DiscordOptions.Value.RegisterGlobalCommands == true) {
                 _SlashCommands.RegisterCommands<ExampleSlashCommands>();
             } else {
-                _SlashCommands.RegisterCommands<ExampleSlashCommands>(_DiscordOptions.Value.GuildId);
+                //_SlashCommands.RegisterCommands<ExampleSlashCommands>(_DiscordOptions.Value.GuildId);
             }
 
             _ButtonCommands = _Discord.Get().UseButtonCommands(new ButtonCommandsConfiguration() {
@@ -98,12 +89,13 @@ namespace honooru.Services.Hosted {
             try {
                 await _Discord.Get().ConnectAsync();
 
+                /*
                 IReadOnlyList<DiscordApplicationCommand> cmds = await _Discord.Get().GetGuildApplicationCommandsAsync(_DiscordOptions.Value.GuildId);
                 _Logger.LogDebug($"Have {cmds.Count} commands");
                 foreach (DiscordApplicationCommand cmd in cmds) {
                     _Logger.LogDebug($"{cmd.Id} {cmd.Name}: {cmd.Description}");
                 }
-
+                */
                 await base.StartAsync(cancellationToken);
             } catch (Exception ex) {
                 _Logger.LogError(ex, "Error in start up of DiscordService");
@@ -231,11 +223,14 @@ namespace honooru.Services.Hosted {
         /// <param name="sender"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        private async Task Client_Ready(DiscordClient sender, ReadyEventArgs args) {
+        private Task Client_Ready(DiscordClient sender, ReadyEventArgs args) {
             _Logger.LogInformation($"Discord client connected");
 
             _IsConnected = true;
 
+            return Task.CompletedTask;
+
+            /*
             DiscordGuild? guild = await sender.GetGuildAsync(_DiscordOptions.Value.GuildId);
             if (guild == null) {
                 _Logger.LogError($"Failed to get guild {_DiscordOptions.Value.GuildId} (what was passed in the options)");
@@ -247,6 +242,7 @@ namespace honooru.Services.Hosted {
             if (channel == null) {
                 _Logger.LogWarning($"Failed to find channel {_DiscordOptions.Value.ChannelId}");
             }
+            */
         }
 
         private Task Guild_Available(DiscordClient sender, GuildCreateEventArgs args) {
@@ -429,36 +425,6 @@ namespace honooru.Services.Hosted {
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"error sending error message to Discord");
             }
-        }
-
-        /// <summary>
-        ///     Event handler for when a message is posted to the reservation channel in PSB discord
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        private async Task Message_Created(DiscordClient client, MessageCreateEventArgs args) {
-            if (args.Guild == null || args.Guild.Id != _DiscordOptions.Value.GuildId || args.Channel.Id != _DiscordOptions.Value.ReservationChannelId) {
-                return;
-            }
-
-            // ignore interactions such as reponses to messages
-            if (args.Message.Interaction != null || args.Author.IsBot == true) {
-                return;
-            }
-
-            DiscordGuild? guild = await client.TryGetGuild(_DiscordOptions.Value.GuildId);
-            if (guild == null) {
-                _Logger.LogError($"cannot parse reservation: failed to find guild {_DiscordOptions.Value.GuildId}");
-                return;
-            }
-
-            DiscordChannel? channel = guild.TryGetChannel(_DiscordOptions.Value.ParsedChannelId);
-            if (channel == null) {
-                _Logger.LogError($"cannot parse reservation: failed to find channel {_DiscordOptions.Value.ParsedChannelId} in guild {guild.Id}");
-                return;
-            }
-
         }
 
         /// <summary>

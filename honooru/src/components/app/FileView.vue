@@ -15,7 +15,7 @@
 <script lang="ts">
     import Vue, { PropType } from "vue";
 
-    import videojs from "video.js";
+    import videojs, { VideoJsPlayer } from "video.js";
 
     export const FileView = Vue.extend({
         props: {
@@ -25,7 +25,7 @@
 
         data: function() {
             return {
-
+                player: null as VideoJsPlayer | null
             }
         },
 
@@ -37,9 +37,21 @@
             });
         },
 
+        beforeDestroy: function(): void {
+            if (this.player != null) {
+                console.log(`dispoing of old player`);
+                this.player.dispose();
+            }
+        },
+
         methods: {
             makeVideo: function(): void {
-                videojs("video-playback", {
+                if (this.player != null) {
+                    this.player.dispose();
+                    this.player = null;
+                }
+
+                this.player = videojs("video-playback", {
                     preload: "auto",
                     fluid: true
                 });

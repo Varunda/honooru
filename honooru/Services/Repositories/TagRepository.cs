@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
 
+    /// <summary>
+    ///     repository service for managing <see cref="Tag"/>s
+    /// </summary>
     public class TagRepository {
 
         private readonly ILogger<TagRepository> _Logger;
@@ -22,19 +25,27 @@ namespace honooru.Services.Repositories {
 
         private readonly TagDb _TagDb;
         private readonly TagInfoRepository _TagInfoRepository;
+        private readonly TagAliasRepository _TagAliasRepository;
 
         public TagRepository(ILogger<TagRepository> logger, IMemoryCache cache,
-            TagDb tagDb, TagInfoRepository tagInfoRepository) {
+            TagDb tagDb, TagInfoRepository tagInfoRepository,
+            TagAliasRepository tagAliasRepository) {
 
             _Logger = logger;
             _Cache = cache;
 
             _TagDb = tagDb;
             _TagInfoRepository = tagInfoRepository;
+            _TagAliasRepository = tagAliasRepository;
         }
 
+        /// <summary>
+        ///     get a list of all <see cref="Tag"/>s
+        /// </summary>
+        /// <param name="cancel">cancellation token</param>
+        /// <returns></returns>
         public async Task<List<Tag>> GetAll(CancellationToken cancel) {
-            if (_Cache.TryGetValue(CACHE_KEY_ALL_LIST, out List<Tag> tags) == false) {
+            if (_Cache.TryGetValue(CACHE_KEY_ALL_LIST, out List<Tag>? tags) == false || tags == null) {
                 _Cache.Remove(CACHE_KEY_ALL_DICT); // invalidate this cache as well
 
                 tags = await _TagDb.GetAll(cancel);
@@ -47,6 +58,10 @@ namespace honooru.Services.Repositories {
             return tags;
         }
 
+        /// <summary>
+        ///     get a list of all <see cref="Tag"/>s
+        /// </summary>
+        /// <returns></returns>
         public Task<List<Tag>> GetAll() {
             return GetAll(CancellationToken.None);
         }
@@ -57,7 +72,7 @@ namespace honooru.Services.Repositories {
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         private async Task<Dictionary<ulong, Tag>> _GetDictionary() {
-            if (_Cache.TryGetValue(CACHE_KEY_ALL_DICT, out Dictionary<ulong, Tag> dict) == false) {
+            if (_Cache.TryGetValue(CACHE_KEY_ALL_DICT, out Dictionary<ulong, Tag>? dict) == false || dict == null) {
                 List<Tag> tags = await GetAll();
 
                 dict = tags.ToDictionary(iter => iter.ID);
@@ -101,8 +116,53 @@ namespace honooru.Services.Repositories {
             return tags;
         }
 
-        public Task<Tag?> GetByName(string name) {
-            return _TagDb.GetByName(name);
+        /// <summary>
+        ///     get an existing <see cref="Tag"/> by its <see cref="Tag.Name"/>,
+        ///     or <c>null</c> if it does not exist
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public async Task<Tag?> GetByName(string name) {
+            TagAlias? alias = await _TagAliasRepository.GetByAlias(name);
+
+            if (alias != null) {
+                Tag? aliasedTag = await GetByID(alias.TagID);
+                if (aliasedTag == null) {
+                    _Logger.LogWarning($"missing aliased tag [alias={name}] [tagID={alias.TagID}]");
+                } else {
+                    return aliasedTag;
+                }
+            }
+
+            return await _TagDb.GetByName(name);
+        }
+
+        /// <summary>
+        ///     get an existing <see cref="Tag"/> by <see cref="Tag.Name"/>,
+        ///     and optionally update the <see cref="Tag.TypeID"/> to match <paramref name="type"/>,
+        ///     or create a new one with a <see cref="Tag.TypeID"/> from <paramref name="type"/>, (default to 1)
+        ///     if it does not exist
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public async Task<Tag> GetOrCreateByName(string name, TagType? type) {
+            name = name.ToLower().Trim();
+
+            Tag? tag = await GetByName(name);
+            if (tag == null) {
+                tag = new Tag() {
+                    Name = name,
+                    TypeID = type?.ID ?? 1
+                };
+
+                tag.ID = await Insert(tag);
+            } else if (type != null && tag.TypeID != type.ID) {
+                tag.TypeID = type.ID;
+                await Update(tag);
+            }
+
+            return tag;
         }
 
         /// <summary>
@@ -110,11 +170,12 @@ namespace honooru.Services.Repositories {
         ///     if the tag name contains <paramref name="name"/>, or the levenshtein dist
         /// </summary>
         /// <param name="name"></param>
+        /// <param name="cancel"></param>
         /// <returns></returns>
         public async Task<List<Tag>> SearchByName(string name, CancellationToken cancel) {
             string cacheKey = string.Format(CACHE_KEY_SEARCH, name);
 
-            if (_Cache.TryGetValue(cacheKey, out List<Tag> ret) == false) {
+            if (_Cache.TryGetValue(cacheKey, out List<Tag>? ret) == false || ret == null) {
                 _Logger.LogDebug($"search results not cached, performing search [name={name}]");
                 ret = new List<Tag>();
 
@@ -125,27 +186,29 @@ namespace honooru.Services.Repositories {
                 foreach (Tag tag in tags) {
                     cancel.ThrowIfCancellationRequested();
 
-                    if (tag.Name.Length > name.Length && tag.Name.Contains(name)) {
+                    if (TagNameCloseEnough(name, tag.Name)) {
                         ret.Add(tag);
-                        continue;
                     }
+                }
 
-                    // if the search term has 2 more characters than the tag name, then the
-                    // distance will always be greater than 2, while we only care about distances <= 1
-                    if (name.Length > tag.Name.Length + 2) {
-                        continue;
+                HashSet<ulong> aliasTagIds = new();
+                List<TagAlias> aliases = await _TagAliasRepository.GetAll();
+                foreach (TagAlias a in aliases) {
+                    cancel.ThrowIfCancellationRequested();
+
+                    if (TagNameCloseEnough(name, a.Alias)) {
+                        aliasTagIds.Add(a.TagID);
                     }
+                }
 
-                    // if the tag name is longer than the input name, use a substring starting from the start to check
-                    // while this isn't perfect (we could instead get all possible substrings and compare those)
-                    string tagName = tag.Name;
-                    if (tagName.Length > name.Length + 2) {
-                        tagName = tag.Name[0..(name.Length + 2)];
-                    }
+                if (aliasTagIds.Count > 0) {
+                    List<Tag> aliasedTags = await GetByIDs(aliasTagIds);
+                    HashSet<ulong> alreadyInList = new(ret.Select(iter => iter.ID));
 
-                    int distance = DamerauLevenshteinDistance(name, tagName, 2);
-                    if (distance <= 1) {
-                        ret.Add(tag);
+                    foreach (Tag t in aliasedTags) {
+                        if (alreadyInList.Contains(t.ID) == false) {
+                            ret.Add(t);
+                        }
                     }
                 }
 
@@ -157,6 +220,32 @@ namespace honooru.Services.Repositories {
             }
 
             return ret;
+        }
+
+        private bool TagNameCloseEnough(string input, string tagName) {
+            if (tagName.Length > input.Length && tagName.Contains(input)) {
+                return true;
+            }
+
+            // if the search term has 2 more characters than the tag name, then the
+            // distance will always be greater than 2, while we only care about distances <= 1
+            if (input.Length > tagName.Length + 2) {
+                return false;
+            }
+
+            // if the tag name is longer than the input name, use a substring starting from the start to check
+            // while this isn't perfect (we could instead get all possible substrings and compare those)
+            // using stringe distance is more meant as a fallback
+            if (tagName.Length > input.Length + 2) {
+                tagName = tagName[0..(input.Length + 2)];
+            }
+
+            int distance = DamerauLevenshteinDistance(input, tagName, 2);
+            if (distance <= 1) {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

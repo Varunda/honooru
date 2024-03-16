@@ -4,8 +4,6 @@ import ApiWrapper from "api/ApiWrapper";
 export class AppAccount {
     public id: number = 0;
     public name: string = "";
-    public email: string = "";
-    public discord: string = "";
     public discordID: string = "0";
     public deletedOn: Date | null = null;
     public deletedBy: number | null = null;
@@ -34,8 +32,6 @@ export class AppAccountApi extends ApiWrapper<AppAccount> {
     public static create(account: AppAccount): Promise<Loading<number>> {
         const parms: URLSearchParams = new URLSearchParams();
         parms.set("name", account.name);
-        parms.set("email", account.email);
-        parms.set("discord", account.discord);
         parms.set("discordID", account.discordID + "");
 
         return AppAccountApi.get().postReply(`/api/account/create?${parms.toString()}`, (elem: any) => elem);

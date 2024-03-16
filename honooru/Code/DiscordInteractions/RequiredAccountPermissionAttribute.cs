@@ -27,7 +27,7 @@ namespace honooru.Code.DiscordInteractions {
                 return false;
             }
 
-            AppAccountPermissionRepository permRepo = ctx.Services.GetRequiredService<AppAccountPermissionRepository>();
+            AppPermissionRepository permRepo = ctx.Services.GetRequiredService<AppPermissionRepository>();
 
             // get at least one AppAccountPermssion the user has
 

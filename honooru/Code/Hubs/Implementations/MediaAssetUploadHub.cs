@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using honooru.Services.Repositories;
 using honooru.Services.UploadStepHandler;
 using honooru.Models.Api;
+using Microsoft.AspNetCore.Authorization;
 
 namespace honooru.Code.Hubs.Implementations {
 
+    [AllowAnonymous]
     public class MediaAssetUploadHub : Hub<IMediaAssetUploadHub> {
 
         private readonly ILogger<MediaAssetUploadHub> _Logger;

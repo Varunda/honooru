@@ -247,8 +247,10 @@
     import Toaster from "Toaster";
 
     import { AppAccount, AppAccountApi } from "api/AppAccountApi";
-    import { AppAccountPermission, AppAccountPermissionApi } from "api/AppAccountPermissionApi";
+    import { AppGroup, AppGroupApi } from "api/AppGroupApi";
+    import { AppGroupPermission, AppGroupPermissionApi } from "api/AppGroupPermissionApi";
     import { AppPermission, AppPermissionApi } from "api/AppPermissionApi";
+    import { AppAccountGroupMembership, AppAccountGroupMembershipApi } from "api/AppAccountGroupMembershipApi";
 
     export const AccountManagement = Vue.extend({
         props: {
@@ -258,6 +260,7 @@
         data: function() {
             return {
                 accounts: Loadable.idle() as Loading<AppAccount[]>,
+                groups: Loadable.idle() as Loading<AppGroup[]>,
 
                 showDeactivated: false as boolean,
 
@@ -266,7 +269,8 @@
 
                 selected: {
                     account: null as AppAccount | null,
-                    permissions: Loadable.idle() as Loading<AppAccountPermission[]>
+                    groups: Loadable.idle() as Loading<AppAccountGroupMembership[]>,
+                    permissions: Loadable.idle() as Loading<AppGroupPermission[]>
                 },
 
                 create: new AppAccount() as AppAccount
@@ -274,21 +278,28 @@
         },
 
         created: function(): void {
-            document.title = `Annuls / Accounts`;
+            document.title = `App / Permissions`;
         },
 
         mounted: function(): void {
             this.getAccounts();
+            this.getGroups();
             this.getPermissions();
         },
 
         methods: {
+
             /**
              * Load all accounts that app knowns of
              */
             getAccounts: async function(): Promise<void> {
                 this.accounts = Loadable.loading();
                 this.accounts = await AppAccountApi.getAll();
+            },
+
+            getGroups: async function(): Promise<void> {
+                this.groups = Loadable.loading();
+                this.groups = await AppGroupApi.getAll();
             },
 
             /**
@@ -312,19 +323,26 @@
                 if (this.selected.account != null && this.selected.account.id == accountID) {
                     this.selected.account = null;
                     this.selected.permissions = Loadable.idle();
+                    this.selected.groups = Loadable.idle();
                 } else {
                     this.selected.account = this.accounts.data.find(iter => iter.id == accountID) || null;
-                    this.getAccountPermission(accountID);
+                    this.getGroupPermission(accountID);
+                    this.getGroupsOfAccount(accountID);
                 }
+            },
+
+            getGroupsOfAccount: async function(accountID: number): Promise<void> {
+                this.selected.groups = Loadable.loading();
+                this.selected.groups = await AppAccountGroupMembershipApi.getByAccountID(accountID);
             },
 
             /**
              * Get the account permissions for a user
              * @param accountID Account ID to load the permissions of
              */
-            getAccountPermission: async function(accountID: number): Promise<void> {
+            getGroupPermission: async function(groupID: number): Promise<void> {
                 this.selected.permissions = Loadable.loading();
-                this.selected.permissions = await AppAccountPermissionApi.getByAccountID(accountID);
+                this.selected.permissions = await AppGroupPermissionApi.getByAccountID(groupID);
             },
 
             /**
@@ -341,14 +359,14 @@
 
                 this.selected.permissions = Loadable.loading();
 
-                const response: Loading<void> = await AppAccountPermissionApi.delete(permID);
+                const response: Loading<void> = await AppGroupPermissionApi.delete(permID);
                 if (response.state == "loaded") {
                     Toaster.add("Permission removed", "Removed permission", "success");
                 } else if (response.state == "error" || response.state == "notfound") {
-                    Toaster.add("Failed to remove permission", `${response.state}: ${response.message}`, "danger");
+                    Toaster.add("Failed to remove permission", `${response.state}`, "danger");
                 }
 
-                this.getAccountPermission(accountID);
+                this.getGroupPermission(accountID);
             },
 
             /**
@@ -364,9 +382,9 @@
             createAccount: async function(): Promise<void> {
                 const id: Loading<number> = await AppAccountApi.create(this.create);
                 if (id.state == "loaded") {
-                    Toaster.add("Account created", `Successfully created an account for ${this.create.name}/${this.create.email}`, "success");
+                    Toaster.add("Account created", `Successfully created an account for ${this.create.name}`, "success");
                 } else if (id.state == "error") {
-                    Toaster.add("Failed to create account", `Failed to create account<br>${id.state}: ${id.message}`, "danger");
+                    Toaster.add("Failed to create account", `Failed to create account<br>${id.state}: ${id.problem.detail}`, "danger");
                 }
                 this.getAccounts();
             },
@@ -404,16 +422,16 @@
                     return;
                 }
 
-                const id: Loading<number> = await AppAccountPermissionApi.insert(this.selected.account.id, perm);
+                const id: Loading<number> = await AppGroupPermissionApi.insert(this.selected.account.id, perm);
 
                 if (id.state == "loaded") {
                     Toaster.add("Permission added", `Permission ${perm} added`, "success");
                 } else if (id.state == "error" || id.state == "notfound") {
-                    Toaster.add("Failed to add permission", `${id.state}: ${id.message}`, "danger");
+                    Toaster.add("Failed to add permission", `${id.state}`, "danger");
                 }
 
                 if (this.selected.account != null) {
-                    this.getAccountPermission(this.selected.account.id);
+                    this.getGroupPermission(this.selected.account.id);
                 }
             },
 
@@ -450,7 +468,7 @@
                     this.selected.account = null;
                     this.getAccounts();
                 } else {
-                    Toaster.add("Error", `Failed to deactivatet account: <br>${response.state}`, "danger");
+                    Toaster.add("Error", `Failed to deactivate account: <br>${response.state}`, "danger");
                 }
             }
         },

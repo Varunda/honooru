@@ -13,7 +13,6 @@ namespace honooru.Services.Db.Readers {
             acc.ID = reader.GetUInt64("id");
             acc.Name = reader.GetString("name");
             acc.Timestamp = reader.GetDateTime("timestamp");
-            acc.Email = "<hidden in reader>";
             acc.DiscordID = reader.GetUInt64("discord_id");
             acc.DeletedOn = reader.GetNullableDateTime("deleted_on");
             acc.DeletedBy = reader.GetNullableInt64("deleted_by");

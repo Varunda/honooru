@@ -6,24 +6,25 @@ using System.Threading.Tasks;
 using honooru.Models;
 using honooru.Services.Db;
 using honooru.Models.Internal;
+using System.Linq;
 
 namespace honooru.Services.Repositories {
 
     /// <summary>
     ///     Repository to interact with <see cref="AppGroupPermission"/>s
     /// </summary>
-    public class AppAccountPermissionRepository {
+    public class AppPermissionRepository {
 
-        private readonly ILogger<AppAccountPermissionRepository> _Logger;
+        private readonly ILogger<AppPermissionRepository> _Logger;
         private readonly IMemoryCache _Cache;
 
-        private const string CACHE_KEY = "App.AccountPermission.{0}"; // {0} => Account ID
+        private const string CACHE_KEY = "App.Permission.{0}"; // {0} => groupd ID
 
-        private readonly AppAccountPermissionDbStore _PermissionDb;
+        private readonly AppGroupPermissionDbStore _PermissionDb;
         private readonly AppAccountGroupMembershipDbStore _MembershipDb;
 
-        public AppAccountPermissionRepository(ILogger<AppAccountPermissionRepository> logger, IMemoryCache cache,
-            AppAccountPermissionDbStore permissionDb, AppAccountGroupMembershipDbStore membershipDb) {
+        public AppPermissionRepository(ILogger<AppPermissionRepository> logger, IMemoryCache cache,
+            AppGroupPermissionDbStore permissionDb, AppAccountGroupMembershipDbStore membershipDb) {
 
             _Logger = logger;
             _Cache = cache;
@@ -40,18 +41,31 @@ namespace honooru.Services.Repositories {
         }
 
         public async Task<List<AppGroupPermission>> GetByAccountID(ulong accountID) {
-            _Logger.LogWarning($"NOT RETURNING ANY ACCOUNT PERMISSIONS FIX ME LATER THANKS");
-            return new List<AppGroupPermission>();
+            Dictionary<string, AppGroupPermission> perms = new();
+
+            List<AppAccountGroupMembership> groups = await _MembershipDb.GetByAccountID(accountID);
+
+            foreach (AppAccountGroupMembership member in groups) {
+                List<AppGroupPermission> groupPerms = await GetByGroupID(member.GroupID);
+
+                foreach (AppGroupPermission p in groupPerms) {
+                    if (perms.ContainsKey(p.Permission) == false) {
+                        perms.Add(p.Permission, p);
+                    }
+                }
+            }
+
+            return perms.Values.ToList();
         }
 
         /// <summary>
-        ///     Get the <see cref="AppGroupPermission"/>s for a user
+        ///     Get the <see cref="AppGroupPermission"/>s of a group
         /// </summary>
-        /// <param name="accountID">ID of the account</param>
+        /// <param name="groupID">ID of the group</param>
         public async Task<List<AppGroupPermission>> GetByGroupID(ulong groupID) {
             string cacheKey = string.Format(CACHE_KEY, groupID);
 
-            if (_Cache.TryGetValue(cacheKey, out List<AppGroupPermission> perms) == false) {
+            if (_Cache.TryGetValue(cacheKey, out List<AppGroupPermission>? perms) == false || perms == null) {
                 perms = await _PermissionDb.GetByGroupID(groupID);
 
                 _Cache.Set(cacheKey, perms, new MemoryCacheEntryOptions() {
@@ -90,37 +104,22 @@ namespace honooru.Services.Repositories {
     }
 
     /// <summary>
-    ///     Useful extensions method for a <see cref="AppAccountPermissionRepository"/>
+    ///     Useful extensions method for a <see cref="AppPermissionRepository"/>
     /// </summary>
-    public static class AppAccountPermissionRepositoryExtensionMethods {
+    public static class AppGroupPermissionRepositoryExtensionMethods {
 
         /// <summary>
         ///     Get the <see cref="AppGroupPermission"/> for a <see cref="AppAccount"/> based on a list of permissions
         /// </summary>
         /// <param name="repo">Extension instance</param>
-        /// <param name="account">Account to get the permission of</param>
+        /// <param name="group">group to get the permission of</param>
         /// <param name="permissions">Permissions to return</param>
         /// <returns>
-        ///     The first <see cref="AppGroupPermission"/> that the account <paramref name="account"/> has that matches
+        ///     The first <see cref="AppGroupPermission"/> that the account <paramref name="group"/> has that matches
         ///     one of the permission keys in <paramref name="permissions"/>.
         ///     Or <c>null</c> if the user does not have any of those permissions
         /// </returns>
-        public static Task<AppGroupPermission?> GetPermissionByAccount(this AppAccountPermissionRepository repo, AppAccount account, params string[] permissions) {
-            return repo.GetPermissionByGroupID(account.ID, permissions);
-        }
-
-        /// <summary>
-        ///     Get the <see cref="AppGroupPermission"/> for a <see cref="AppAccount"/> based on a list of permissions
-        /// </summary>
-        /// <param name="repo">Extension instance</param>
-        /// <param name="account">Account to get the permission of</param>
-        /// <param name="permissions">Permissions to return</param>
-        /// <returns>
-        ///     The first <see cref="AppGroupPermission"/> that the account <paramref name="account"/> has that matches
-        ///     one of the permission keys in <paramref name="permissions"/>.
-        ///     Or <c>null</c> if the user does not have any of those permissions
-        /// </returns>
-        public static Task<AppGroupPermission?> GetPermissionByGroup(this AppAccountPermissionRepository repo, AppGroup group, params string[] permissions) {
+        public static Task<AppGroupPermission?> GetPermissionByGroup(this AppPermissionRepository repo, AppGroup group, params string[] permissions) {
             return repo.GetPermissionByGroupID(group.ID, permissions);
         }
 
@@ -128,14 +127,14 @@ namespace honooru.Services.Repositories {
         ///     Get the <see cref="AppGroupPermission"/> for a <see cref="AppAccount"/> based on a list of permissions
         /// </summary>
         /// <param name="repo">Extension instance</param>
-        /// <param name="accountID">ID of the account to get the permission of</param>
+        /// <param name="groupID">ID of the group to get the permission of</param>
         /// <param name="permissions">Permissions to return</param>
         /// <returns>
         ///     The first <see cref="AppGroupPermission"/> that the account with <see cref="AppAccount.ID"/>
-        ///     of <paramref name="accountID"/> has that matches one of the permission keys in <paramref name="permissions"/>.
+        ///     of <paramref name="groupID"/> has that matches one of the permission keys in <paramref name="permissions"/>.
         ///     Or <c>null</c> if the user does not have any of those permissions
         /// </returns>
-        public static async Task<AppGroupPermission?> GetPermissionByGroupID(this AppAccountPermissionRepository repo, ulong groupID, params string[] permissions) {
+        public static async Task<AppGroupPermission?> GetPermissionByGroupID(this AppPermissionRepository repo, ulong groupID, params string[] permissions) {
             List<AppGroupPermission> perms = await repo.GetByGroupID(groupID);
 
             foreach (AppGroupPermission perm in perms) {

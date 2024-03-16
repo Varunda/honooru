@@ -32,6 +32,11 @@ using honooru.Models.Config;
 using honooru.Services.Parsing;
 using honooru.Services.Util;
 using honooru.Services.UploadStepHandler;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using AspNet.Security.OAuth.Discord;
+using System.Globalization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace honooru {
 
@@ -57,6 +62,7 @@ namespace honooru {
             });
 
             services.AddRouting();
+            services.AddRequestTimeouts();
 
             services.AddSignalR(options => {
                 options.EnableDetailedErrors = true;
@@ -81,50 +87,70 @@ namespace honooru {
                 Console.WriteLine("");
             });
 
-            string gIDKey = "Authentication:Google:ClientId";
-            string gSecretKey = "Authentication:Google:ClientSecret";
-
-            string? googleClientID = Configuration[gIDKey];
-            string? googleSecret = Configuration[gSecretKey];
-
-            if (string.IsNullOrEmpty(googleClientID) == false && string.IsNullOrEmpty(googleSecret) == false) {
-                services.AddAuthentication(options => {
-                    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                }).AddCookie(options => {
-                    //options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                    //options.Cookie.SameSite = SameSiteMode.Lax;
-                }).AddGoogle(options => {
-                    options.ClientId = googleClientID;
-                    options.ClientSecret = googleSecret;
-                    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                });
-
-                Console.WriteLine($"Added Google auth");
-            } else {
-                Console.WriteLine($"===============================================================");
-                Console.WriteLine($"!!! GOOGLE AUTH NOT SETUP");
-                Console.WriteLine($"!!! missing either '{gIDKey}' ({string.IsNullOrEmpty(googleClientID)}) or '{gSecretKey}' ({string.IsNullOrEmpty(googleSecret)})");
-                Console.WriteLine($"!!! GOOGLE AUTH NOT SETUP");
-                Console.WriteLine($"===============================================================");
-            }
-
-            services.AddRazorPages();
-            services.AddMemoryCache();
-            services.AddHttpContextAccessor();
-
-            services.AddCors(o => o.AddDefaultPolicy(builder => {
-                builder.AllowAnyOrigin();
-                builder.AllowAnyHeader();
-            }));
-
             services.Configure<DiscordOptions>(Configuration.GetSection("Discord"));
             services.Configure<InstanceOptions>(Configuration.GetSection("Instance"));
             services.Configure<HttpConfig>(Configuration.GetSection("Http"));
             services.Configure<StorageOptions>(Configuration.GetSection("Storage"));
 
+            // require all endpoints to be authorized unless another policy is defined
+            services.AddAuthorization(options => {
+                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+            });
+
+            services.AddAuthentication(options => {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = DiscordAuthenticationDefaults.AuthenticationScheme;
+            }).AddCookie(options => {
+                options.Cookie.Name = "honooru-auth";
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+            }).AddDiscord(options => {
+                DiscordOptions? dOpts = Configuration.GetSection("Discord").Get<DiscordOptions>();
+                if (dOpts == null) {
+                    throw new InvalidOperationException($"no discord configuration in the Discord: section configured");
+                }
+
+                if (string.IsNullOrWhiteSpace(dOpts.ClientId)) {
+                    throw new InvalidOperationException($"missing ClientId. did you set Discord:ClientId?");
+                }
+                if (string.IsNullOrWhiteSpace(dOpts.ClientSecret)) {
+                    throw new InvalidOperationException($"missing ClientSecret. did you set Discord:ClientSecret?");
+                }
+
+                options.ClientId = dOpts.ClientId;
+                options.ClientSecret = dOpts.ClientSecret;
+
+                options.CallbackPath = "/auth/callback"; // configured callback
+
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.SaveTokens = true;
+
+                // map the returned JSON from Discord to auth claims
+                options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+                options.ClaimActions.MapCustomJson("urn:discord:avatar:url",
+                    user => string.Format(CultureInfo.InvariantCulture, "https://cdn.discordapp.com/avatars/{0}/{1}.{2}",
+                    user.GetString("id"),
+                    user.GetString("avatar"),
+                    user.GetString("avatar")!.StartsWith("a_") ? "gif" : "png")
+                );
+
+                options.Scope.Add("identify");
+            });
+
+            services.AddRazorPages();
+            services.AddMemoryCache();
+            services.AddHttpContextAccessor();
+
+            services.AddCors(o => {
+                o.AddDefaultPolicy(builder => {
+                    builder.AllowAnyOrigin();
+                    builder.AllowAnyHeader();
+                });
+            });
+
             services.Configure<KestrelServerOptions>(options => {
-                options.Limits.MaxRequestBodySize = int.MaxValue;
+                options.Limits.MaxRequestBodySize = long.MaxValue;
             });
 
             services.AddSingleton<ServiceHealthMonitor>();
@@ -147,13 +173,10 @@ namespace honooru {
             services.AddSearchServices();
             services.AddAppQueueProcessorServices();
             services.AddUploadStepHandlers();
+            services.AddAppHostedServices();
 
             // Hosted services
             services.AddHostedService<DbCreatorStartupService>(); // Have first to ensure DBs exist
-
-            // hosted background services
-            services.AddHostedService<ExampleBackgroundService>();
-            services.AddHostedService<ExampleStartupService>();
 
             if (Configuration.GetValue<bool>("Discord:Enabled") == true) {
                 services.AddSingleton<DiscordWrapper>();
@@ -185,6 +208,7 @@ namespace honooru {
 
             app.UseStaticFiles();
             app.UseRouting();
+            app.UseRequestTimeouts();
 
             app.UseSwagger(doc => { });
             app.UseSwaggerUI(doc => {
@@ -198,6 +222,12 @@ namespace honooru {
 
             app.UseCors();
             app.UseEndpoints(endpoints => {
+                endpoints.MapControllerRoute(
+                    name: "unauth",
+                    pattern: "/unauthorized/{*.}",
+                    defaults: new { controller = "Unauthorized", action = "Index"}
+                );
+
                 endpoints.MapControllerRoute(
                     name: "index",
                     pattern: "/{action}",

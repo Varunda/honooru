@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Code.ExtensionMethods {
@@ -10,11 +11,6 @@ namespace honooru.Code.ExtensionMethods {
         static async Task<T> DelayedResultTask<T>(TimeSpan delay, T result) {
             await Task.Delay(delay);
             return result;
-        }
-
-        static async Task<T> DelayedResultTimeoutTask<T>(TimeSpan delay) {
-            await Task.Delay(delay);
-            throw new TimeoutException();
         }
 
         /// <summary>
@@ -33,6 +29,11 @@ namespace honooru.Code.ExtensionMethods {
         public static async Task<T> TimeoutWithDefault<T>(this Task<T> task, TimeSpan delay, T fallback) {
             // who knew await await was a valid thing
             return await await Task.WhenAny(task, DelayedResultTask<T>(delay, fallback));
+        }
+
+        static async Task<T> DelayedResultTimeoutTask<T>(TimeSpan delay) {
+            await Task.Delay(delay);
+            throw new TimeoutException();
         }
 
         /// <summary>

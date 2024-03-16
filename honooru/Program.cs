@@ -29,6 +29,7 @@ using honooru.Code.ExtensionMethods;
 using honooru.Code.Tracking;
 using honooru.Models;
 using honooru.Services;
+using FFMpegCore;
 
 namespace honooru {
 
@@ -41,6 +42,11 @@ namespace honooru {
 
         public static async Task Main(string[] args) {
             Console.WriteLine($"starting at {DateTime.UtcNow:u}");
+
+            GlobalFFOptions.Configure(new FFOptions() {
+                BinaryFolder = "./ffmpeg",
+                TemporaryFilesFolder = "./ffmpeg/temp"
+            });
 
             bool hostBuilt = false;
 
@@ -55,7 +61,7 @@ namespace honooru {
                     };
                 })
                 //.AddNpgsql()
-                .AddJaegerExporter(config => {
+                .AddOtlpExporter(config => {
 
                 })
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(AppActivitySource.ActivitySourceName))

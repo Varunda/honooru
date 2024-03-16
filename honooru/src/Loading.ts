@@ -61,8 +61,9 @@ export class Loadable {
      * Create a Loading that is in the state of 'error'. Data will be the error passed
      * 
      * @param err Error that occured while attemping to load this external resource
+     * @param url url that caused this error
      */
-    public static error<T>(err: string | object | ProblemDetails): Loading<T> {
+    public static error<T>(err: string | object | ProblemDetails, url?: string): Loading<T> {
         if (typeof err == "string") {
             try {
                 const pb: ProblemDetails = JSON.parse(err);
@@ -76,7 +77,7 @@ export class Loadable {
                 return {
                     state: "error",
                     problem: {
-                        type: "generic-error",
+                        type: url ?? "generic-error",
                         title: `generic error: ${err}`,
                         status: 0,
                         detail: err,
@@ -90,7 +91,7 @@ export class Loadable {
             return {
                 state: "error",
                 problem: {
-                    type: "generic-error",
+                    type: url ?? "generic-error",
                     title: "generic error",
                     status: 0,
                     detail: JSON.stringify(err),

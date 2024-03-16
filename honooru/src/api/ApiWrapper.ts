@@ -55,15 +55,15 @@ export default class ApiWrapper<T> {
 		if (response.status == 204) {
 			return Loadable.nocontent();
 		} else if (response.status == 400) {
-			return Loadable.error(`bad request: ${response.data}`);
+			return Loadable.error(`bad request: ${response.data}`, url);
 		} else if (response.status == 404) {
 			return Loadable.notFound(response.data);
 		} else if (response.status == 429) {
 			return Loadable.error(`you have been rate limited! more info: ${response.data}`);
 		} else if (response.status == 500) {
-			return Loadable.error(response.data);
+			return Loadable.error(response.data, url);
 		} else if (response.status == 524 || response.status == 504) {
-			return Loadable.error(`timeout from cloudflare`);
+			return Loadable.error(`timeout from cloudflare`, url);
         } 
 
 		if (response.status != 200) {
@@ -81,17 +81,17 @@ export default class ApiWrapper<T> {
             if (response.status == 204) {
                 return Loadable.nocontent();
             } else if (response.status == 400) {
-                return Loadable.error(`bad request: ${response.data}`);
+                return Loadable.error(`bad request: ${response.data}`, url);
             } else if (response.status == 403) {
-                return Loadable.error(`forbidden: you are not signed in, or your account lacks permissions`);
+                return Loadable.error(`forbidden: you are not signed in, or your account lacks permissions`, url);
             } else if (response.status == 404) {
                 return Loadable.notFound(response.data);
             } else if (response.status == 429) {
-                return Loadable.error(`you have been rate limited! more info: ${response.data}`);
+                return Loadable.error(`you have been rate limited! more info: ${response.data}`, url);
             } else if (response.status == 500) {
-                return Loadable.error(`internal server error: ${response.data}`);
+                return Loadable.error(`internal server error: ${response.data}`, url);
             } else if (response.status == 524 || response.status == 504) {
-                return Loadable.error(`timeout from cloudflare`);
+                return Loadable.error(`timeout from cloudflare`, url);
             }
 
             if (response.status != 200) {
@@ -104,9 +104,9 @@ export default class ApiWrapper<T> {
 			const responseCode = err.response.status;
 
 			if (responseCode == 400) {
-				return Loadable.error(`bad request: ${responseData}`);
+				return Loadable.error(`bad request: ${responseData}`, url);
             } else if (responseCode == 403) {
-                return Loadable.error(`forbidden: you are not signed in, or your account lacks permissions`);
+                return Loadable.error(`forbidden: you are not signed in, or your account lacks permissions`, url);
 			} else if (responseCode == 404) {
 				return Loadable.notFound(responseData);
 			} else if (responseCode == 429) {
@@ -118,9 +118,9 @@ export default class ApiWrapper<T> {
 				problem.type = "rate-limited";
 				return Loadable.error(problem);
 			} else if (responseCode == 500) {
-				return Loadable.error(`internal server error: ${responseData}`);
+				return Loadable.error(`internal server error: ${responseData}`, url);
 			} else if (responseCode == 524 || responseCode == 504) {
-				return Loadable.error(`timeout from cloudflare`);
+				return Loadable.error(`timeout from cloudflare`, url);
 			}
 
 			throw `unchecked status code ${responseCode}: ${responseData}`;

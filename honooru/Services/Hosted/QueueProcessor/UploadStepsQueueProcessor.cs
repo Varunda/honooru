@@ -32,7 +32,12 @@ namespace honooru.Services.Hosted.QueueProcessor {
             _Logger.LogInformation($"starting to process {entry.Asset.Guid}");
 
             try {
-                CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
+                // originally the using was not here
+                // it took me like 6 hours of debugging to find thise ;-;
+                // it kept crashing 10 minutes (to the second) after uploading a .mkv file
+                // with an error about: "No process is associated with this object."
+                // very annoying to debug, would not recommend missing this again
+                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
                 await _UploadStepsHandler.Run(entry, cts.Token);
                 _Logger.LogInformation($"successfully processed {entry.Asset.Guid}");
             } catch (Exception ex) {

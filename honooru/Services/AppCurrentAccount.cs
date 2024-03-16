@@ -78,13 +78,18 @@ namespace honooru.Services {
                 */
 
                 // Get the email claim of the authed user
-                Claim? emailClaim = claims.FindFirst(ClaimTypes.Email);
-                if (emailClaim == null || string.IsNullOrEmpty(emailClaim.Value)) {
+                Claim? idClaim = claims.FindFirst(ClaimTypes.NameIdentifier);
+                if (idClaim == null || string.IsNullOrEmpty(idClaim.Value)) {
                     return null;
                 }
 
-                string email = emailClaim.Value;
-                return await _AppAccountDb.GetByEmail(email, CancellationToken.None);
+                string id = idClaim.Value;
+
+                if (ulong.TryParse(id, out ulong discordID) == false) {
+                    throw new InvalidCastException($"failed to convert {id} to a valid ulong");
+                }
+
+                return await _AppAccountDb.GetByDiscordID(discordID, CancellationToken.None);
             } else {
                 _Logger.LogWarning($"Unchecked stat of httpContext.User");
             }

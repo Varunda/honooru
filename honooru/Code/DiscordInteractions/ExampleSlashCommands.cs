@@ -89,7 +89,7 @@ namespace honooru.Code.DiscordInteractions {
         /// <summary>
         ///     example embed
         /// </summary>
-        /// <param name="worldID">ID of the world</param>
+        /// <param name="previousValue">ID of the world</param>
         public Task<DiscordEmbed> GeneralStatus(long previousValue) {
             DiscordEmbedBuilder builder = new();
             builder.Title = $"howdy!";
