@@ -43,7 +43,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <button v-if="editing == false" class="btn btn-primary" @click="editing = true">
+                        <button v-if="editing == false" class="btn btn-primary" @click="startEdit">
                             edit
                         </button>
 
@@ -114,18 +114,24 @@
                             </div>
 
                             <div v-else-if="aliases.state == 'loaded'">
-                                <div v-for="a in aliases.data">
-                                    <button v-if="del.alias == a.alias" class="btn btn-danger" @click="deleteAlias">
-                                        {{a.alias}}
-                                    </button>
+                                <div v-for="a in aliases.data" class="d-inline mr-1">
+                                    <div class="btn-group">
+                                        <button v-if="del.alias == a.alias" class="btn btn-danger" @click="deleteAlias(a.alias)">
+                                            <span class="bi-trash"></span>
+                                        </button>
 
-                                    <button v-else class="btn btn-info" @click="del.alias = a.alias">
-                                        {{a.alias}}
-                                    </button>
+                                        <button class="btn btn-info">
+                                            {{a.alias}}
+                                        </button>
 
-                                    <span v-if="del.alias == a.alias" class="text-danger">
-                                        click again to delete
-                                    </span>
+                                        <button v-if="del.alias != a.alias" class="btn btn-info" @click="del.alias = a.alias">
+                                            &times;
+                                        </button>
+
+                                        <button v-else class="btn btn-secondary" @click="del.alias = ''">
+                                            &times;
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -147,6 +153,28 @@
 
                             <api-error v-if="pending.alias.state == 'error'" :error="pending.alias.problem"></api-error>
                         </div>
+                    </div>
+
+                    <hr class="border" />
+
+                    <div>
+                        <div class="mb-3">
+                            <h4 class="mb-0">
+                                implications
+                            </h4>
+                            <h6 class="text-muted">
+                                implications are tags that when added to a post, will add another tag as well.
+                                implications only go one level deep.
+                                <br />
+                                for example, if there is an implication A -> B -> C, if tag A is added to a post,
+                                only tag B will be added as well, NOT tag C, despite an implication from tag B to tag C
+                            </h6>
+                        </div>
+
+                        <div class="mb-3">
+                            <view-tag-implications :tag-id="tagID"></view-tag-implications>
+                        </div>
+
                     </div>
 
                     <hr class="border" />
@@ -182,6 +210,8 @@
     import ToggleButton from "components/ToggleButton";
     import PostList from "components/app/PostList.vue";
 
+    import ViewTagImplications from "./components/ViewTagImplications.vue";
+
     import "filters/LocaleFilter";
 
     import { Post, PostApi } from "api/PostApi";
@@ -189,6 +219,7 @@
     import { PostTagApi } from "api/PostTagApi";
     import { TagTypeApi, TagType } from "api/TagTypeApi";
     import { TagAlias, TagAliasApi } from "api/TagAliasApi";
+    import { TagImplicationBlock, TagImplicationApi } from "api/TagImplicationApi";
 
     export const ViewTag = Vue.extend({
         props: {
@@ -212,11 +243,11 @@
                 },
 
                 pending: {
-                    alias: Loadable.idle() as Loading<void>
+                    alias: Loadable.idle() as Loading<void>,
                 },
 
                 del: {
-                    alias: "" as string
+                    alias: "" as string,
                 }
             }
         },
@@ -226,6 +257,24 @@
             this.getTag();
 
             this.getTagTypes();
+        },
+
+        mounted: function(): void {
+            document.addEventListener("keyup", (ev: KeyboardEvent) => {
+                // this means another input is currently in focus
+                if (document.activeElement != document.body) {
+                    return;
+                }
+
+                if (ev.key == "e") {
+                    this.startEdit();
+                }
+
+                if (ev.key == "Enter" && ev.ctrlKey) {
+                    this.saveEdit();
+                }
+
+            });
         },
 
         methods: {
@@ -265,6 +314,10 @@
                 this.aliases = await TagAliasApi.getByTagID(tagID);
             },
 
+            startEdit: function(): void {
+                this.editing = true;
+            },
+
             saveEdit: async function(): Promise<void> {
                 this.editing = false;
 
@@ -299,6 +352,7 @@
                 const r: Loading<void> = await TagAliasApi.delete(this.del.alias);
                 if (r.state == "loaded") {
                     Toaster.add(`alias deleted`, `successfully deleted the alias '${this.del.alias}'`, "success");
+                    this.del.alias = "";
 
                     this.getTagAliases(this.tagID);
                 }
@@ -308,13 +362,17 @@
                 Toaster.add(`update queued`, "queued an updated to the tag usage count", "info");
                 await TagApi.queueRecount(this.tagID);
             }
+        },
+
+        computed: {
 
         },
 
         components: {
             InfoHover, ApiError,
             AppMenu, MenuSep, MenuDropdown, MenuImage,
-            ToggleButton, PostList
+            ToggleButton, PostList,
+            ViewTagImplications
         }
     });
     export default ViewTag;

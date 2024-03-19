@@ -23,6 +23,7 @@ namespace honooru.Services.Db.Readers {
             services.AddSingleton<IDataReader<PostTag>, PostTagReader>();
             services.AddSingleton<IDataReader<TagInfo>, TagInfoReader>();
             services.AddSingleton<IDataReader<TagAlias>, TagAliasReader>();
+            services.AddSingleton<IDataReader<TagImplication>, TagImplicationReader>();
         }
 
     }

@@ -21,6 +21,8 @@ namespace honooru.Models.Db {
         /// </summary>
         public DateTime Timestamp { get; set; }
 
+        public PostStatus Status { get; set; }
+
         /// <summary>
         ///     an optional title
         /// </summary>
@@ -88,4 +90,13 @@ namespace honooru.Models.Db {
         public long Width { get; set; }
 
     }
+
+    public enum PostStatus {
+
+        OK = 1,
+
+        DELETED = 2
+
+    }
+
 }

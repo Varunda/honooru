@@ -70,7 +70,7 @@
                     return "image";
                 }
 
-                console.error(`unchecked file extension ${f}, assuming an 'image' file type! this is likely wrong!`);
+                console.error(`unchecked file extension '${f}'', assuming an 'image' file type! this is likely wrong!`);
 
                 return "image";
             }

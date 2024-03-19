@@ -15,12 +15,15 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<AppGroupRepository>();
             services.AddSingleton<AppAccountGroupMembershipRepository>();
 
+            services.AddSingleton<PostRepository>();
             services.AddSingleton<SearchQueryRepository>();
             services.AddSingleton<TagRepository>();
+            services.AddSingleton<PostTagRepository>();
             services.AddSingleton<TagTypeRepository>();
             services.AddSingleton<TagInfoRepository>();
             services.AddSingleton<MediaAssetRepository>();
             services.AddSingleton<TagAliasRepository>();
+            services.AddSingleton<TagImplicationRepository>();
         }
 
     }

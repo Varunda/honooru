@@ -84,8 +84,6 @@ export class PostApi extends ApiWrapper<Post> {
     }
 
     public static async update(postID: number, tags?: string, rating?: string, source?: string, title?: string, description?: string): Promise<Loading<void>> {
-        let url: string = `/api/post/${postID}?`;
-
         const parms: URLSearchParams = new URLSearchParams();
 
         if (tags) {
@@ -95,13 +93,13 @@ export class PostApi extends ApiWrapper<Post> {
             parms.set("rating", rating);
         }
         if (source) {
-            parms.set("source", encodeURI(source));
+            parms.set("source", source);
         }
         if (title) {
-            parms.set("title", encodeURI(title));
+            parms.set("title", title);
         }
         if (description) {
-            parms.set("description", encodeURI(description));
+            parms.set("description", description);
         }
 
         return PostApi.get().post(`/api/post/${postID}?${parms.toString()}`);

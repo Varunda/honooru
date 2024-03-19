@@ -37,6 +37,8 @@ using System.Security.Claims;
 using AspNet.Security.OAuth.Discord;
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
+using honooru.Services.UrlMediaExtrator;
+using System.Text.Json.Serialization;
 
 namespace honooru {
 
@@ -74,6 +76,7 @@ namespace honooru {
 
             }).AddJsonOptions(config => {
                 config.JsonSerializerOptions.Converters.Add(new DateTimeJsonConverter());
+                config.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             }).AddRazorRuntimeCompilation();
 
             services.AddSwaggerGen(doc => {
@@ -174,6 +177,7 @@ namespace honooru {
             services.AddAppQueueProcessorServices();
             services.AddUploadStepHandlers();
             services.AddAppHostedServices();
+            services.AddUrlExtractors();
 
             // Hosted services
             services.AddHostedService<DbCreatorStartupService>(); // Have first to ensure DBs exist

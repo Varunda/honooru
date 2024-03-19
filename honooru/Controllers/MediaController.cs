@@ -43,7 +43,7 @@ namespace honooru.Controllers {
             }
 
             string size = parts[2];
-            string md5 = parts[3];
+            string md5 = parts[3]; // this include the file extension
 
             string[] extParts = md5.Split(".");
             if (extParts.Length != 2) {
@@ -59,11 +59,14 @@ namespace honooru.Controllers {
                 return NotFound();
             }
 
+            // DO NOT use |using| here, as calling File() will dispose of the stream for us
+            FileStream file = System.IO.File.OpenRead(path);
+
             string contentType = _FileExtensionHelper.GetContentType(fileExt);
             //_Logger.LogDebug($"sending physical file path [md5={md5}] [fileExt={fileExt}] [Content-Type={contentType}]");
 
-            return PhysicalFile(path, contentType);
-
+            // enable range processing is what allows seeking within long videos
+            return File(file, contentType, enableRangeProcessing: true);
         }
 
     }

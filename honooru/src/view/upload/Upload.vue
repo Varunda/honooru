@@ -11,27 +11,44 @@
         </app-menu>
 
         <div v-if="state == 'upload'">
-            <div class="custom-file mb-1 mt-5">
-                <input id="file-upload" type="file" class="custom-file-input" @change="updateName" />
-                <label class="custom-file-label" for="file-upload" style="color: black!important;">{{fileText}}</label>
-            </div>
 
-            <div class="w-100">
-                <button class="btn btn-primary w-100" @click="uploadFile">Upload</button>
-            </div>
+            <div class="d-flex">
+                <div class="flex-grow-1"></div>
 
-            <div v-if="upload.show == true">
-                <hr class="border" />
+                <div class="flex-grow-2" style="max-width: 640px;">
+                    <div class="h1 text-center">
+                        upload
+                    </div>
 
-                Uploading...
-                <div class="progress mt-3" style="height: 3rem;">
-                    <div class="progress-bar bg-primary" :style="{ width: uploadWidth }" style="height: 3rem;">
-                        <span style="position: absolute; left: 50%; transform: translateX(-50%); font-size: 2.5rem;">
-                            {{upload.progress | bytes}}/{{upload.total | bytes}}
-                            ({{upload.progress / Math.max(1, upload.total) * 100 | locale(2)}}%)
-                        </span>
+                    <div class="custom-file mb-1">
+                        <input id="file-upload" type="file" class="custom-file-input" @change="updateName" />
+                        <label class="custom-file-label" for="file-upload" style="color: black!important;">{{fileText}}</label>
+                    </div>
+
+                    <div>
+                        <input class="form-control" type="text" v-model="inputUrl" placeholder="URL" />
+                    </div>
+
+                    <div class="w-100">
+                        <button class="btn btn-primary w-100" @click="doUpload">Upload</button>
+                    </div>
+
+                    <div v-if="upload.show == true">
+                        <hr class="border" />
+
+                        Uploading...
+                        <div class="progress mt-3" style="height: 3rem;">
+                            <div class="progress-bar bg-primary" :style="{ width: uploadWidth }" style="height: 3rem;">
+                                <span style="position: absolute; left: 50%; transform: translateX(-50%); font-size: 2.5rem;">
+                                    {{upload.progress | bytes}}/{{upload.total | bytes}}
+                                    ({{upload.progress / Math.max(1, upload.total) * 100 | locale(2)}}%)
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <div class="flex-grow-1"></div>
             </div>
 
             <div>
@@ -40,7 +57,7 @@
                         <div class="d-flex align-items-center">
                             <span class="border px-2 mx-1" style="max-width: 30px; flex-grow: 1; height: 1px;"></span>
                             <span class="h3 flex-grow-0 mr-2">processing</span>
-                            <span class="h5 flex-grow-0">(these uploads are currently being processed (or queued for processing))</span>
+                            <span class="h5 flex-grow-0">(these uploads are currently being processed, or are queued for processing)</span>
                             <span class="border px-2 mx-1 flex-grow-1" style="height: 1px;"></span>
                         </div>
 
@@ -50,7 +67,7 @@
                                     {{entry.guid}} - {{entry.fileName}} ({{entry.timestamp | moment}})
                                 </a>
                             </div>
-                            <div v-if="upload.processing.data.length == 0">
+                            <div v-if="upload.processing.data.length == 0" class="text-muted">
                                 nothing!
                             </div>
                         </div>
@@ -73,13 +90,13 @@
                         </div>
 
                         <div v-if="upload.ready.state == 'loaded'">
-                            <a v-for="entry in upload.ready.data" :href="'/upload?m=' + entry.guid">
+                            <a v-for="entry in upload.ready.data" :href="'/upload?m=' + entry.guid" class="d-block">
                                 <span>
                                     -
                                     {{entry.guid}} - {{entry.fileName}} ({{entry.timestamp | moment}})
                                 </span>
                             </a>
-                            <div v-if="upload.ready.data.length == 0">
+                            <div v-if="upload.ready.data.length == 0" class="text-muted">
                                 nothing!
                             </div>
                         </div>
@@ -110,7 +127,22 @@
         </div>
 
         <div v-else-if="state == 'view'">
-            <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem;">
+
+            <div v-if="mediaAsset.postID != null" class="d-flex">
+                <span class="flex-grow-1"></span>
+
+                <span class="h1 text-center flex-grow-0 mt-5">
+                    this file was already uploaded in
+
+                    <a :href="'/post/' + mediaAsset.postID">
+                        post #{{mediaAsset.postID}}
+                    </a>
+                </span>
+
+                <span class="flex-grow-1"></span>
+            </div>
+
+            <div v-else style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem;">
                 <div>
                     <div class="mb-2">
                         <label class="mb-0">rating</label>
@@ -132,9 +164,29 @@
                         <post-search v-model="posting.tags" type="textarea"></post-search>
                     </div>
 
+                    <div class="mb-0">
+                        <label class="mb-0">title</label>
+                        <input type="text" class="form-control" v-model="posting.title" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="mb-0">description</label>
+                        <textarea v-model="posting.description" class="form-control"></textarea>
+                    </div>
+
                     <div class="mb-2">
                         <label class="mb-0">source</label>
-                        <input type="text" class="form-control" />
+                        <input type="text" class="form-control" v-model="posting.source" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="mb-0">
+                            additional tags
+                            <info-hover text="these tags will be added when posted"></info-hover>
+                        </label>
+
+                        <textarea class="form-control" v-model="posting.additionalTags" readonly disabled style="background-color: var(--gray); color: var(--dark);">
+                        </textarea>
                     </div>
 
                     <span class="text-muted d-block">
@@ -207,6 +259,8 @@
 
                 progress: new UploadStepEntry() as UploadStepEntry,
 
+                inputUrl: "" as string,
+
                 upload: {
                     show: false as boolean,
                     progress: 0 as number,
@@ -223,6 +277,7 @@
                     source: "" as string,
                     title: "" as string,
                     description: "" as string,
+                    additionalTags: "" as string
                 }
             }
         },
@@ -256,6 +311,8 @@
                         } else if (data.data.status == 3) { // 3 = done
                             this.mediaAsset = data.data;
                             this.state = "view";
+
+                            this.setMediaAsset(data.data);
                         } else {
                             console.log(`unchecked status: ${data.data.status}`);
                         }
@@ -294,12 +351,34 @@
                 history.pushState({ path: url.href }, "", `/upload?${url.searchParams.toString()}`);
             },
 
+            setMediaAsset: function(asset: MediaAsset): void {
+                this.posting.source = asset.source.trim();
+                this.posting.title = asset.title.trim();
+                this.posting.description = asset.description.trim();
+                this.posting.additionalTags = asset.additionalTags.trim();
+            },
+
             makeFile: function(): void {
                 this.file = document.getElementById("file-upload") as HTMLInputElement | null;
             },
 
             updateTags: function(tags: string): void {
                 this.posting.tags = tags;
+            },
+
+            doUpload: async function(): Promise<void> {
+                if (this.inputUrl != "") {
+                    console.log(`using inputUrl as upload source`);
+                    await this.uploadUrl();
+                } else {
+                    console.log(`using file input as upload source`);
+                    await this.uploadFile();
+                }
+            },
+
+            uploadUrl: async function(): Promise<void> {
+                const asset: Loading<MediaAsset> = await MediaAssetApi.uploadUrl(this.inputUrl);
+                await this._handleAsset(asset);
             },
 
             uploadFile: async function(): Promise<void> {
@@ -312,7 +391,7 @@
                 }
 
                 for (let i = 0; i < files.length; ++i) {
-                    const f: File | null = files.item(0);
+                    const f: File | null = files.item(i);
 
                     if (f == null) {
                         console.warn(`failed to get file at index ${i}`);
@@ -325,17 +404,23 @@
                         this.upload.total = total;
                         console.log(`${progress} of ${total} uploaded`);
                     });
-                    if (asset.state == "loaded") {
-                        this.setMediaAssetID(asset.data.guid);
-                        this.upload.show = false;
-                        this.upload.progress = this.upload.total = 0;
-                        console.log(`uploaded ${asset.data.guid} with hash of ${asset.data.md5}`);
+                    await this._handleAsset(asset);
+                }
+            },
 
-                        if (this.connection != null) {
-                            await this.connection.invoke("SubscribeToMediaAsset", asset.data.guid);
-                            console.log(`connected to hub`);
-                            this.state = "processing";
-                        }
+            _handleAsset: async function(asset: Loading<MediaAsset>): Promise<void> {
+                if (asset.state == "loaded") {
+                    this.mediaAsset = asset.data;
+
+                    this.setMediaAssetID(asset.data.guid);
+                    this.upload.show = false;
+                    this.upload.progress = this.upload.total = 0;
+                    console.log(`uploaded ${asset.data.guid} with hash of ${asset.data.md5}`);
+
+                    if (this.connection != null) {
+                        await this.connection.invoke("SubscribeToMediaAsset", asset.data.guid);
+                        console.log(`connected to hub`);
+                        this.state = "processing";
                     }
                 }
             },
@@ -394,13 +479,11 @@
             },
 
             onFinish: function(elem: any): void {
+                this.mediaAsset = MediaAssetApi.parse(elem);
+                this.setMediaAsset(this.mediaAsset);
                 this.state = "view";
                 console.log(`done ${elem}`);
                 console.log(elem);
-
-                setTimeout(() => {
-                    this.mediaAsset = elem;
-                }, 500);
             },
 
             computeProgressClasses: function(e: UploadStepProgress) {

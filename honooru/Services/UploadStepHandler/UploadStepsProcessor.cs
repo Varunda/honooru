@@ -3,6 +3,7 @@ using honooru.Code.Hubs.Implementations;
 using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Models.App.MediaUploadStep;
+using honooru.Models.Db;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,13 +27,14 @@ namespace honooru.Services.UploadStepHandler {
 
         private readonly MediaAssetRepository _MediaAssetRepository;
         private readonly UploadStepProgressRepository _UploadProgressRepository;
+        private readonly PostRepository _PostRepository;
 
         //private Dictionary<Guid, UploadStepEntry> _Progress = new();
 
         public UploadStepsProcessor(ILogger<UploadStepsProcessor> logger,
             IServiceProvider services, MediaAssetRepository mediaAssetRepository,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> uploadHub,
-            UploadStepProgressRepository uploadProgressRepository) {
+            UploadStepProgressRepository uploadProgressRepository, PostRepository postRepository) {
 
             _Logger = logger;
 
@@ -40,6 +42,7 @@ namespace honooru.Services.UploadStepHandler {
             _MediaAssetRepository = mediaAssetRepository;
             _UploadHub = uploadHub;
             _UploadProgressRepository = uploadProgressRepository;
+            _PostRepository = postRepository;
         }
 
         public async Task Run(UploadSteps steps, CancellationToken cancel) {
@@ -86,13 +89,13 @@ namespace honooru.Services.UploadStepHandler {
                         throw new MissingMethodException(workerType.FullName, "Run");
                     }
 
-                    if (workMethod.ReturnType != typeof(Task)) {
-                        throw new ArgumentException($"return type of Run must be a Task");
+                    if (workMethod.ReturnType != typeof(Task<bool>)) {
+                        throw new ArgumentException($"return type of Run must be a Task<bool>, got {workMethod.ReturnType.FullName} instead");
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();
-                    // force is safe, we know the return type will be a Task, not a Task?
-                    Task task = (Task) workMethod.Invoke(worker, new object[] {
+                    // force is safe, we know the return type will be a Task<bool>, not a |Task<bool>?|
+                    Task<bool> task = (Task<bool>) workMethod.Invoke(worker, [
                         step,
                         (decimal progress) => {
                             if (entry.Current != null) {
@@ -100,26 +103,39 @@ namespace honooru.Services.UploadStepHandler {
                             }
                         },
                         cancel
-                    })!;
+                    ])!;
 
-                    await task;
+                    bool result = await task;
 
                     _Logger.LogInformation($"took {timer.ElapsedMilliseconds}ms to process {workerType.FullName}");
                     if (entry.Current != null) {
                         entry.Current.Finished = true;
                     }
+
+                    Post? existingPost = await _PostRepository.GetByMD5(steps.Asset.MD5);
+                    _Logger.LogDebug($"checking if existing post by MD5 exists [md5={steps.Asset.MD5}]");
+                    if (existingPost != null) {
+                        _Logger.LogInformation($"found existing post after uploading asset [postID={existingPost.ID}] [md5={existingPost.MD5}] [MediaAssetID={steps.Asset.Guid}]");
+                        steps.Asset.PostID = existingPost.ID;
+                        break;
+                    }
+
+                    if (result == false) {
+                        _Logger.LogInformation($"upload step said to stop processing now, stopping [name={step.Name}]");
+                        break;
+                    }
                 }
+
+                MediaAsset asset = steps.Asset;
+
+                await _MediaAssetRepository.Upsert(asset);
+                await group.Finish(asset);
+                _UploadProgressRepository.Remove(entry.MediaAssetID);
+
+                _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}]");
             } catch (Exception ex) {
                 _Logger.LogError(ex, "failed to run upload steps");
             }
-
-            _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}]");
-            MediaAsset asset = steps.Asset;
-            asset.Status = MediaAssetStatus.DONE;
-            await _MediaAssetRepository.Upsert(asset);
-
-            await group.Finish(asset);
-            _UploadProgressRepository.Remove(entry.MediaAssetID);
         }
 
     }

@@ -9,6 +9,11 @@ namespace honooru.Models.App {
         ///     temp guid the file is saved under
         /// </summary>
         public Guid Guid { get; set; } = Guid.Empty;
+        
+        /// <summary>
+        ///     if this <see cref="MediaAsset"/> uploaded exists as a post already, this is the ID of that post
+        /// </summary>
+        public ulong? PostID { get; set; }
 
         /// <summary>
         ///     md5 hash of the media asset
@@ -42,6 +47,20 @@ namespace honooru.Models.App {
         /// </summary>
         public long FileSizeBytes { get; set; } = 0;
 
+        /// <summary>
+        ///     where this media asset came from
+        /// </summary>
+        public string Source { get; set; } = "";
+
+        /// <summary>
+        ///     additional tags that are added during parsing
+        /// </summary>
+        public string AdditionalTags { get; set; } = "";
+
+        public string Title { get; set; } = "";
+
+        public string Description { get; set; } = "";
+
     }
 
     public enum MediaAssetStatus {
@@ -64,7 +83,12 @@ namespace honooru.Models.App {
         /// <summary>
         ///     this media asset is done and ready for tagging to become a post
         /// </summary>
-        DONE = 3
+        DONE = 3,
+
+        /// <summary>
+        ///     this media asset is being pulled from a URL
+        /// </summary>
+        EXTRACTING = 4,
 
     }
 

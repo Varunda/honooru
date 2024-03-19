@@ -13,7 +13,7 @@
             </span>
         </div>
 
-        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control"
+        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1"
                   @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" >
         </textarea>
 

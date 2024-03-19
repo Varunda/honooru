@@ -15,6 +15,14 @@ namespace honooru.Services.Db.Readers {
             post.ID = reader.GetUInt64("id");
             post.PosterUserID = reader.GetUInt64("poster_user_id");
             post.Timestamp = reader.GetDateTime("timestamp");
+
+            short statusID = reader.GetInt16("status");
+            if (Enum.IsDefined((PostStatus) statusID)) {
+                post.Status = (PostStatus)statusID;
+            } else {
+                throw new InvalidCastException($"{statusID} is not a valid {nameof(PostStatus)}");
+            }
+
             post.Title = reader.GetNullableString("title");
             post.Description = reader.GetNullableString("description");
             post.LastEditorUserID = reader.GetUInt64("last_editor_user_id");

@@ -6,20 +6,23 @@
 
         <hr class="border my-0" />
 
+        <!--
         <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; max-width: 100vw">
-            <div>
+        -->
+        <div class="columns">
+            <div class="column is-one-fifth">
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
                     <div class="btn-group w-100">
-                        <button class="btn" :disabled="!editing"
+                        <button class="button" :disabled="!editing"
                                 :class="[ edit.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
-                            explicit
+                            explict
                         </button>
-                        <button class="btn" :disabled="!editing" 
+                        <button class="button" :disabled="!editing" 
                                 :class="[ edit.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
                             unsafe
                         </button>
-                        <button class="btn" :disabled="!editing"
+                        <button class="button" :disabled="!editing"
                                 :class="[ edit.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'general'">
                             general
                         </button>
@@ -34,12 +37,12 @@
 
                     <div v-else-if="tags.state == 'loaded'">
                         <div v-for="block in sortedTags" class="mb-2" style="line-height: 1.2">
-                            <h5 class="mb-0">
+                            <h6 class="mb-0" style="font-size: 1rem;">
                                 <strong>{{block.name}}</strong>
-                            </h5>
+                            </h6>
 
                             <div v-for="tag in block.tags" :style="{ 'color': '#' + tag.hexColor }">
-                                <a :href="'/tag/' + tag.id">
+                                <a :href="'/tag/' + tag.id" :class="{ 'text-info': tag.description, 'text-secondary': !tag.description }">
                                     <info-hover :text="tag.description || ''"></info-hover>
                                 </a>
                                 <a :href="'/posts?q=' + tag.name">
@@ -99,6 +102,55 @@
 
                 <hr class="border border-secondary" />
 
+                <h5>information</h5>
+
+                <div v-if="post.state == 'idle'"></div>
+
+                <div v-else-if="post.state == 'loading'">
+                    loading...
+                </div>
+
+                <table v-else-if="post.state == 'loaded'" class="table table-sm">
+                    <tr>
+                        <td>ID</td>
+                        <td>{{post.data.id}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>timestamp</td>
+                        <td>{{post.data.timestamp | moment}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>md5</td>
+                        <td>{{post.data.md5}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>file size</td>
+                        <td>{{post.data.fileSizeBytes | bytes}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>file extension</td>
+                        <td>{{post.data.fileExtension}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>dimensions</td>
+                        <td>{{post.data.width}}x{{post.data.height}}</td>
+                    </tr>
+
+                    <tr v-if="post.data.durationSeconds > 0">
+                        <td>duration</td>
+                        <td>{{post.data.durationSeconds | mduration}}</td>
+                    </tr>
+                </table>
+
+                <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
+
+                <hr class="border border-secondary" />
+
                 <h5>misc controls</h5>
 
                 <button class="btn btn-sm btn-secondary d-block mb-1" @click="remakeThumbnail">
@@ -114,30 +166,32 @@
                 </button>
             </div>
 
-            <div v-if="post.state == 'loaded'">
-                <div class="h2">
-                    <span v-if="post.data.title">
-                        {{post.data.title}}
-                    </span>
+            <div class="column">
+                <div v-if="post.state == 'loaded'">
+                    <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
 
-                    <span v-else class="text-muted">
-                        &lt;no title set&gt;
-                    </span>
-                </div>
+                    <div class="h2">
+                        <span v-if="post.data.title">
+                            {{post.data.title}}
+                        </span>
 
-                <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
-
-                <div>
-                    <div class="h4">
-                        Description
+                        <span v-else class="text-muted">
+                            &lt;no title set&gt;
+                        </span>
                     </div>
-                    <div v-if="post.data.description">
-                        {{post.data.description}}
+
+                    <div>
+                        <div class="h4">
+                            description
+                        </div>
+                        <div v-if="post.data.description">
+                            {{post.data.description}}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+        </div>
     </div>
 </template>
 
@@ -155,6 +209,9 @@
     import { Post, PostApi } from "api/PostApi";
     import { ExtendedTag } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
+
+    import "filters/ByteFilter";
+    import "filters/MomentFilter";
 
     class TagBlock {
         public name: string = "";
@@ -243,7 +300,11 @@
                 this.tags = await PostTagApi.getByPostID(this.postID);
 
                 if (this.tags.state == "loaded") {
-                    this.edit.tags = [...this.tags.data].sort((a, b) => a.name.localeCompare(b.name)).map(iter => iter.name).join(" ");
+                    this.edit.tags = "";
+                    for (const b of this.sortedTags) {
+                        this.edit.tags += b.tags.sort((a, b) => a.name.localeCompare(b.name)).map(iter => iter.name).join(" ");
+                        this.edit.tags += "\n";
+                    }
                 }
             },
 

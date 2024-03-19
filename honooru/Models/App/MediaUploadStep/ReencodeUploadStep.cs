@@ -34,7 +34,13 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger = logger;
             }
 
-            public async Task Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
+            public async Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
+                if (order.Asset.FileExtension == "mp4" || order.Asset.FileExtension == "webm") {
+                    _Logger.LogDebug($"skipping re-encoding of file that is already web playable [FileExtension={order.Asset.FileExtension}] [id={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                    progressCallback(100m);
+                    return true;
+                }
+
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
                 string output = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + ".mp4");
 
@@ -72,6 +78,8 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger.LogDebug($"creating FileInfo [output={output}]");
                 order.Asset.FileSizeBytes = new FileInfo(output).Length;
                 order.Asset.FileExtension = "mp4";
+
+                return true;
             }
 
         }

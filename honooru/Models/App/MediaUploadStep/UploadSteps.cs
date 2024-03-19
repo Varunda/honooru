@@ -28,6 +28,11 @@ namespace honooru.Models.App.MediaUploadStep {
             return this;
         }
 
+        public UploadSteps AddExtractStep(string url) {
+            Steps.Add(new ExtractStep.Order(Asset, StorageOptions, url));
+            return this;
+        }
+
     }
 
 }

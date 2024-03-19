@@ -23,10 +23,21 @@ namespace honooru.Services.Db.Patches {
                     (3, 'explicit')
                 ON CONFLICT (id) DO NOTHING;
 
+                CREATE TABLE IF NOT EXISTS post_status (
+                    id smallint NOT NULL PRIMARY KEY,
+                    name varchar NOT NULL
+                );
+
+                INSERT INTO post_status (id, name) VALUES 
+                    (1, 'ok'),
+                    (2, 'deleted')
+                ON CONFLICT (id) DO NOTHING;
+
                 CREATE TABLE IF NOT EXISTS post (
                     id bigint NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1),
                     poster_user_id bigint NOT NULL,
                     timestamp timestamptz NOT NULL,
+                    status smallint NOT NULL,
                     title varchar NULL,
                     description varchar NULL,
                     last_editor_user_id bigint NOT NULL DEFAULT 0,
@@ -39,7 +50,12 @@ namespace honooru.Services.Db.Patches {
                     file_size_bytes bigint NOT NULL,
                     duration_seconds bigint NOT NULL,
                     width bigint NOT NULL,
-                    height bigint NOT NULL
+                    height bigint NOT NULL,
+
+                    UNIQUE(md5),
+
+                    CONSTRAINT fk_post_rating FOREIGN KEY (rating) REFERENCES post_rating(id),
+                    CONSTRAINT fk_post_status FOREIGN KEY (status) REFERENCES post_status(id)
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_post_md5 ON post(md5);
@@ -82,11 +98,12 @@ namespace honooru.Services.Db.Patches {
                     tag_b BIGINT NOT NULL,
                 
                     UNIQUE(tag_a, tag_b),
-                    CONSTRAINT fk_tag_implication_tag_a FOREIGN KEY
+                    CONSTRAINT fk_tag_implication_tag_a FOREIGN KEY(tag_a) REFERENCES tag(id),
+                    CONSTRAINT fk_tag_implication_tag_b FOREIGN KEY(tag_b) REFERENCES tag(id)
                 );
 
-                CREATE INDEX IF NOT EXISTS idx_tag_implication_tag_a ON tag_implication USING (tag_a);
-                CREATE INDEX IF NOT EXISTS idx_tag_implication_tag_b ON tag_implication USING (tag_b);
+                CREATE INDEX IF NOT EXISTS idx_tag_implication_tag_a ON tag_implication(tag_a);
+                CREATE INDEX IF NOT EXISTS idx_tag_implication_tag_b ON tag_implication(tag_b);
 
                 CREATE TABLE IF NOT EXISTS post_tag (
                     post_id bigint NOT NULL,
@@ -102,12 +119,17 @@ namespace honooru.Services.Db.Patches {
 
                 CREATE TABLE IF NOT EXISTS media_asset (
                     id UUID NOT NULL PRIMARY KEY,
+                    post_id bigint NULL,
                     md5 varchar NOT NULL,
                     status int NOT NULL,
                     file_name varchar NOT NULL,
                     file_extension varchar NOT NULL,
                     timestamp timestamptz NOT NULL,
                     file_size_bytes bigint NOT NULL,
+                    source varchar NOT NULL,
+                    additional_tags varchar NOT NULL,
+                    title varchar NOT NULL,
+                    descriptiont varchar NOT NULL,
 
                     UNIQUE (md5)
                 );

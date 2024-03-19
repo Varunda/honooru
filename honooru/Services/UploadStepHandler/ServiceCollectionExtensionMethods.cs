@@ -11,6 +11,7 @@ namespace honooru.Services.UploadStepHandler {
 
             services.AddScoped<ReencodeUploadStep.Worker>();
             services.AddScoped<MoveUploadStep.Worker>();
+            services.AddScoped<ExtractStep.Worker>();
         }
 
     }

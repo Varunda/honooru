@@ -4,7 +4,9 @@ import ApiWrapper from "api/ApiWrapper";
 import { TagType } from "api/TagTypeApi";
 
 export class Tag {
-
+    public id: number = 0;
+    public name: string = "";
+    public typeID: number = 0;
 }
 
 export class ExtendedTag {
@@ -29,7 +31,7 @@ export class TagApi extends ApiWrapper<Tag> {
 
     public static parse(elem: any): Tag {
         return {
-
+            ...elem
         }
     }
 
@@ -48,6 +50,10 @@ export class TagApi extends ApiWrapper<Tag> {
 
     public static async getExtendedByID(tagID: number): Promise<Loading<ExtendedTag>> {
         return TagApi.get().readSingle(`/api/tag/${tagID}/extended`, TagApi.parseExtendedTag);
+    }
+
+    public static getByName(name: string): Promise<Loading<ExtendedTag>> {
+        return TagApi.get().readSingle(`/api/tag/name?name=${encodeURI(name)}`, TagApi.parseExtendedTag);
     }
 
     public static async search(name: string): Promise<Loading<TagSearchResults>> {

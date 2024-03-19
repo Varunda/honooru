@@ -4,12 +4,17 @@ import * as axios from "axios";
 
 export class MediaAsset {
     public guid: string = ""; // guid
+    public postID: number | null = null;
     public md5: string = "";
     public status: number = 0;
     public fileName: string = "";
     public fileExtension: string = "";
     public timestamp: Date = new Date();
     public fileSizeBytes: number = 0;
+    public source: string = "";
+    public additionalTags: string = "";
+    public title: string = "";
+    public description: string = "";
 }
 
 export class MediaAssetApi extends ApiWrapper<MediaAsset> {
@@ -33,6 +38,10 @@ export class MediaAssetApi extends ApiWrapper<MediaAsset> {
 
     public static async getReady(): Promise<Loading<MediaAsset[]>> {
         return MediaAssetApi.get().readList(`/api/media-asset/ready`, MediaAssetApi.parse);
+    }
+
+    public static async uploadUrl(url: string): Promise<Loading<MediaAsset>> {
+        return MediaAssetApi.get().postReply(`/api/media-asset/upload-url?url=${encodeURIComponent(url)}`, MediaAssetApi.parse);
     }
 
     public static async upload(file: File, processCallback: (arg0: number, arg1: number) => void): Promise<Loading<MediaAsset>> {

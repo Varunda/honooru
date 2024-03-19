@@ -1,6 +1,7 @@
 ﻿using FFMpegCore;
 using honooru.Code;
 using honooru.Code.Constants;
+using honooru.Code.ExtensionMethods;
 using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
@@ -50,12 +51,15 @@ namespace honooru.Controllers.Api {
         private readonly TagTypeRepository _TagTypeRepository;
         private readonly PostTagDb _PostTagDb;
         private readonly FileExtensionService _FileExtensionHelper;
+        private readonly TagImplicationRepository _TagImplicationRepository;
 
         private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailCreationQueue;
         private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
 
         private readonly SearchQueryRepository _SearchQueryRepository;
         private readonly SearchQueryParser _SearchQueryParser;
+
+        private static readonly string[] TAG_SEPARATOR = [" ", "\n", "\r"];
 
         public PostApiController(ILogger<PostApiController> logger,
             IOptions<StorageOptions> storageOptions,
@@ -64,7 +68,8 @@ namespace honooru.Controllers.Api {
             TagTypeRepository tagTypeRepository, PostTagDb postTagDb,
             SearchQueryRepository searchQueryRepository, SearchQueryParser searchQueryParser,
             BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository,
-            BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue, FileExtensionService fileExtensionHelper) {
+            BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue, FileExtensionService fileExtensionHelper,
+            TagImplicationRepository tagImplicationRepository) {
 
             _Logger = logger;
 
@@ -82,6 +87,7 @@ namespace honooru.Controllers.Api {
             _ThumbnailCreationQueue = thumbnailCreationQueue;
             _TagInfoUpdateQueue = tagInfoUpdateQueue;
             _FileExtensionHelper = fileExtensionHelper;
+            _TagImplicationRepository = tagImplicationRepository;
         }
 
         /// <summary>
@@ -250,6 +256,7 @@ namespace honooru.Controllers.Api {
             post.FileName = asset.FileName;
             post.FileExtension = asset.FileExtension;
             post.FileSizeBytes = asset.FileSizeBytes;
+            post.Status = PostStatus.OK;
 
             try {
                 string? fileType = _FileExtensionHelper.GetFileType(post.FileExtension);
@@ -304,8 +311,13 @@ namespace honooru.Controllers.Api {
                 _Logger.LogError(ex, $"failed to auto generated tags for post [MD5={post.MD5}] [FileExtension={post.FileExtension}]");
             }
 
+            if (asset.AdditionalTags.Length > 0) {
+                tags += asset.AdditionalTags;
+                _Logger.LogInformation($"adding additional tags from uploading [additionalTags={asset.AdditionalTags}]");
+            }
+
             // tag parsing!
-            List<string> tag = tags.ToLower().Trim().Split(" ").ToList();
+            List<string> tag = _SplitTags(tags);
             _Logger.LogDebug($"tags found [tags=[{string.Join(" ", tag)}]]");
             HashSet<ulong> tagIds = new(); // list of tag IDs to insert
             foreach (string t in tag) {
@@ -340,6 +352,9 @@ namespace honooru.Controllers.Api {
                 if (tagObj.ID == 0) {
                     throw new Exception($"missing tag ID from {t}");
                 }
+
+                List<TagImplication> implications = await _TagImplicationRepository.GetBySourceTagID(tagObj.ID);
+                tagIds.AddRange(implications.Select(iter => iter.TagB));
 
                 tagIds.Add(tagObj.ID);
             }
@@ -433,7 +448,7 @@ namespace honooru.Controllers.Api {
                 List<ulong> tagsToAdd = new();
                 List<ulong> tagsToKeep = new();
 
-                List<string> tagsInput = tags.Trim().ToLower().Split(" ").ToList();
+                List<string> tagsInput = _SplitTags(tags);
 
                 foreach (string tag in tagsInput) {
                     string iter = tag.ToLower().Trim();
@@ -476,6 +491,9 @@ namespace honooru.Controllers.Api {
                     } else {
                         // otherwise, the tag isn't already part of the post, so we need to create a new one
                         tagsToAdd.Add(tagObj.ID);
+
+                        List<TagImplication> implications = await _TagImplicationRepository.GetBySourceTagID(tagObj.ID);
+                        tagsToAdd.AddRange(implications.Select(iter => iter.TagB));
                     }
                 }
 
@@ -485,11 +503,21 @@ namespace honooru.Controllers.Api {
                 foreach (ulong tagID in tagsToRemove) {
                     _Logger.LogTrace($"removing tag from post [tagID={tagID}] [postID={postID}]");
                     await _PostTagDb.Delete(postID, tagID);
+
+                    // queue the uses update now that it's been changed
+                    _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
+                        TagID = tagID
+                    });
                 }
 
                 foreach (ulong tagID in tagsToAdd) {
                     _Logger.LogTrace($"adding new tag to post [tagID={tagID}] [postID={postID}]");
                     await _PostTagDb.Insert(new PostTag() { PostID = postID, TagID = tagID });
+
+                    // queue the uses update now that it's been changed
+                    _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
+                        TagID = tagID
+                    });
                 }
             }
 
@@ -524,6 +552,10 @@ namespace honooru.Controllers.Api {
             _ThumbnailCreationQueue.Queue(entry);
 
             return ApiOk();
+        }
+
+        internal List<string> _SplitTags(string tags) {
+            return [.. tags.Trim().ToLower().Split(TAG_SEPARATOR, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
         }
 
     }

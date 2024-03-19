@@ -76,6 +76,32 @@ namespace honooru.Controllers.Api {
             return ApiOk(et);
         }
 
+        [HttpGet("name")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
+        public async Task<ApiResponse<ExtendedTag>> GetByName([FromQuery] string name) {
+            Tag? tag = await _TagRepository.GetByName(name);
+
+            if (tag == null) {
+                return ApiNoContent<ExtendedTag>();
+            }
+
+            TagInfo? info = await _TagInfoRepository.GetByID(tag.ID);
+            TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
+
+            ExtendedTag et = new();
+            et.ID = tag.ID;
+            et.Name = tag.Name;
+            et.TypeID = tag.TypeID;
+
+            et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
+            et.HexColor = type?.HexColor ?? "000000";
+
+            et.Uses = info?.Uses ?? 0;
+            et.Description = info?.Description;
+
+            return ApiOk(et);
+        }
+
         /// <summary>
         ///     search for all tags that 
         /// </summary>

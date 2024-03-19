@@ -703,6 +703,22 @@
                 no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="guid"/> exists
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.UploadUrl(System.String)">
+            <summary>
+                upload a file via a URL
+            </summary>
+            <param name="url">URL to upload</param>
+            <response code="200">
+                the response will contain the <see cref="T:honooru.Models.App.MediaAsset"/> that was uploaded.
+                it may not be ready for viewing, check <see cref="P:honooru.Models.App.MediaAsset.Status"/> for that
+            </response>
+            <response code="400">
+                one of the following validation errors occured:
+                <ul>
+                    <li>the URL supplied could not be used to pull the file from</li>
+                </ul>
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.MediaAssetApiController.Upload">
             <summary>
                 upload a new media asset
@@ -868,6 +884,40 @@
                 no <see cref="T:honooru.Models.App.TagType"/> with <see cref="P:honooru.Models.App.TagType.ID"/> of <paramref name="typeID"/> exists
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.TagImplicationApiController.Create(System.UInt64,System.UInt64)">
+            <summary>
+                create a new <see cref="T:honooru.Models.App.TagImplication"/>
+            </summary>
+            <param name="sourceTagID">
+                ID of the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="sourceTagID"/> that when applied to a post,
+                will also add the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="targetTagID"/>
+            </param>
+            <param name="targetTagID">
+                when the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="sourceTagID"/> is applied to a post,
+                then this <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="targetTagID"/> is also added
+            </param>
+            <response code="200">
+                a new <see cref="T:honooru.Models.App.TagImplication"/> was successfully created
+            </response>
+            <response code="400">
+                one of the following validation errors occured:
+                <ul>
+                    <li><paramref name="sourceTagID"/> equals <paramref name="targetTagID"/></li>
+                    <li>
+                        there is already an implication with <see cref="P:honooru.Models.App.TagImplication.TagA"/> of <paramref name="sourceTagID"/>,
+                        and <see cref="P:honooru.Models.App.TagImplication.TagB"/> of <paramref name="targetTagID"/>
+                    </li>
+                    <li>
+                        there is already an implication with <see cref="P:honooru.Models.App.TagImplication.TagA"/> of <paramref name="targetTagID"/>,
+                        and <see cref="P:honooru.Models.App.TagImplication.TagB"/> of <paramref name="sourceTagID"/>, which would create a loop
+                    </li>
+                </ul>
+            </response>
+            <response code="404">
+                either the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="sourceTagID"/> or <paramref name="targetTagID"/>
+                does not exist
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.TestErrorApiController.DbTimeout">
             <summary>
                 throw an exception due to a DB timeout
@@ -993,6 +1043,11 @@
                 temp guid the file is saved under
             </summary>
         </member>
+        <member name="P:honooru.Models.App.MediaAsset.PostID">
+            <summary>
+                if this <see cref="T:honooru.Models.App.MediaAsset"/> uploaded exists as a post already, this is the ID of that post
+            </summary>
+        </member>
         <member name="P:honooru.Models.App.MediaAsset.MD5">
             <summary>
                 md5 hash of the media asset
@@ -1024,6 +1079,16 @@
                 using a <see cref="T:System.Int64"/> gives us files over 4GB (which is what an int would limit us to)
             </summary>
         </member>
+        <member name="P:honooru.Models.App.MediaAsset.Source">
+            <summary>
+                where this media asset came from
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.MediaAsset.AdditionalTags">
+            <summary>
+                additional tags that are added during parsing
+            </summary>
+        </member>
         <member name="F:honooru.Models.App.MediaAssetStatus.DEFAULT">
             <summary>
                 this media asset is in the default state and has not been processed yet
@@ -1044,6 +1109,11 @@
                 this media asset is done and ready for tagging to become a post
             </summary>
         </member>
+        <member name="F:honooru.Models.App.MediaAssetStatus.EXTRACTING">
+            <summary>
+                this media asset is being pulled from a URL
+            </summary>
+        </member>
         <member name="M:honooru.Models.App.MediaUploadStep.IUploadStepWorker`2.Run(`0,System.Action{System.Decimal},System.Threading.CancellationToken)">
             <summary>
                 run the worker with the parameters needed
@@ -1051,7 +1121,9 @@
             <param name="order">what <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/> to work on</param>
             <param name="updateProgress">useful for long running tasks (such as reencoding), use this callback to update the progress of the step</param>
             <param name="cancel">cancellation token</param>
-            <returns></returns>
+            <returns>
+                true if the next <see cref="T:honooru.Models.App.MediaUploadStep.IUploadStep"/> is to be ran or not
+            </returns>
         </member>
         <member name="P:honooru.Models.App.Tag.ID">
             <summary>
@@ -1076,6 +1148,12 @@
         <member name="P:honooru.Models.App.TagAlias.TagID">
             <summary>
                 id of the <see cref="T:honooru.Models.App.Tag"/> this alias is for
+            </summary>
+        </member>
+        <member name="T:honooru.Models.App.TagImplication">
+            <summary>
+                an implication between two tags. when a post has the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <see cref="P:honooru.Models.App.TagImplication.TagA"/>,
+                then it will also have the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <see cref="P:honooru.Models.App.TagImplication.TagB"/>
             </summary>
         </member>
         <member name="P:honooru.Models.App.TagNameValidationResult.Input">

@@ -25,7 +25,7 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger = logger;
             }
 
-            public Task Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
+            public Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
                 string output = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.MD5 + "." + order.Asset.FileExtension);
 
@@ -36,13 +36,13 @@ namespace honooru.Models.App.MediaUploadStep {
                 }
 
                 if (File.Exists(output) == true) {
-                    return Task.CompletedTask;
+                    return Task.FromResult(true);
                 }
 
                 progressCallback(0m);
                 File.Move(input, output);
                 progressCallback(1m);
-                return Task.CompletedTask;
+                return Task.FromResult(true);
             }
 
         }

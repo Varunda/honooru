@@ -5,11 +5,15 @@
             :data-html="AllowHtml"
             :style="{ 'filter': !icon ? 'invert(1)' : ''}">
 
-        <span v-if="icon != null" :class="'fas fa-' + icon">
+        <span v-if="icon != null" :class="'bi-' + icon">
 
         </span>
 
+        <span v-else class="bi-question-lg"></span>
+
+        <!--
         <img v-else src="/img/question-circle.svg" />
+        -->
     </span>
 </template>
 
@@ -35,7 +39,7 @@
 
         mounted: function () {
             this.$nextTick(() => {
-                $(`#info-hover-${this.ID}`).popover();
+                //$(`#info-hover-${this.ID}`).popover();
             });
         },
     });

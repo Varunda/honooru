@@ -96,29 +96,43 @@ namespace honooru.Services.Db {
             if (asset.Guid == Guid.Empty) {
                 throw new Exception($"not inserting a {nameof(MediaAsset)} with an empty guid");
             }
+            if (asset.MD5 == "") {
+                throw new Exception($"not inserting a {nameof(MediaAsset)} with an empty MD5");
+            }
 
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO media_asset (
-                    id, md5, status, file_name, file_extension, timestamp, file_size_bytes
+                    id, post_id, md5, status, file_name, file_extension, timestamp, file_size_bytes, source, additional_tags, title, description
                 ) VALUES (
-                    @ID, @MD5, @Status, @FileName, @FileExtension, @Timestamp, @FileSizeBytes
+                    @ID, @PostID, @MD5, @Status, @FileName, @FileExtension, @Timestamp, @FileSizeBytes, @Source, @AdditionalTags, @Title, @Description
                 ) ON CONFLICT (id) DO UPDATE 
                     set md5 = @MD5,
+                        post_id = @PostID,
                         status = @Status,
                         file_name = @FileName,
                         file_extension = @FileExtension,
                         timestamp = @Timestamp,
-                        file_size_bytes = @FileSizeBytes;
+                        file_size_bytes = @FileSizeBytes,
+                        source = @Source,
+                        additional_tags = @AdditionalTags,
+                        title = @Title,
+                        description = @Description
+                ;
             ");
 
             cmd.AddParameter("ID", asset.Guid);
+            cmd.AddParameter("PostID", asset.PostID);
             cmd.AddParameter("MD5", asset.MD5);
             cmd.AddParameter("Status", (int)asset.Status);
             cmd.AddParameter("FileName", asset.FileName);
             cmd.AddParameter("FileExtension", asset.FileExtension);
             cmd.AddParameter("Timestamp", asset.Timestamp);
             cmd.AddParameter("FileSizeBytes", asset.FileSizeBytes);
+            cmd.AddParameter("Source", asset.Source);
+            cmd.AddParameter("AdditionalTags", asset.AdditionalTags);
+            cmd.AddParameter("Title", asset.Title);
+            cmd.AddParameter("Description", asset.Description);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();
