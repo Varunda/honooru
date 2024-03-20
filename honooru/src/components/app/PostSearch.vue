@@ -2,7 +2,7 @@
 <template>
     <div>
         <div v-if="type == 'input'" class="input-group">
-            <input class="form-control pr-0" placeholder="search..." v-model="search" id="search-input"
+            <input class="input" placeholder="search..." v-model="search" id="search-input"
                 @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord"
             />
 
@@ -13,7 +13,7 @@
             </span>
         </div>
 
-        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1"
+        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="textarea"
                   @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" >
         </textarea>
 
