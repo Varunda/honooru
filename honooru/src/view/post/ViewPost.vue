@@ -11,6 +11,23 @@
         -->
         <div class="columns">
             <div class="column is-one-fifth">
+                <div class="mb-2">
+                    <label class="mb-0">rating</label>
+                    <div class="btn-group w-100">
+                        <button class="button" :disabled="!editing"
+                                :class="[ edit.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
+                            explict
+                        </button>
+                        <button class="button" :disabled="!editing" 
+                                :class="[ edit.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
+                            unsafe
+                        </button>
+                        <button class="button" :disabled="!editing"
+                                :class="[ edit.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'general'">
+                            general
+                        </button>
+                    </div>
+                </div>
 
                 <div>
                     <div v-if="tags.state == 'idle'"></div>
@@ -19,12 +36,12 @@
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <nav class="panel mb-4" v-for="block in sortedTags" style="line-height: 1.2">
-                            <p class="panel-heading py-2 px-3 no-border-radius" :style="{ 'background-color': '#' + block.hexColor }">
-                                {{block.name}}
-                            </p>
+                        <div v-for="block in sortedTags" class="mb-2" style="line-height: 1.2">
+                            <h6 class="mb-0" style="font-size: 1rem;">
+                                <strong>{{block.name}}</strong>
+                            </h6>
 
-                            <div v-for="tag in block.tags" class="panel-block py-1 no-border" :style="{ 'color': '#' + tag.hexColor }">
+                            <div v-for="tag in block.tags" :style="{ 'color': '#' + tag.hexColor }">
                                 <a :href="'/tag/' + tag.id" :class="{ 'text-info': tag.description, 'text-secondary': !tag.description }">
                                     <info-hover :text="tag.description || ''"></info-hover>
                                 </a>
@@ -33,75 +50,59 @@
                                         {{tag.name}}
                                     </span>
                                 </a>
-                                <span class="has-text-dark ml-1">
+                                <span class="text-muted">
                                     ({{tag.uses}})
                                 </span>
                             </div>
-                        </nav>
+                        </div>
                     </div>
                 </div>
 
-                <div v-if="editing == true" class="field">
-                    <label class="label">edit tags</label>
+                <div v-if="editing == true" class="mb-1 border-top pt-2 mb-2">
+                    <h5 class="mb-0">edit tags</h5>
                     <post-search ref="post-tags" v-model="edit.tags" type="textarea" @keyup.control.enter="saveEdit"></post-search>
                 </div>
 
-                <hr />
+                <div class="mb-2">
+                    <label class="mb-0 d-block">source</label>
 
-                <div class="field">
-                    <label class="label">rating</label>
-                    <div class="buttons has-addons is-grouped">
-                        <button class="button" :disabled="!editing"
-                                :class="[ edit.rating == 'explicit' ? 'is-danger' : 'is-dark' ]" @click="edit.rating = 'explicit'">
-                            explict
-                        </button>
-                        <button class="button" :disabled="!editing" 
-                                :class="[ edit.rating == 'unsafe' ? 'is-warning' : 'is-dark' ]" @click="edit.rating = 'unsafe'">
-                            unsafe
-                        </button>
-                        <button class="button" :disabled="!editing"
-                                :class="[ edit.rating == 'general' ? 'is-primary' : 'is-dark' ]" @click="edit.rating = 'general'">
-                            general
-                        </button>
+                    <div v-if="editing == false">
+                        <a v-if="edit.source != ''" :href="edit.source">{{edit.source}}</a>
+                        <span v-else class="text-muted">
+                            &lt;missing&gt;
+                        </span>
                     </div>
+
+                    <input v-else v-model="edit.source" class="form-control" />
                 </div>
 
-                <div class="field">
-                    <label class="label">source</label>
-                    <input v-model="edit.source" class="input" type="text" :disabled="!editing" />
+                <div v-if="editing == true" class="mb-2">
+                    <label class="mb-0">title</label>
+                    <input v-model="edit.title" class="form-control" />
                 </div>
 
-                <div v-if="editing == true" class="field">
-                    <label class="label">title</label>
-                    <div class="control">
-                        <input v-model="edit.title" class="input" type="text" />
-                    </div>
-                </div>
-
-                <div v-if="editing == true" class="field">
-                    <label class="label">description</label>
-                    <div class="control">
-                        <textarea v-model="edit.description" class="textarea"></textarea>
-                    </div>
+                <div v-if="editing == true" class="mb-2">
+                    <label class="mb-0">description</label>
+                    <textarea v-model="edit.description" class="form-control"></textarea>
                 </div>
 
                 <div>
-                    <button v-if="editing == false" class="button is-primary" @click="startEdit">
+                    <button v-if="editing == false" class="btn btn-sm btn-primary" @click="startEdit">
                         edit
                     </button>
 
-                    <button v-if="editing == true" class="button is-dark" @click="cancelEdit">
+                    <button v-if="editing == true" class="btn btn-sm btn-secondary" @click="cancelEdit">
                         cancel
                     </button>
 
-                    <button v-if="editing == true" class="button is-success" @click="saveEdit">
+                    <button v-if="editing == true" class="btn btn-sm btn-success" @click="saveEdit">
                         save
                     </button>
                 </div>
 
                 <hr class="border border-secondary" />
 
-                <div class="title is-5 mb-0">information</div>
+                <h5>information</h5>
 
                 <div v-if="post.state == 'idle'"></div>
 
@@ -109,43 +110,41 @@
                     loading...
                 </div>
 
-                <table v-else-if="post.state == 'loaded'" class="table is-hoverable">
-                    <tbody>
-                        <tr>
-                            <td>ID</td>
-                            <td>{{post.data.id}}</td>
-                        </tr>
+                <table v-else-if="post.state == 'loaded'" class="table table-sm">
+                    <tr>
+                        <td>ID</td>
+                        <td>{{post.data.id}}</td>
+                    </tr>
 
-                        <tr>
-                            <td>timestamp</td>
-                            <td>{{post.data.timestamp | moment}}</td>
-                        </tr>
+                    <tr>
+                        <td>timestamp</td>
+                        <td>{{post.data.timestamp | moment}}</td>
+                    </tr>
 
-                        <tr>
-                            <td>md5</td>
-                            <td>{{post.data.md5}}</td>
-                        </tr>
+                    <tr>
+                        <td>md5</td>
+                        <td>{{post.data.md5}}</td>
+                    </tr>
 
-                        <tr>
-                            <td>file size</td>
-                            <td>{{post.data.fileSizeBytes | bytes}}</td>
-                        </tr>
+                    <tr>
+                        <td>file size</td>
+                        <td>{{post.data.fileSizeBytes | bytes}}</td>
+                    </tr>
 
-                        <tr>
-                            <td>file extension</td>
-                            <td>{{post.data.fileExtension}}</td>
-                        </tr>
+                    <tr>
+                        <td>file extension</td>
+                        <td>{{post.data.fileExtension}}</td>
+                    </tr>
 
-                        <tr>
-                            <td>dimensions</td>
-                            <td>{{post.data.width}}x{{post.data.height}}</td>
-                        </tr>
+                    <tr>
+                        <td>dimensions</td>
+                        <td>{{post.data.width}}x{{post.data.height}}</td>
+                    </tr>
 
-                        <tr v-if="post.data.durationSeconds > 0">
-                            <td>duration</td>
-                            <td>{{post.data.durationSeconds | mduration}}</td>
-                        </tr>
-                    </tbody>
+                    <tr v-if="post.data.durationSeconds > 0">
+                        <td>duration</td>
+                        <td>{{post.data.durationSeconds | mduration}}</td>
+                    </tr>
                 </table>
 
                 <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
@@ -154,20 +153,17 @@
 
                 <h5>misc controls</h5>
 
-                <div class="buttons">
-                    <button class="button is-dark" @click="remakeThumbnail">
-                        remake thumbnail
-                    </button>
+                <button class="btn btn-sm btn-secondary d-block mb-1" @click="remakeThumbnail">
+                    remake thumbnail
+                </button>
 
-                    <button class="button is-danger">
-                        delete
-                    </button>
+                <button class="btn btn-sm btn-danger d-block mb-1">
+                    delete
+                </button>
 
-                    <button class="button is-danger">
-                        erase
-                    </button>
-                </div>
-
+                <button class="btn btn-sm btn-danger d-block mb-1">
+                    erase
+                </button>
             </div>
 
             <div class="column">

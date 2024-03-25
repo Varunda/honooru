@@ -2,35 +2,33 @@
 
 export const AppMenu = Vue.extend({
     template: `
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <a class="navbar-item" href="/">
-                    <img src="/img/logo0.png" width="28" height="28">
-                </a>
-            </div>
+        <nav class="navbar navbar-expand p-0">
+            <div class="navbar-collapse">
+                <ul class="navbar-nav h1">
+                    <slot></slot>
 
-            <div class="navbar-menu">
-                <div class="navbar-start">
-                    <a class="navbar-item" href="/">
-                        PLAP
-                    </a>
+                    <li class="nav-item">
+                        <span class="mx-2">
+                            |
+                        </span>
+                    <li>
 
-                    <a class="navbar-item" href="/posts">
-                        posts
-                    </a>
-
-                    <a class="navbar-item" href="/upload">
-                        upload
-                    </a>
-                </div>
-
-                <div class="navbar-end">
-                    <div class="navbar-item">
-                        <a class="button is-primary">
-                            signin
+                    <li class="nav-item">
+                        <a class="nav-link h1 p-0" href="/upload">
+                            Upload
                         </a>
-                    </div>
-                </div>
+                    </li>
+
+                    <li class="nav-item mx-2">
+                        &middot;
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link h1 p-0" href="/posts">
+                            Posts
+                        </a>
+                    </li>
+                </ul>
             </div>
         </nav>
     `,
