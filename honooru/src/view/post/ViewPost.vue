@@ -1,28 +1,21 @@
 ﻿<template>
-    <div>
-        <app-menu class="flex-grow-1">
-            <menu-dropdown></menu-dropdown>
-        </app-menu>
+    <div style="display: grid; grid-template-rows: min-content 1fr; gap: 0.5rem; max-height: 100vh; max-width: 100vw;">
+        <app-menu></app-menu>
 
-        <hr class="border my-0" />
-
-        <!--
-        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; max-width: 100vw">
-        -->
-        <div class="columns">
-            <div class="column is-one-fifth">
+        <div class="d-grid" style="grid-template-columns: 400px 1fr; gap: 0.5rem; overflow: hidden;">
+            <div style="overflow-y: auto;">
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
                     <div class="btn-group w-100">
-                        <button class="button" :disabled="!editing"
+                        <button class="btn" :disabled="!editing"
                                 :class="[ edit.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
                             explict
                         </button>
-                        <button class="button" :disabled="!editing" 
+                        <button class="btn" :disabled="!editing" 
                                 :class="[ edit.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
                             unsafe
                         </button>
-                        <button class="button" :disabled="!editing"
+                        <button class="btn" :disabled="!editing"
                                 :class="[ edit.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'general'">
                             general
                         </button>
@@ -36,8 +29,8 @@
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <div v-for="block in sortedTags" class="mb-2" style="line-height: 1.2">
-                            <h6 class="mb-0" style="font-size: 1rem;">
+                        <div v-for="block in sortedTags" class="mb-3 no-underline-links" style="line-height: 1.2">
+                            <h6 class="mb-1 px-2 py-1 rounded-top" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }">
                                 <strong>{{block.name}}</strong>
                             </h6>
 
@@ -111,45 +104,45 @@
                 </div>
 
                 <table v-else-if="post.state == 'loaded'" class="table table-sm">
-                    <tr>
-                        <td>ID</td>
-                        <td>{{post.data.id}}</td>
-                    </tr>
+                    <tbody>
+                        <tr>
+                            <td>ID</td>
+                            <td>{{post.data.id}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>timestamp</td>
-                        <td>{{post.data.timestamp | moment}}</td>
-                    </tr>
+                        <tr>
+                            <td>timestamp</td>
+                            <td>{{post.data.timestamp}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>md5</td>
-                        <td>{{post.data.md5}}</td>
-                    </tr>
+                        <tr>
+                            <td>md5</td>
+                            <td>{{post.data.md5}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>file size</td>
-                        <td>{{post.data.fileSizeBytes | bytes}}</td>
-                    </tr>
+                        <tr>
+                            <td>file size</td>
+                            <td>{{bytes(post.data.fileSizeBytes)}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>file extension</td>
-                        <td>{{post.data.fileExtension}}</td>
-                    </tr>
+                        <tr>
+                            <td>file extension</td>
+                            <td>{{post.data.fileExtension}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>dimensions</td>
-                        <td>{{post.data.width}}x{{post.data.height}}</td>
-                    </tr>
+                        <tr>
+                            <td>dimensions</td>
+                            <td>{{post.data.width}}x{{post.data.height}}</td>
+                        </tr>
 
-                    <tr v-if="post.data.durationSeconds > 0">
-                        <td>duration</td>
-                        <td>{{post.data.durationSeconds | mduration}}</td>
-                    </tr>
+                        <tr v-if="post.data.durationSeconds > 0">
+                            <td>duration</td>
+                            <td>{{post.data.durationSeconds}}</td>
+                        </tr>
+                    </tbody>
                 </table>
 
                 <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
-
-                <hr class="border border-secondary" />
 
                 <h5>misc controls</h5>
 
@@ -166,7 +159,7 @@
                 </button>
             </div>
 
-            <div class="column">
+            <div class="overflow-y-auto">
                 <div v-if="post.state == 'loaded'">
                     <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
 
@@ -190,16 +183,16 @@
                     </div>
                 </div>
             </div>
-
         </div>
+
     </div>
 </template>
 
 <script lang="ts">
-    import Vue from "vue";
+    import { defineComponent } from "vue";
     import { Loadable, Loading } from "Loading";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import AppMenu from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
 
@@ -210,8 +203,8 @@
     import { ExtendedTag } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
 
-    import "filters/ByteFilter";
-    import "filters/MomentFilter";
+    import { bytes } from "filters/ByteFilter";
+    //import "filters/MomentFilter";
 
     class TagBlock {
         public name: string = "";
@@ -225,7 +218,7 @@
         [3, "explicit"]
     ]);
 
-    export const ViewPost = Vue.extend({
+    export default defineComponent({
         props: {
 
         },
@@ -261,7 +254,6 @@
                 if (ev.key == "Enter" && ev.ctrlKey) {
                     this.saveEdit();
                 }
-
             });
         },
 
@@ -387,12 +379,10 @@
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             FileView,
             PostSearch
         }
 
     });
-    export default ViewPost;
-
 </script>

@@ -13,13 +13,13 @@
 </template>
 
 <script lang="ts">
-    import Vue from "vue";
+    import { defineComponent } from "vue";
 
     import "filters/LocaleFilter";
 
     import Busy from "components/Busy.vue";
 
-    export const ProgressBar = Vue.extend({
+    export const ProgressBar = defineComponent({
         props: {
             total: { type: Number, required: true },
             progress: { type: Number, required: true },

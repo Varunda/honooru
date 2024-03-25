@@ -1,6 +1,4 @@
 ﻿
-import Vue from "vue";
-
 /**
  * Format bytes as human-readable text.
  * 
@@ -13,7 +11,7 @@ import Vue from "vue";
  */
 // copied from StackOverflow:
 // https://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable-string/14919494#14919494 
-Vue.filter("bytes", (bytes: number): string => {
+export function bytes(bytes: number): string {
     const thresh = 1024;
 
     if (Math.abs(bytes) < thresh) {
@@ -31,4 +29,4 @@ Vue.filter("bytes", (bytes: number): string => {
 
 
     return bytes.toFixed(2) + ' ' + units[u];
-});
+}

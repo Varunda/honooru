@@ -3,7 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <!--
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+	-->
     <RootNamespace>honooru</RootNamespace>
     <AssemblyName>honooru</AssemblyName>
     <UserSecretsId>3edb7e65-94fe-482d-839a-648debe73b91</UserSecretsId>
@@ -44,7 +46,7 @@
     <PackageReference Include="Magick.NET.Core" Version="13.6.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.3" />
-    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.5.3">
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.4.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

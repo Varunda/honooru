@@ -1,4 +1,4 @@
-﻿import Vue, { VNode, VNodeData, CreateElement } from "vue";
+﻿import { createApp, VNode, VNodeData, CreateElement } from "vue";
 
 //import DateTimePicker from "components/DateTimePicker.vue";
 import { Loading, Loadable, ProblemDetails } from "Loading";
@@ -68,7 +68,7 @@ export interface ATableType {
 
 }
 
-export const ATable = Vue.extend({
+export const ATable = createApp({
     props: {
         // Where the data comes from
         entries: { type: Object, required: true },

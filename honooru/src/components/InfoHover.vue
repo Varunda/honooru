@@ -18,9 +18,9 @@
 </template>
 
 <script lang="ts">
-    import Vue from "vue";
+    import { defineComponent } from "vue";
 
-    export const InfoHover = Vue.extend({
+    export const InfoHover = defineComponent({
         props: {
             text: { type: String, required: true },
             AllowHtml: { type: Boolean, required: false, default: false },

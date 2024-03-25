@@ -13,11 +13,11 @@
 </template>
 
 <script lang="ts">
-    import Vue, { PropType } from "vue";
+    import { createApp, PropType } from "vue";
 
     import videojs, { VideoJsPlayer } from "video.js";
 
-    export const FileView = Vue.extend({
+    export const FileView = createApp({
         props: {
             md5: { type: String, required: true },
             FileExtension: { type: String, required: true }

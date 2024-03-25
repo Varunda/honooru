@@ -1,17 +1,17 @@
 ﻿
-import Vue from "vue";
+import { createApp } from "vue";
 
-import ViewPost from "./ViewPost.vue";
+import ViewPost from "view/post/ViewPost.vue";
 
-const vm = new Vue({
-	el: "#app",
-
+const app = createApp({
 	created: function(): void {
 
 	},
 
-	data: {
+	data: function() {
+        return {
 
+        }
 	},
 
 	methods: {
@@ -21,5 +21,7 @@ const vm = new Vue({
 	components: {
 		ViewPost
 	}
-});
-(window as any).vm = vm;
+	
+}).mount("#app");
+
+(window as any).app = app;

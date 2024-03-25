@@ -2,12 +2,6 @@
     <div>
         <app-menu class="flex-grow-1">
             <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Upload
-            </li>
         </app-menu>
 
         <div v-if="state == 'upload'">
@@ -145,8 +139,8 @@
             <div v-else style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem;">
                 <div>
                     <div class="mb-2">
-                        <label class="mb-0">rating</label>
-                        <div class="btn-group w-100">
+                        <label class="form-label">rating</label>
+                        <div class="btn-group w-100" @click="checkErrors">
                             <button class="btn" :class="[ posting.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="posting.rating = 'explicit'">
                                 explicit
                             </button>
@@ -157,30 +151,38 @@
                                 general
                             </button>
                         </div>
+
+                        <div v-if="errors.rating == true" class="text-danger">
+                            please select a rating
+                        </div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0">tags</label>
-                        <post-search v-model="posting.tags" type="textarea"></post-search>
+                        <label class="form-label">tags</label>
+                        <post-search v-model="posting.tags" type="textarea" @unblur="checkErrors"></post-search>
+
+                        <div v-if="errors.tags == true" class="text-danger">
+                            please add at least 1 tag
+                        </div>
                     </div>
 
                     <div class="mb-0">
-                        <label class="mb-0">title</label>
+                        <label class="form-label">title</label>
                         <input type="text" class="form-control" v-model="posting.title" />
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0">description</label>
+                        <label class="form-label">description</label>
                         <textarea v-model="posting.description" class="form-control"></textarea>
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0">source</label>
+                        <label class="form-label">source</label>
                         <input type="text" class="form-control" v-model="posting.source" />
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0">
+                        <label class="form-label">
                             additional tags
                             <info-hover text="these tags will be added when posted"></info-hover>
                         </label>
@@ -193,7 +195,7 @@
                         Control + Enter to post
                     </span>
 
-                    <button class="btn btn-primary" @click="makePost">
+                    <button class="btn btn-primary" @click="makePost" @mouseover="checkErrors" :disabled="!canUpload">
                         upload
                     </button>
 
@@ -215,7 +217,7 @@
 
     import { Loading, Loadable } from "Loading";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import AppMenu from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import ProgressBar from "components/ProgressBar.vue";
@@ -278,6 +280,11 @@
                     title: "" as string,
                     description: "" as string,
                     additionalTags: "" as string
+                },
+
+                errors: {
+                    rating: false as boolean,
+                    tags: false as boolean
                 }
             }
         },
@@ -478,12 +485,17 @@
                 }
             },
 
-            onFinish: function(elem: any): void {
+            onFinish: function(elem: any): void { 
                 this.mediaAsset = MediaAssetApi.parse(elem);
                 this.setMediaAsset(this.mediaAsset);
                 this.state = "view";
                 console.log(`done ${elem}`);
                 console.log(elem);
+            },
+
+            checkErrors: function(): void {
+                this.errors.rating = this.posting.rating == "";
+                this.errors.tags = this.posting.tags == "";
             },
 
             computeProgressClasses: function(e: UploadStepProgress) {
@@ -500,12 +512,16 @@
         computed: {
             uploadWidth: function(): string {
                 return `${this.upload.progress / Math.max(this.upload.total) * 100}%`;
+            },
+
+            canUpload: function(): boolean {
+                return !this.errors.rating && !this.errors.tags;
             }
         },
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu, 
             ProgressBar,
             FileView, PostSearch
         }

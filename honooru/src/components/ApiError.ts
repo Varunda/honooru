@@ -1,6 +1,6 @@
-﻿import Vue from "vue";
+﻿import { defineComponent } from "vue";
 
-export const ApiError = Vue.extend({
+export const ApiError = defineComponent({
     props: {
         error: { required: true }
     },

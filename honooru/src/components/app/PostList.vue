@@ -28,14 +28,14 @@
 </template>
 
 <script lang="ts">
-    import Vue, { PropType } from "vue";
+    import { defineComponent } from "vue";
     import { Loading, Loadable } from "Loading";
 
     import ApiError from "components/ApiError";
 
     import { Post, SearchResults, PostApi } from "api/PostApi";
 
-    export const PostList = Vue.extend({
+    export const PostList = defineComponent({
         props: {
             q: { type: String, required: true },
             limit: { type: Number, required: false, default: 100 }

@@ -3,9 +3,9 @@
 </template>
 
 <script lang="ts">
-    import Vue from "vue";
+    import { defineComponent } from "vue";
 
-    export const Busy = Vue.extend({
+    export const Busy = defineComponent({
 
     });
     export default Busy;

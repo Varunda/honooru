@@ -14,14 +14,16 @@
         </div>
 
         <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1"
-                  @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" >
+                  @keyup.up="keyUp" @keyup.down="keyDown" @keydown.enter.prevent="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord" >
         </textarea>
 
-        <div>
+        <div class="position-absolute overflow-x-auto" id="search-dropdown-results">
             <div v-if="searchResults.state == 'loaded'" class="list-group list-group-sm">
                 <div v-for="(result, index) in searchResults.data.tags" class="list-group-item d-flex justify-content-between align-items-center"
                      :class="{ 'list-group-item-primary': select.index == index }"
-                     :style="{ 'background-color': '#' + result.hexColor }">
+                     :style="{ 'background-color': '#' + result.hexColor }"
+                     @click="selectClick(index)"
+                     >
 
                     {{result.name}}
                     <span class="text-muted">
@@ -35,13 +37,13 @@
 </template>
 
 <script lang="ts">
-    import Vue from "vue";
+    import { createApp } from "vue";
 
     import { Loadable, Loading } from "Loading";
 
     import { ExtendedTag, TagApi, TagSearchResults } from "api/TagApi";
 
-    export const PostSearch = Vue.extend({
+    export const PostSearch = createApp({
         props: {
             type: { type: String, required: false, default: "input" },
             value: { type: String, required: false }
@@ -69,6 +71,25 @@
                 this.searchInput = document.getElementById("search-input") as any;
                 if (this.searchInput == null || this.searchInput == undefined) {
                     throw `failed to find #search-input!`;
+                }
+
+                if (this.type == "textarea") {
+                    this.searchInput.style.height = `${this.searchInput.scrollHeight}px`;
+                    this.searchInput.style.overflowY = "hidden";
+
+                    this.searchInput.addEventListener("input", (ev: Event) => {
+                        const elem: HTMLElement = ev.target as HTMLElement;
+                        elem.style.height = "auto";
+                        elem.style.height = elem.scrollHeight + "px";
+                    });
+                }
+
+                // because the search results are absolute, marking them as width 100% will take up the whole
+                //      screen, which is not ideal
+                // so instead, once the search input element is rendered, just copy that width
+                const results = document.getElementById("search-dropdown-results");
+                if (results != null) {
+                    results.style.width = `${this.searchInput.clientWidth}px`;
                 }
             });
         },
@@ -110,6 +131,13 @@
                 }
             },
 
+            selectClick: function(index: number): void {
+                console.log(`adding index ${index} to the tags`);
+
+                this.select.index = index;
+                this.selectEnter();
+            },
+
             selectFirst: function(): void {
                 if (this.select.index == -1) {
                     this.select.index = 0;
@@ -149,6 +177,8 @@
                 this.search = this.search.slice(0, index) + " " + tag.name + " " + this.search.slice(indexEnd);
                 this.searchResults = Loadable.idle();
                 this.select.index = -1;
+
+                this.searchInput.focus();
             },
 
             getCurrentWordIndex: function(): [number, number] {
@@ -157,7 +187,7 @@
                 const s: string = this.search;
                 for (let i = indexEnd - 1; i >= 0; --i) {
                     const ic: string | undefined = s.at(i);
-                    if (ic == " " || ic == undefined) {
+                    if (ic == " " || ic == "\n" || ic == undefined) {
                         return [i, indexEnd];
                     }
                 }
@@ -197,6 +227,8 @@
                 console.log(`search term: ${word}`);
 
                 if (word.length <= 1) {
+                    this.select.index = -1;
+                    this.searchResults = Loadable.idle();
                     return;
                 }
 
