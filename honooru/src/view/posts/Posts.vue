@@ -1,8 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu class="flex-grow-1">
-            <menu-dropdown></menu-dropdown>
-        </app-menu>
+        <app-menu></app-menu>
 
         <hr class="border" />
 
@@ -25,7 +23,7 @@
     import Vue from "vue";
     import { Loading, Loadable } from "Loading";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import PostSearch from "components/app/PostSearch.vue";
@@ -66,7 +64,7 @@
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             PostList,
             PostSearch
         }

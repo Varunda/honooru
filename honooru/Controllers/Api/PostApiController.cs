@@ -386,6 +386,27 @@ namespace honooru.Controllers.Api {
             return ApiOk(post);
         }
 
+        /// <summary>
+        ///     update an existing <see cref="Post"/> with new information
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to update</param>
+        /// <param name="tags">optional, leave null to not change. what tags to update the post with</param>
+        /// <param name="rating">optional, leave null to not chagne. what rating to update the post with</param>
+        /// <param name="title">optional, leave null to not change. what title to update the post with</param>
+        /// <param name="description">optional, leave null to not change. what description to update the post with</param>
+        /// <param name="source">optional, leave null to not change. what source to update the post with</param>
+        /// <exception cref="Exception"></exception>
+        /// <response code="200">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> was successfully
+        ///     updated with all the non-null parameters. any parameter left <c>null</c> will result in that
+        ///     field not being updated
+        /// </response>
+        /// <response code="400">
+        ///     one of the following validation errors occurred:
+        ///     <ul>
+        ///         <li><paramref name="rating"/> was not a valid valid</li>
+        ///     </ul>
+        /// </response>
         [HttpPost("{postID}")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse> Update(ulong postID,
@@ -445,8 +466,8 @@ namespace honooru.Controllers.Api {
                 // save current tags, removed as we find them in |tags|
                 // this represents the set of tags to remove from a post AFTER all tags have been processed
                 HashSet<ulong> tagsToRemove = new(postTags.Select(iter => iter.TagID));
-                List<ulong> tagsToAdd = new();
-                List<ulong> tagsToKeep = new();
+                HashSet<ulong> tagsToAdd = new();
+                HashSet<ulong> tagsToKeep = new();
 
                 List<string> tagsInput = _SplitTags(tags);
 

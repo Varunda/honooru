@@ -1,14 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu>
-            <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Health
-            </li>
-        </app-menu>
+        <app-menu></app-menu>
 
         <div>
             <h3 class="d-inline">
@@ -110,7 +102,7 @@
     import "filters/DurationFilter";
     import "filters/CompactFilter";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ToggleButton from "components/ToggleButton";
 
@@ -185,7 +177,7 @@
         },
 
         components: {
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             InfoHover, ToggleButton,
         }
     });

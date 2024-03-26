@@ -1,6 +1,6 @@
 ﻿
 <template>
-    <div>
+    <div id="post-search-parent">
         <div v-if="type == 'input'" class="input-group">
             <input class="form-control pr-0" placeholder="search..." v-model="search" id="search-input"
                 @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord"
@@ -13,23 +13,15 @@
             </span>
         </div>
 
+        <!--
+            
         <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1"
-                  @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" >
+                  @keyup.up="keyUp" @keyup.down="keyDown" @keydown.enter.prevent="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord" >
         </textarea>
+        -->
 
-        <div>
-            <div v-if="searchResults.state == 'loaded'" class="list-group list-group-sm">
-                <div v-for="(result, index) in searchResults.data.tags" class="list-group-item d-flex justify-content-between align-items-center"
-                     :class="{ 'list-group-item-primary': select.index == index }"
-                     :style="{ 'background-color': '#' + result.hexColor }">
-
-                    {{result.name}}
-                    <span class="text-muted">
-                        ({{result.uses}})
-                    </span>
-                </div>
-            </div>
-        </div>
+        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1">
+        </textarea>
 
     </div>
 </template>
@@ -41,6 +33,8 @@
 
     import { ExtendedTag, TagApi, TagSearchResults } from "api/TagApi";
 
+    import Tribute, { TributeCollection, TributeItem } from "node_modules/tributejs";
+
     export const PostSearch = Vue.extend({
         props: {
             type: { type: String, required: false, default: "input" },
@@ -49,16 +43,9 @@
 
         data: function() {
             return {
+                tribute: null as Tribute<ExtendedTag> | null,
                 search: "" as string,
                 searchInput: {} as HTMLElement,
-
-                searchTerm: "" as string,
-
-                searchResults: Loadable.idle() as Loading<TagSearchResults>,
-
-                select: {
-                    index: -1 as number
-                }
             }
         },
 
@@ -69,6 +56,69 @@
                 this.searchInput = document.getElementById("search-input") as any;
                 if (this.searchInput == null || this.searchInput == undefined) {
                     throw `failed to find #search-input!`;
+                }
+
+                this.tribute = new Tribute<ExtendedTag>({
+                    trigger: "", // don't trigger on anything special
+                    menuShowMinLength: 2, // tag search requires at least 2 characters
+                    autocompleteMode: true, // autocomplete this, not sure what false does tho
+                    allowSpaces: false, // tags can't have spaces
+
+                    // attribute from a |ExtendedTag| that is inserted into the <textarea>
+                    fillAttr: "name",
+
+                    // big government doesn't want you to know this,
+                    // but despite it being named | itemClass |, you can in fact put classes in here
+                    itemClass: "bg-dark border",
+                    // now this one does require you to not have spaces
+                    selectClass: "fw-bold",
+
+                    //menuContainer: document.getElementById("post-search-parent") || undefined,
+                    //positionMenu: false,
+
+                    // required, otherwise remote search doesn't work
+                    searchOpts: {
+                        pre: "",
+                        post: "",
+                        skip: true // this means don't do a local search
+                    },
+
+                    // remote callback
+                    values: (text: string, callback: (r: ExtendedTag[]) => void) => {
+                        console.log(`performing search [text=${text}]`);
+                        TagApi.search(text).then((value: Loading<TagSearchResults>) => {
+                            if (value.state == "loaded") {
+                                console.log(`loaded searched tags: [${value.data.tags.map(iter => iter.name).join(" ")}]`);
+                                callback(value.data.tags);
+                            }
+                        });
+                    },
+
+                    // change the menu template to have the color of the tag type
+                    menuItemTemplate: (item: TributeItem<ExtendedTag>): string => {
+                        return `<span contentediable="false" style="color: #${item.original.hexColor}">${item.original.name} <span class="text-muted">(${item.original.uses})</span></span>`;
+                    }
+                });
+
+                this.tribute.attach(this.searchInput);
+
+                // i don't think these actually matter
+                this.searchInput.addEventListener("tribute-replaced", (ev: any) => {
+                    console.log(`replaced event ${ev.detail}`);
+                });
+
+                this.searchInput.addEventListener("tribute-no-match", (ev: any) => {
+                    console.log(`no match event emitted`);
+                });
+
+                if (this.type == "textarea") {
+                    this.searchInput.style.height = `${this.searchInput.scrollHeight}px`;
+                    this.searchInput.style.overflowY = "hidden";
+                    this.searchInput.addEventListener("input", (ev: Event) => {
+                        const elem: HTMLElement = ev.target as HTMLElement;
+                        elem.style.height = "auto";
+                        elem.style.height = elem.scrollHeight + "px";
+                    });
                 }
             });
         },
@@ -83,135 +133,11 @@
                     this.searchInput.focus();
                 });
             },
-
-            emitCurrentWord: function(): void {
-                const w: string = this.getCurrentWord();
-                if (w.length > 0) {
-                    console.log(`emitting current word ${w}`);
-                    this.$emit("added-tag", this.getCurrentWord());
-                } else {
-                    console.log(`word length is 0, not emitting`);
-                }
-            },
-
-            keyUp: function(): void {
-                if (this.select.index > -1) {
-                    --this.select.index;
-                }
-            },
-
-            keyDown: function(): void {
-                if (this.searchResults.state != "loaded") {
-                    return;
-                }
-
-                if (this.select.index < this.searchResults.data.tags.length) {
-                    ++this.select.index;
-                }
-            },
-
-            selectFirst: function(): void {
-                if (this.select.index == -1) {
-                    this.select.index = 0;
-                }
-
-                this.selectEnter();
-            },
-
-            selectEnter: function(): void {
-                if (this.select.index == -1) {
-                    console.log(`performing search`);
-                    this.performSearch();
-                    return;
-                }
-
-                if (this.searchResults.state != "loaded") {
-                    console.warn(`search results not loaded, cannot add tag to search`);
-                    return;
-                }
-
-                if (this.select.index > this.searchResults.data.tags.length) {
-                    console.warn(`index is out of range [index=${this.select.index}] [length=${this.searchResults.data.tags.length}`);
-                    return;
-                }
-
-                const tag: ExtendedTag | undefined = this.searchResults.data.tags[this.select.index];
-                if (tag == undefined) {
-                    console.warn(`not sure why tag is undefined now`);
-                    return;
-                }
-
-                console.log(`selected tag: ${tag.name}`);
-
-                const [index, indexEnd] = this.getCurrentWordIndex();
-                console.log(`replacing ${index} to ${indexEnd} with ${tag.name}`);
-
-                this.search = this.search.slice(0, index) + " " + tag.name + " " + this.search.slice(indexEnd);
-                this.searchResults = Loadable.idle();
-                this.select.index = -1;
-            },
-
-            getCurrentWordIndex: function(): [number, number] {
-                const indexEnd = (this.searchInput as any).selectionEnd as number;
-
-                const s: string = this.search;
-                for (let i = indexEnd - 1; i >= 0; --i) {
-                    const ic: string | undefined = s.at(i);
-                    if (ic == " " || ic == undefined) {
-                        return [i, indexEnd];
-                    }
-                }
-
-                return [0, indexEnd];
-            },
-
-            getCurrentWord: function(): string {
-                const [index, indexEnd] = this.getCurrentWordIndex();
-                return this.search.slice(index, indexEnd);
-            }
         },
 
         watch: {
             search: function(): void {
                 this.$emit("input", this.search);
-
-                const cursorStart = (this.searchInput as any).selectionStart as number;
-                const cursorEnd = (this.searchInput as any).selectionEnd as number;
-
-                if (cursorStart != cursorEnd) {
-                    console.log(`not performing search, there is a selection`);
-                    return;
-                }
-
-                const s: string = this.search;
-
-                // if at the end of the input, or the next character is a space
-                // there would be space there if the user is editing a previously input tag
-                let doSearch: boolean = cursorEnd == s.length || s.at(cursorEnd + 1) == " ";
-                if (doSearch == false) {
-                    return;
-                }
-
-                let word = this.getCurrentWord().trim();
-
-                console.log(`search term: ${word}`);
-
-                if (word.length <= 1) {
-                    return;
-                }
-
-                this.searchTerm = word;
-                this.select.index = -1;
-                TagApi.search(word).then((value: Loading<TagSearchResults>) => {
-                    if (value.state == "loaded") {
-                        if (value.data.input == this.searchTerm) {
-                            this.searchResults = value;
-                            console.log(`loaded searched tags: [${value.data.tags.map(iter => iter.name).join(" ")}]`);
-                        } else {
-                            console.log(`ignoring old tag search ${value.data.input}`);
-                        }
-                    }
-                });
             }
         }
     });

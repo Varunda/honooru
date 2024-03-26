@@ -73,13 +73,13 @@ namespace honooru.Services.Db.Patches {
                 INSERT INTO tag_type (
                     id, name, hex_color, alias
                 ) OVERRIDING SYSTEM VALUE VALUES
-                    (1, 'General', '00ff00', 'gen'),
-                    (2, 'Artist', 'f0f0f0', 'art'),
-                    (3, 'Player', 'ff0000', 'play'),
-                    (4, 'Outfit', '0000ff', 'out'),
+                    (1, 'General', '009be6', 'gen'),
+                    (2, 'Artist', 'ff8a8b', 'art'),
+                    (3, 'Player', '35c64a', 'play'),
+                    (4, 'Group', '0000ff', 'grp'),
                     (5, 'Base', 'ff00ff', 'base'),
-                    (6, 'Meta', '00ffff', 'meta'),
-                    (7, 'Source', 'ffff00', 'source')
+                    (6, 'Meta', 'ead084', 'meta'),
+                    (7, 'Source', 'c797ff', 'source')
                 ON CONFLICT (id) DO NOTHING;
 
                 CREATE TABLE IF NOT EXISTS tag (

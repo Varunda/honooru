@@ -1,28 +1,22 @@
 ﻿<template>
-    <div>
-        <app-menu class="flex-grow-1">
-            <menu-dropdown></menu-dropdown>
-        </app-menu>
+    <div style="display: grid; grid-template-rows: min-content 1fr; gap: 0.5rem; max-height: 100vh; max-width: 100vw;">
 
-        <hr class="border my-0" />
+        <app-menu></app-menu>
 
-        <!--
-        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; max-width: 100vw">
-        -->
-        <div class="columns">
-            <div class="column is-one-fifth">
+        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; overflow: hidden">
+            <div class="overflow-y-auto">
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
                     <div class="btn-group w-100">
-                        <button class="button" :disabled="!editing"
+                        <button class="btn" :disabled="!editing"
                                 :class="[ edit.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
                             explict
                         </button>
-                        <button class="button" :disabled="!editing" 
+                        <button class="btn" :disabled="!editing" 
                                 :class="[ edit.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
                             unsafe
                         </button>
-                        <button class="button" :disabled="!editing"
+                        <button class="btn" :disabled="!editing"
                                 :class="[ edit.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'general'">
                             general
                         </button>
@@ -36,8 +30,8 @@
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <div v-for="block in sortedTags" class="mb-2" style="line-height: 1.2">
-                            <h6 class="mb-0" style="font-size: 1rem;">
+                        <div v-for="block in sortedTags" class="mb-3 no-underline-links" style="line-height: 1.2">
+                            <h6 class="mb-1 px-2 py-1 rounded" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }">
                                 <strong>{{block.name}}</strong>
                             </h6>
 
@@ -111,40 +105,42 @@
                 </div>
 
                 <table v-else-if="post.state == 'loaded'" class="table table-sm">
-                    <tr>
-                        <td>ID</td>
-                        <td>{{post.data.id}}</td>
-                    </tr>
+                    <tbody>
+                        <tr>
+                            <td>ID</td>
+                            <td>{{post.data.id}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>timestamp</td>
-                        <td>{{post.data.timestamp | moment}}</td>
-                    </tr>
+                        <tr>
+                            <td>timestamp</td>
+                            <td>{{post.data.timestamp | moment}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>md5</td>
-                        <td>{{post.data.md5}}</td>
-                    </tr>
+                        <tr>
+                            <td>md5</td>
+                            <td>{{post.data.md5}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>file size</td>
-                        <td>{{post.data.fileSizeBytes | bytes}}</td>
-                    </tr>
+                        <tr>
+                            <td>file size</td>
+                            <td>{{post.data.fileSizeBytes | bytes}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>file extension</td>
-                        <td>{{post.data.fileExtension}}</td>
-                    </tr>
+                        <tr>
+                            <td>file extension</td>
+                            <td>{{post.data.fileExtension}}</td>
+                        </tr>
 
-                    <tr>
-                        <td>dimensions</td>
-                        <td>{{post.data.width}}x{{post.data.height}}</td>
-                    </tr>
+                        <tr>
+                            <td>dimensions</td>
+                            <td>{{post.data.width}}x{{post.data.height}}</td>
+                        </tr>
 
-                    <tr v-if="post.data.durationSeconds > 0">
-                        <td>duration</td>
-                        <td>{{post.data.durationSeconds | mduration}}</td>
-                    </tr>
+                        <tr v-if="post.data.durationSeconds > 0">
+                            <td>duration</td>
+                            <td>{{post.data.durationSeconds | mduration}}</td>
+                        </tr>
+                    </tbody>
                 </table>
 
                 <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
@@ -166,7 +162,7 @@
                 </button>
             </div>
 
-            <div class="column">
+            <div class="overflow-y-auto">
                 <div v-if="post.state == 'loaded'">
                     <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
 
@@ -184,8 +180,7 @@
                         <div class="h4">
                             description
                         </div>
-                        <div v-if="post.data.description">
-                            {{post.data.description}}
+                        <div v-if="post.data.description" v-html="markedDescription">
                         </div>
                     </div>
                 </div>
@@ -199,7 +194,7 @@
     import Vue from "vue";
     import { Loadable, Loading } from "Loading";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
 
@@ -212,6 +207,9 @@
 
     import "filters/ByteFilter";
     import "filters/MomentFilter";
+
+    import { marked, Token, TokenizerAndRendererExtension } from "marked";
+    import * as DOMPurify from "dompurify";
 
     class TagBlock {
         public name: string = "";
@@ -245,7 +243,9 @@
                     rating: "" as string
                 },
 
-                editing: false as boolean
+                editing: false as boolean,
+
+                markedDescription: "" as string,
             }
         },
 
@@ -291,6 +291,43 @@
                     this.edit.title = this.post.data.title ?? "";
                     this.edit.description = this.post.data.description ?? "";
                     this.edit.source = this.post.data.source;
+
+                    const rule = /post #(\d+)/;
+
+                    const e: TokenizerAndRendererExtension = {
+                        name: "honooru-post",
+                        level: "inline",
+                        tokenizer: (src: string, tokens: Token[]) => {
+                            console.log(src);
+
+                            const matches = rule.exec(src);
+                            if (matches) {
+                                console.log(matches);
+                                const postID = matches[1];
+                                return {
+                                    type: "link",
+                                    raw: src,
+                                    html: `<a href='/post/${postID}'>post #${postID}</a>`,
+                                    text: `post #${postID}`,
+                                    tokens: []
+                                }
+                            }
+
+                            return undefined;
+                        }
+                    };
+
+                    marked.use({ extensions: [ e ] });
+
+                    const html: string | Promise<string> = marked.parse(this.post.data.description ?? "");
+
+                    if (typeof html == "string") {
+                        this.markedDescription = DOMPurify.sanitize(html)
+                    } else {
+                        html.then((result: string) => {
+                            this.markedDescription = DOMPurify.sanitize(result);
+                        });
+                    }
                 }
             },
 
@@ -387,7 +424,7 @@
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             FileView,
             PostSearch
         }

@@ -1,14 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu class="flex-grow-1">
-            <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Posts
-            </li>
-        </app-menu>
+        <app-menu></app-menu>
 
         <hr class="border" />
 
@@ -204,7 +196,7 @@
     import { Loadable, Loading } from "Loading";
     import Toaster from "Toaster";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import ToggleButton from "components/ToggleButton";
@@ -370,7 +362,7 @@
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             ToggleButton, PostList,
             ViewTagImplications
         }

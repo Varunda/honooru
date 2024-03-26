@@ -1,14 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu class="flex-grow-1">
-            <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Upload
-            </li>
-        </app-menu>
+        <app-menu></app-menu>
 
         <div v-if="state == 'upload'">
 
@@ -215,7 +207,7 @@
 
     import { Loading, Loadable } from "Loading";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import ProgressBar from "components/ProgressBar.vue";
@@ -505,7 +497,7 @@
 
         components: {
             InfoHover, ApiError,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             ProgressBar,
             FileView, PostSearch
         }

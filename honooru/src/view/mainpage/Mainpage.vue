@@ -1,10 +1,7 @@
 ﻿<template>
     <div>
-        <div class="d-flex align-items-center">
-            <app-menu class="flex-grow-1">
-                <menu-dropdown></menu-dropdown>
-            </app-menu>
-        </div>
+        <app-menu>
+        </app-menu>
 
         <hr class="border" />
 
@@ -20,7 +17,7 @@
     import Vue from "vue";
     import * as sR from "signalR";
 
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
 
     import "filters/MomentFilter";
@@ -83,7 +80,7 @@
 
         components: {
             InfoHover,
-            AppMenu, MenuSep, MenuDropdown, MenuImage
+            AppMenu,
         }
     });
 

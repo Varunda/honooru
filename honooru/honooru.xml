@@ -703,6 +703,25 @@
                 no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="guid"/> exists
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.GetProcessing">
+            <summary>
+                get a list of <see cref="T:honooru.Models.App.MediaAsset"/>s that are currently, or are queued for, processing
+            </summary>
+            <response code="200">
+                the response will contain a list of <see cref="T:honooru.Models.App.MediaAsset"/>
+                with a <see cref="P:honooru.Models.App.MediaAsset.Status"/> of <see cref="F:honooru.Models.App.MediaAssetStatus.PROCESSING"/>
+                or <see cref="F:honooru.Models.App.MediaAssetStatus.QUEUED"/>
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.GetReady">
+            <summary>
+                get a list of <see cref="T:honooru.Models.App.MediaAsset"/>s that are ready to be tagged
+            </summary>
+            <response code="200">
+                the response will contain a list of <see cref="T:honooru.Models.App.MediaAsset"/>
+                with a <see cref="P:honooru.Models.App.MediaAsset.Status"/> of <see cref="F:honooru.Models.App.MediaAssetStatus.DONE"/>
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.MediaAssetApiController.UploadUrl(System.String)">
             <summary>
                 upload a file via a URL
@@ -827,6 +846,29 @@
                 no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/> exists
             </response>
             
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.Update(System.UInt64,System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+                update an existing <see cref="T:honooru.Models.Db.Post"/> with new information
+            </summary>
+            <param name="postID">ID of the <see cref="T:honooru.Models.Db.Post"/> to update</param>
+            <param name="tags">optional, leave null to not change. what tags to update the post with</param>
+            <param name="rating">optional, leave null to not chagne. what rating to update the post with</param>
+            <param name="title">optional, leave null to not change. what title to update the post with</param>
+            <param name="description">optional, leave null to not change. what description to update the post with</param>
+            <param name="source">optional, leave null to not change. what source to update the post with</param>
+            <exception cref="T:System.Exception"></exception>
+            <response code="200">
+                the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/> was successfully
+                updated with all the non-null parameters. any parameter left <c>null</c> will result in that
+                field not being updated
+            </response>
+            <response code="400">
+                one of the following validation errors occurred:
+                <ul>
+                    <li><paramref name="rating"/> was not a valid valid</li>
+                </ul>
+            </response>
         </member>
         <member name="M:honooru.Controllers.Api.PostApiController.RemakeThumbnail(System.UInt64)">
             <summary>

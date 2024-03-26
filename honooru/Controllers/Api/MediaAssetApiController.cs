@@ -100,6 +100,14 @@ namespace honooru.Controllers.Api {
             return ApiOk(asset);
         }
 
+        /// <summary>
+        ///     get a list of <see cref="MediaAsset"/>s that are currently, or are queued for, processing
+        /// </summary>
+        /// <response code="200">
+        ///     the response will contain a list of <see cref="MediaAsset"/>
+        ///     with a <see cref="MediaAsset.Status"/> of <see cref="MediaAssetStatus.PROCESSING"/>
+        ///     or <see cref="MediaAssetStatus.QUEUED"/>
+        /// </response>
         [HttpGet("processing")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<List<MediaAsset>>> GetProcessing() {
@@ -110,6 +118,13 @@ namespace honooru.Controllers.Api {
             return ApiOk(assets);
         }
 
+        /// <summary>
+        ///     get a list of <see cref="MediaAsset"/>s that are ready to be tagged
+        /// </summary>
+        /// <response code="200">
+        ///     the response will contain a list of <see cref="MediaAsset"/>
+        ///     with a <see cref="MediaAsset.Status"/> of <see cref="MediaAssetStatus.DONE"/>
+        /// </response>
         [HttpGet("ready")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<List<MediaAsset>>> GetReady() {

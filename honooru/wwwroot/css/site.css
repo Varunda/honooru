@@ -163,3 +163,12 @@
     padding: 0.25rem 0.5rem;
 
 }
+
+.no-underline-links a {
+    text-decoration: none !important;
+}
+
+
+.no-underline-links a:hover {
+    text-decoration: underline !important;
+}

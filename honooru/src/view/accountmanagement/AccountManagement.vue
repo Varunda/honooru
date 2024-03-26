@@ -1,14 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu>
-            <menu-dropdown></menu-dropdown>
-
-            <menu-sep></menu-sep>
-
-            <li class="nav-item h1 p-0">
-                Account Management
-            </li>
-        </app-menu>
+        <app-menu></app-menu>
 
         <div class="row">
             <div class="col-2">
@@ -237,7 +229,7 @@
     import { Loadable, Loading } from "Loading";
 
     import ATable, { ACol, ABody, AFilter, AHeader } from "components/ATable";
-    import { AppMenu, MenuSep, MenuDropdown, MenuImage } from "components/AppMenu";
+    import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import Busy from "components/Busy.vue";
     import Collapsible from "components/Collapsible.vue";
@@ -510,7 +502,7 @@
 
         components: {
             ATable, ACol, ABody, AFilter, AHeader,
-            AppMenu, MenuSep, MenuDropdown, MenuImage,
+            AppMenu,
             InfoHover, Busy, Collapsible, ToggleButton
         }
     });
