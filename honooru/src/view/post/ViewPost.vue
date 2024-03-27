@@ -5,6 +5,10 @@
 
         <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; overflow: hidden">
             <div class="overflow-y-auto">
+                <h2 class="mb-2 text-center pb-2 border-bottom">
+                    post {{postID}}
+                </h2>
+
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
                     <div class="btn-group w-100">
@@ -23,7 +27,7 @@
                     </div>
                 </div>
 
-                <div>
+                <div class="honooru-tags">
                     <div v-if="tags.state == 'idle'"></div>
                     <div v-else-if="tags.state == 'loading'">
                         loading tags...
@@ -36,7 +40,7 @@
                             </h6>
 
                             <div v-for="tag in block.tags" :style="{ 'color': '#' + tag.hexColor }">
-                                <a :href="'/tag/' + tag.id" :class="{ 'text-info': tag.description, 'text-secondary': !tag.description }">
+                                <a :href="'/tag/' + tag.id" :class="{ 'text-success': tag.description, 'text-secondary': !tag.description }">
                                     <info-hover :text="tag.description || ''"></info-hover>
                                 </a>
                                 <a :href="'/posts?q=' + tag.name">
@@ -163,10 +167,20 @@
             </div>
 
             <div class="overflow-y-auto">
-                <div v-if="post.state == 'loaded'">
+                <div v-if="post.state == 'idle'"></div>
+
+                <div v-else-if="post.state == 'loading'">
+                    loading...
+                </div>
+
+                <div v-else-if="post.state == 'nocontent'">
+                    failed to find post {{postID}}
+                </div>
+
+                <div v-else-if="post.state == 'loaded'">
                     <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
 
-                    <div class="h2">
+                    <div class="h2 mt-2 pt-2">
                         <span v-if="post.data.title">
                             {{post.data.title}}
                         </span>
@@ -176,13 +190,31 @@
                         </span>
                     </div>
 
-                    <div>
-                        <div class="h4">
-                            description
+                    <div v-if="post.data.description" class="border-top mt-2 pt-2">
+                        <div v-if="htmlDesc.state == 'idle'"></div>
+
+                        <div v-else-if="htmlDesc.state == 'loading'">
+                            loading...
                         </div>
-                        <div v-if="post.data.description" v-html="markedDescription">
+
+                        <div v-else-if="htmlDesc.state == 'loaded'" v-html="htmlDesc.data"></div>
+
+                        <div v-else-if="htmlDesc.state == 'error'">
+                            error loading description:
+                            <api-error :error="htmlDesc.problem"></api-error>
                         </div>
+
+                        <div v-else>
+                            unchecked state of htmlDesc: {{htmlDesc.state}}
+                        </div>
+
                     </div>
+                </div>
+
+                <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
+
+                <div v-else>
+                    unchecked state of post: {{post.state}}
                 </div>
             </div>
 
@@ -202,13 +234,13 @@
     import PostSearch from "components/app/PostSearch.vue";
 
     import { Post, PostApi } from "api/PostApi";
-    import { ExtendedTag } from "api/TagApi";
+    import { ExtendedTag, TagApi } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
 
     import "filters/ByteFilter";
     import "filters/MomentFilter";
 
-    import { marked, Token, TokenizerAndRendererExtension } from "marked";
+    import { marked, MarkedExtension, Token, TokenizerAndRendererExtension } from "marked";
     import * as DOMPurify from "dompurify";
 
     class TagBlock {
@@ -222,6 +254,132 @@
         [2, "unsafe"],
         [3, "explicit"]
     ]);
+
+    const DEBUG: boolean = false;
+
+    const _debug = (str: string): void => {
+        if (DEBUG) {
+            console.log(str);
+        }
+    }
+
+    const rule = /^post #(\d+)/;
+    const tagRule = /^\[\[(.+)\]\]/;
+
+    const honooruMarkdownExtension: MarkedExtension = {
+        // walks the tokens and turns a honooru-tag-link into an <a> with the correct ID
+        walkTokens: async (token) => {
+            _debug(`${token.type} :: ${token.raw}`);
+
+            if (token.type != "honooru-tag-link") {
+                return;
+            }
+
+            const tagName: string = token.tagName;
+            _debug(`getting tag [tagName='${tagName}']`);
+
+            const tag: Loading<ExtendedTag> = await TagApi.getByName(tagName);
+
+            _debug(`loaded tag [state=${tag.state}]`);
+            if (tag.state == "loaded") {
+                token.tagData = tag.data;
+            } else if (tag.state == "nocontent") {
+                token.tagData = {
+                    id: -1,
+                    name: `NOT_FOUND:${tagName}`,
+                    typeID: -1,
+                    typeName: "invalid",
+                    hexColor: "ff0000",
+                    uses: -1,
+                    description: ""
+                };
+            }
+        },
+
+        // async lets walkTokens above be async, which lets us get the tag data when we find a honooru-tag-link
+        async: true,
+
+        extensions: [
+            // extension to turn post numbers into links
+            // example:
+            //          post #4
+            //      would turn into
+            //          <a href="/post/4">post 4</a>
+            //
+            {
+                name: "honooru-post-link",
+                start: (src: string) => src.indexOf("post #"),
+                level: "inline",
+                tokenizer: function(src: string, tokens: Token[]) {
+                    _debug(`SRC "${src}"`);
+
+                    const match = rule.exec(src);
+                    if (match) {
+                        const token = {
+                            type: "link",
+                            raw: match[0],
+                            text: match[0].trim(),
+                            href: `/post/${match[1]}`,
+                            tokens: [{
+                                type: "text",
+                                raw: match[0],
+                                text: match[0]
+                            }]
+                        }
+
+                        return token;
+                    }
+
+                    return undefined;
+                },
+            },
+
+            // extension to turn tags into links
+            // example:
+            //          [[tag]]
+            //      would turn into
+            //          <a href="/post/1">tag</a>
+            // with the correct coloring to match the tag type, and the correct tag ID that matches the name
+            {
+                name: "honooru-tag-link",
+                start: (src: string) => src.indexOf("[["),
+                level: "inline",
+                tokenizer: function(src: string, tokens: Token[]) {
+                    const match = tagRule.exec(src);
+
+                    if (!match) {
+                        return undefined;
+                    }
+
+                    const token = {
+                        type: "honooru-tag-link",
+                        raw: match[0],
+                        text: match[1].trim(),
+                        tagName: match[1].trim(), // used in walkTokens
+                        tokens: [{
+                            type: "text",
+                            raw: match[0],
+                            text: match[1]
+                        }]
+                    };
+
+                    return token;
+                },
+
+                // called after walkTokens has populated the data we want
+                renderer: (token) => {
+                    _debug(`renderer for tag link: ${token.tagData}`);
+                    return `<a href="/tag/${token.tagData.id}" style="color: #${token.tagData.hexColor}">${token.tagData.name}</a>`;
+                }
+            }
+        ],
+
+        tokenizer: null,
+    };
+
+    ///////////////////////////////////////////////////
+    // start vue component
+    ///////////////////////////////////////////////////
 
     export const ViewPost = Vue.extend({
         props: {
@@ -245,7 +403,7 @@
 
                 editing: false as boolean,
 
-                markedDescription: "" as string,
+                htmlDesc: Loadable.idle() as Loading<string>,
             }
         },
 
@@ -261,7 +419,6 @@
                 if (ev.key == "Enter" && ev.ctrlKey) {
                     this.saveEdit();
                 }
-
             });
         },
 
@@ -292,41 +449,21 @@
                     this.edit.description = this.post.data.description ?? "";
                     this.edit.source = this.post.data.source;
 
-                    const rule = /post #(\d+)/;
+                    marked.use(honooruMarkdownExtension);
 
-                    const e: TokenizerAndRendererExtension = {
-                        name: "honooru-post",
-                        level: "inline",
-                        tokenizer: (src: string, tokens: Token[]) => {
-                            console.log(src);
-
-                            const matches = rule.exec(src);
-                            if (matches) {
-                                console.log(matches);
-                                const postID = matches[1];
-                                return {
-                                    type: "link",
-                                    raw: src,
-                                    html: `<a href='/post/${postID}'>post #${postID}</a>`,
-                                    text: `post #${postID}`,
-                                    tokens: []
-                                }
-                            }
-
-                            return undefined;
-                        }
-                    };
-
-                    marked.use({ extensions: [ e ] });
-
+                    this.htmlDesc = Loadable.loading();
                     const html: string | Promise<string> = marked.parse(this.post.data.description ?? "");
 
-                    if (typeof html == "string") {
-                        this.markedDescription = DOMPurify.sanitize(html)
-                    } else {
-                        html.then((result: string) => {
-                            this.markedDescription = DOMPurify.sanitize(result);
-                        });
+                    try {
+                        if (typeof html == "string") {
+                            this.htmlDesc = Loadable.loaded(DOMPurify.sanitize(html));
+                        } else {
+                            html.then((result: string) => {
+                                this.htmlDesc = Loadable.loaded(DOMPurify.sanitize(result));
+                            });
+                        }
+                    } catch (err) {
+                        this.htmlDesc = Loadable.error(err);
                     }
                 }
             },

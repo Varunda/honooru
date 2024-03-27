@@ -3,7 +3,6 @@
     <div id="post-search-parent">
         <div v-if="type == 'input'" class="input-group">
             <input class="form-control pr-0" placeholder="search..." v-model="search" id="search-input"
-                @keyup.up="keyUp" @keyup.down="keyDown" @keyup.enter="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord"
             />
 
             <span class="input-group-append">

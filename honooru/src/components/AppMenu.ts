@@ -2,9 +2,9 @@
 
 export const AppMenu = Vue.extend({
     template: `
-        <nav class="navbar navbar-expand p-0">
+        <nav class="navbar navbar-expand">
             <div class="navbar-collapse">
-                <ul class="navbar-nav h1">
+                <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link">
                             <img src="/img/logo0.png" style="height: 100%; width: 48px;" title="homepage" />
@@ -22,10 +22,6 @@ export const AppMenu = Vue.extend({
                             <li><a class="dropdown-item" href="/upload">Upload</a></li>
                             <li><a class="dropdown-item" href="/">Homepage</a></li>
                         </ul>
-                    </li>
-
-                    <li class="nav-item mx-2">
-                        &middot;
                     </li>
 
                     <li class="nav-item">

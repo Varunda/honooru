@@ -576,7 +576,8 @@ namespace honooru.Controllers.Api {
         }
 
         internal List<string> _SplitTags(string tags) {
-            return [.. tags.Trim().ToLower().Split(TAG_SEPARATOR, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+            // making the tag distinct ensures that multiple of the same tag on upload doesn't throw an error
+            return [.. tags.Trim().ToLower().Split(TAG_SEPARATOR, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct()];
         }
 
     }

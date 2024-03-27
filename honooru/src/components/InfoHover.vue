@@ -2,8 +2,7 @@
     <span :id="'info-hover-' + ID"
             class="d-inline-block" data-toggle="popover" data-trigger="hover"
             :data-content="text"
-            :data-html="AllowHtml"
-            :style="{ 'filter': !icon ? 'invert(1)' : ''}">
+            :data-html="AllowHtml">
 
         <span v-if="icon != null" :class="'bi-' + icon">
 

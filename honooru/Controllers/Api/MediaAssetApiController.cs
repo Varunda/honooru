@@ -97,7 +97,19 @@ namespace honooru.Controllers.Api {
                 return ApiNoContent<MediaAsset>();
             }
 
+            Thing[] arr = [];
+            arr[0].A = "abc";
+
             return ApiOk(asset);
+        }
+
+        struct Thing {
+            public string A { get; set; } = "";
+
+            public Thing(string a) {
+                A = a;
+            }
+
         }
 
         /// <summary>

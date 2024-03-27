@@ -2,13 +2,11 @@
     <div>
         <app-menu></app-menu>
 
-        <hr class="border" />
-
         <div>
 
             <div style="display: grid; grid-template-columns: 300px 1fr; gap: 1rem;">
                 <div>
-                    <post-search v-model="query" @do-search="performSearch"></post-search>
+                    <post-search v-model="query" @keyup.enter="performSearch"></post-search>
                 </div>
 
                 <div>
@@ -53,6 +51,8 @@
 
         methods: {
             performSearch: function(query: string): void {
+                query = this.query;
+
                 const url = new URL(location.href);
                 url.searchParams.set("q", query.trim());
                 history.pushState({ path: url.href }, "", `/posts?${url.searchParams.toString()}`);
