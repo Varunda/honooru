@@ -1,5 +1,6 @@
 ﻿using honooru.Models.Internal;
 using honooru.Services.Db;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,11 +12,16 @@ namespace honooru.Services.Repositories {
         private readonly ILogger<AppAccountGroupMembershipRepository> _Logger;
         private readonly AppAccountGroupMembershipDbStore _MembershipDb;
 
+        private readonly IMemoryCache _Cache;
+
+        private const string CACHE_KEY_ACCOUNT = "App.AccountGroupMembership.Account.{0}"; // {0} => account ID
+
         public AppAccountGroupMembershipRepository(ILogger<AppAccountGroupMembershipRepository> logger,
-            AppAccountGroupMembershipDbStore membershipDb) {
+            AppAccountGroupMembershipDbStore membershipDb, IMemoryCache cache) {
 
             _Logger = logger;
             _MembershipDb = membershipDb;
+            _Cache = cache;
         }
 
         public Task<AppAccountGroupMembership?> GetByID(ulong ID) {

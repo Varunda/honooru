@@ -1,5 +1,6 @@
 ﻿using honooru.Models.App;
 using honooru.Services.Db;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,11 +14,14 @@ namespace honooru.Services.Repositories {
 
         private readonly TagInfoDb _TagInfoDb;
 
+        private readonly IMemoryCache _Cache;
+
         public TagInfoRepository(ILogger<TagInfoRepository> logger,
-            TagInfoDb tagInfoDb) {
+            TagInfoDb tagInfoDb, IMemoryCache cache) {
 
             _Logger = logger;
             _TagInfoDb = tagInfoDb;
+            _Cache = cache;
         }
 
         public Task<TagInfo?> GetByID(ulong tagID) {

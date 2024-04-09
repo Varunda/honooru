@@ -128,6 +128,7 @@ namespace honooru.Services.UploadStepHandler {
 
                 MediaAsset asset = steps.Asset;
 
+                asset.Status = MediaAssetStatus.DONE;
                 await _MediaAssetRepository.Upsert(asset);
                 await group.Finish(asset);
                 _UploadProgressRepository.Remove(entry.MediaAssetID);

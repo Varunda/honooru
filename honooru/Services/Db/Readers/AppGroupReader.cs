@@ -14,7 +14,7 @@ namespace honooru.Services.Db.Readers {
             group.ID = reader.GetUInt64("id");
             group.Name = reader.GetString("name");
             group.HexColor = reader.GetString("hex_color");
-            group.Implies = reader.GetString("implies").Split(" ").Select(iter => ulong.Parse(iter)).ToList();
+            group.Implies = reader.GetString("implies").Split(" ").Where(iter => iter != "").Select(iter => ulong.Parse(iter)).ToList();
 
             return group;
         }

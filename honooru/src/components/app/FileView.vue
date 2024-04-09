@@ -7,7 +7,7 @@
         </div>
 
         <div v-else-if="fileType == 'image'">
-            <img :src="'/media/origina/' + md5 + FileExtension" />
+            <img :src="'/media/original/' + md5 + '.' + FileExtension" class="mw-100" />
         </div>
     </div>
 </template>
@@ -66,7 +66,7 @@
                     return "video";
                 }
 
-                if (f == "png" || f == "jpg" || f == "jpeg" || f == "webp") {
+                if (f == "png" || f == "jpg" || f == "jpeg" || f == "webp" || f == "gif") {
                     return "image";
                 }
 

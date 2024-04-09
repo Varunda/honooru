@@ -3,11 +3,11 @@
 
         <app-menu></app-menu>
 
-        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem; overflow: hidden">
+        <div style="display: grid; grid-template-columns: 400px 1fr 180px; gap: 0.5rem; overflow: hidden">
             <div class="overflow-y-auto">
-                <h2 class="mb-2 text-center pb-2 border-bottom">
-                    post {{postID}}
-                </h2>
+                <div class="mb-2">
+                    <post-search @keyup.enter="performSearch" @do-search="performSearch"></post-search>
+                </div>
 
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
@@ -218,6 +218,10 @@
                 </div>
             </div>
 
+            <div class="pl-2 ml-2 border-left overflow-y-auto">
+                <similarity v-if="post.state == 'loaded'" :hash="post.data.iqdbHash" :exclude-post-id="post.data.id"></similarity>
+            </div>
+
         </div>
     </div>
 </template>
@@ -225,6 +229,7 @@
 <script lang="ts">
     import Vue from "vue";
     import { Loadable, Loading } from "Loading";
+    import Toaster from "Toaster";
 
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
@@ -232,6 +237,7 @@
 
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
+    import Similarity from "components/app/Similarity.vue";
 
     import { Post, PostApi } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
@@ -239,9 +245,11 @@
 
     import "filters/ByteFilter";
     import "filters/MomentFilter";
+    import "filters/LocaleFilter";
 
     import { marked, MarkedExtension, Token, TokenizerAndRendererExtension } from "marked";
     import * as DOMPurify from "dompurify";
+import AccountUtil from "../../util/AccountUtil";
 
     class TagBlock {
         public name: string = "";
@@ -412,6 +420,11 @@
             this.loadAll();
 
             document.addEventListener("keyup", (ev: KeyboardEvent) => {
+                // this means another input is currently in focus
+                if (document.activeElement != document.body) {
+                    return;
+                }
+
                 if (ev.key == "e") {
                     this.startEdit();
                 }
@@ -424,6 +437,7 @@
 
         methods: {
             getPostID: function(): void {
+
                 const parts: string[] = location.pathname.split("/");
                 if (parts.length < 3) {
                     console.error(`missing post ID`);
@@ -520,7 +534,15 @@
                 }
 
                 await PostApi.remakeThumbnail(this.post.data.id);
-            }
+                Toaster.add("success", `submitted post ${this.post.data.id} for a new thumbnail`, "success");
+            },
+
+            performSearch: function(query: string): void {
+                const url = new URL(location.href);
+                url.searchParams.set("q", query.trim());
+                history.pushState({ path: url.href }, "", `/posts?${url.searchParams.toString()}`);
+                location.href = `/posts?${url.searchParams.toString()}`;
+            },
         },
 
         computed: {
@@ -556,14 +578,23 @@
                 }
 
                 return blocks;
+            },
+
+            permissions: function() {
+                return {
+                    post: {
+                        delete: AccountUtil.hasPermission("app.post.delete"),
+                        erase: AccountUtil.hasPermission("app.post.erase")
+                    }
+
+                };
             }
         },
 
         components: {
             InfoHover, ApiError,
             AppMenu,
-            FileView,
-            PostSearch
+            FileView, PostSearch, Similarity
         }
 
     });

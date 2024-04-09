@@ -33,6 +33,10 @@ namespace honooru.Controllers {
             return View();
         }
 
+        public IActionResult Settings() {
+            return View();
+        }
+
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         public IActionResult AccountManagement() {
             return View();
@@ -55,6 +59,11 @@ namespace honooru.Controllers {
         }
 
         public IActionResult Tag() {
+            return View();
+        }
+
+        [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
+        public IActionResult Admin() {
             return View();
         }
 

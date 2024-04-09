@@ -6,18 +6,11 @@
             />
 
             <span class="input-group-append">
-                <button class="btn btn-primary" type="button">
+                <button class="btn btn-primary" type="button" @click="performSearch">
                     &#128270;
                 </button>
             </span>
         </div>
-
-        <!--
-            
-        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1"
-                  @keyup.up="keyUp" @keyup.down="keyDown" @keydown.enter.prevent="selectEnter" @keydown.tab.prevent="selectFirst" @keyup.space="emitCurrentWord" >
-        </textarea>
-        -->
 
         <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1">
         </textarea>
@@ -67,7 +60,7 @@
                     fillAttr: "name",
 
                     // big government doesn't want you to know this,
-                    // but despite it being named | itemClass |, you can in fact put classes in here
+                    // but despite it being named |itemClass|, you can in fact put classes in here
                     itemClass: "bg-dark border",
                     // now this one does require you to not have spaces
                     selectClass: "fw-bold",
@@ -80,6 +73,10 @@
                         pre: "",
                         post: "",
                         skip: true // this means don't do a local search
+                    },
+
+                    noMatchTemplate: () => {
+                        return "<li><span class=\"bg-secondary\">not found</span></li>";
                     },
 
                     // remote callback

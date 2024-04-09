@@ -42,7 +42,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
             // recreate the thumbnail only if needed
             _Logger.LogDebug($"checking if thumbnail exists [md5={md5}] [recreateIfNeeded={entry.RecreateIfNeeded}] [thumbnailPath={thumbnailPath}]");
             if (File.Exists(thumbnailPath) == true) {
-                if (entry.RecreateIfNeeded == true) {
+                if (entry.RecreateIfNeeded == false) {
                     _Logger.LogWarning($"thumbnail already exists! skipping [md5={md5}] [thumbnailPath={thumbnailPath}]");
                     return false;
                 } else {
@@ -76,17 +76,34 @@ namespace honooru.Services.Hosted.QueueProcessor {
 
         private async Task _ProcessImage(string input, string output, CancellationToken cancel) {
             using MagickImage mImage = new(input);
-            mImage.Resize(180, 180);
             mImage.Strip();
+
+            if (mImage.Width > mImage.Height) {
+                mImage.Resize(180, 0);
+            } else {
+                mImage.Resize(0, 180);
+            }
+            mImage.Extent(180, 180, Gravity.Center, MagickColor.FromRgba(0, 0, 0, 0));
 
             await mImage.WriteAsync(output, cancel);
         }
 
         private async Task _ProcessVideo(string input, string output, CancellationToken cancel) {
+            IMediaAnalysis dets = FFProbe.Analyse(input);
+
+            int height = dets.PrimaryVideoStream?.Height ?? 0;
+            int width = dets.PrimaryVideoStream?.Width ?? 0;
+
             await FFMpeg.SnapshotAsync(input, output, new System.Drawing.Size() {
-                Width = 180,
-                Height = 0 // 0 means calculate it from the aspect ratio, which is what we want!
+                Width = width > height ? 180 : 0,
+                Height = width > height ? 0 : 180
             });
+
+            using MagickImage mImage = new(output);
+            mImage.Strip();
+            mImage.Extent(180, 180, Gravity.Center, MagickColor.FromRgba(0, 0, 0, 0));
+
+            await mImage.WriteAsync(output, cancel);
         }
 
     }

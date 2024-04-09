@@ -15,6 +15,7 @@ export class MediaAsset {
     public additionalTags: string = "";
     public title: string = "";
     public description: string = "";
+    public iqdbHash: string | null = null;
 }
 
 export class MediaAssetApi extends ApiWrapper<MediaAsset> {
@@ -56,6 +57,14 @@ export class MediaAssetApi extends ApiWrapper<MediaAsset> {
                 processCallback(ev.loaded, ev.total);
             }
         });
+    }
+
+    public static regenerateIqdb(assetID: string): Promise<Loading<void>> {
+        return MediaAssetApi.get().post(`/api/media-asset/${assetID}/regenerate-iqdb`);
+    }
+
+    public static remove(assetID: string): Promise<Loading<void>> {
+        return MediaAssetApi.get().delete(`/api/media-asset/${assetID}`);
     }
 
 }

@@ -103,9 +103,9 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO media_asset (
-                    id, post_id, md5, status, file_name, file_extension, timestamp, file_size_bytes, source, additional_tags, title, description
+                    id, post_id, md5, status, file_name, file_extension, timestamp, file_size_bytes, source, additional_tags, title, description, iqdb_hash
                 ) VALUES (
-                    @ID, @PostID, @MD5, @Status, @FileName, @FileExtension, @Timestamp, @FileSizeBytes, @Source, @AdditionalTags, @Title, @Description
+                    @ID, @PostID, @MD5, @Status, @FileName, @FileExtension, @Timestamp, @FileSizeBytes, @Source, @AdditionalTags, @Title, @Description, @IqdbHash
                 ) ON CONFLICT (id) DO UPDATE 
                     set md5 = @MD5,
                         post_id = @PostID,
@@ -117,7 +117,8 @@ namespace honooru.Services.Db {
                         source = @Source,
                         additional_tags = @AdditionalTags,
                         title = @Title,
-                        description = @Description
+                        description = @Description,
+                        iqdb_hash = @IqdbHash
                 ;
             ");
 
@@ -127,6 +128,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Status", (int)asset.Status);
             cmd.AddParameter("FileName", asset.FileName);
             cmd.AddParameter("FileExtension", asset.FileExtension);
+            cmd.AddParameter("IqdbHash", asset.IqdbHash);
             cmd.AddParameter("Timestamp", asset.Timestamp);
             cmd.AddParameter("FileSizeBytes", asset.FileSizeBytes);
             cmd.AddParameter("Source", asset.Source);

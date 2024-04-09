@@ -1,5 +1,7 @@
 ﻿import { Loading, Loadable } from "Loading";
 import ApiWrapper from "api/ApiWrapper";
+import { MediaAsset, MediaAssetApi } from "./MediaAssetApi";
+import { ExtendedTag, TagApi } from "./TagApi";
 
 export class SearchResultsQuery {
     public input: string = "";
@@ -13,6 +15,7 @@ export class SearchResults {
     public timings: string[] = [];
     public parsedAst: string = "";
     public results: Post[] = [];
+    public tags: ExtendedTag[] = [];
 }
 
 export class Post {
@@ -29,6 +32,15 @@ export class Post {
     public source: string = "";
     public fileExtension: string = "";
     public fileSizeBytes: number = 0;
+    public iqdbHash: string = "";
+}
+
+export class IqdbSearchResult {
+    public postId: string = "";
+    public score: number = 0;
+    public hash: string = "";
+    public post: Post | null = null;
+    public mediaAsset: MediaAsset | null = null;
 }
 
 export class PostApi extends ApiWrapper<Post> {
@@ -38,8 +50,8 @@ export class PostApi extends ApiWrapper<Post> {
 
     public static parse(elem: any): Post {
         return {
-            timestamp: new Date(elem.timestamp),
-            ...elem
+            ...elem,
+            timestamp: new Date(elem.timestamp)
         };
     }
 
@@ -51,11 +63,20 @@ export class PostApi extends ApiWrapper<Post> {
 
     public static parseSearchResults(elem: any) : SearchResults {
         return {
-            ...elem,
+            parsedAst: elem.parsedAst,
             query: PostApi.parseSearchResultsQuery(elem.query),
             timings: elem.timings,
-            results: elem.results.map((iter: any) => PostApi.parse(iter))
+            results: elem.results.map((iter: any) => PostApi.parse(iter)),
+            tags: elem.tags.map((iter: any) => TagApi.parseExtendedTag(iter))
         }
+    }
+
+    public static parseSimilarResults(elem: any): IqdbSearchResult {
+        return {
+            ...elem,
+            post: (elem.post == null) ? null : PostApi.parse(elem.post),
+            mediaAsset: (elem.mediaAsset == null) ? null : MediaAssetApi.parse(elem.mediaAsset)
+        };
     }
 
     public static async getByID(postID: number): Promise<Loading<Post>> {
@@ -105,8 +126,20 @@ export class PostApi extends ApiWrapper<Post> {
         return PostApi.get().post(`/api/post/${postID}?${parms.toString()}`);
     }
 
+    public static searchIqdb(iqdb: string): Promise<Loading<IqdbSearchResult[]>> {
+        return PostApi.get().readList(`/api/post/similar/${iqdb}`, PostApi.parseSimilarResults);
+    }
+
     public static async remakeThumbnail(postID: number): Promise<Loading<void>> {
         return PostApi.get().post(`/api/post/${postID}/remake-thumbnail`);
+    }
+
+    public static remove(postID: number): Promise<Loading<void>> {
+        return PostApi.get().delete(`/api/post/${postID}`);
+    }
+
+    public static erase(postID: number): Promise<Loading<void>> {
+        return PostApi.get().delete(`/api/post/${postID}/erase`);
     }
 
 }

@@ -5,35 +5,67 @@
         <div class="row">
             <div class="col-2">
                 <h2 class="wt-header text-center">
-                    Accounts
+                    <span class="btn-group w-100">
+                        <button class="btn btn-primary" @click="view.left = 'account'">
+                            Accounts
+                        </button>
+                        <button class="btn btn-primary" @click="view.left = 'group'">
+                            Groups
+                        </button>
+                    </span>
 
                     <toggle-button v-model="showDeactivated">
                         Show deactivated
                     </toggle-button>
                 </h2>
 
-                <div v-if="accounts.state == 'idle'"></div>
-                <div v-else-if="accounts.state == 'loading'">
-                    <busy class="app-busy-sm"></busy>
-                    Loading...
-                </div>
+                <div v-if="view.left == 'account'">
+                    <div v-if="accounts.state == 'idle'"></div>
+                    <div v-else-if="accounts.state == 'loading'">
+                        <busy class="app-busy-sm"></busy>
+                        Loading...
+                    </div>
 
-                <div v-else-if="accounts.state == 'loaded'">
-                    <div class="list-group">
-                        <div v-for="account in displayedAccounts" @click="viewAccount(account.id)" class="list-group-item"
-                                :class="{ 'list-group-item-primary': selected.account != null && selected.account.id == account.id }">
+                    <div v-else-if="accounts.state == 'loaded'">
+                        <div class="list-group">
+                            <div v-for="account in displayedAccounts" @click="viewAccount(account.id)" class="list-group-item"
+                                    :class="{ 'list-group-item-primary': selected.account != null && selected.account.id == account.id }">
 
-                            {{account.id}} / {{account.name}}
-                            <span v-if="account.deletedOn != null">
-                                (deactivated)
-                            </span>
+                                {{account.id}} / {{account.name}}
+                                <span v-if="account.deletedOn != null">
+                                    (deactivated)
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    <button class="btn btn-success w-100 mt-1" @click="showCreateModal">
+                        Create account
+                    </button>
                 </div>
 
-                <button class="btn btn-success w-100 mt-1" @click="showCreateModal">
-                    Create account
-                </button>
+                <div v-else-if="view.left == 'group'">
+                    <div v-if="groups.state == 'idle'"></div>
+                    <div v-else-if="groups.state == 'loading'">
+                        <busy class="app-busy-sm"></busy>
+                        Loading...
+                    </div>
+
+                    <div v-else-if="groups.state == 'loaded'">
+                        <div class="list-group">
+                            <div v-for="group in displayedGroups" @click="viewAccount(group.id)" class="list-group-item"
+                                    :class="{ 'list-group-item-primary': selected.group != null && selected.group.id == group.id }">
+
+                                {{group.id}} / {{group.name}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-success w-100 mt-1" @click="showCreateModal">
+                        Create group
+                    </button>
+                </div>
+
             </div>
 
             <div class="col-10">
@@ -152,12 +184,6 @@
                         <div>Name:</div>
                         <input v-model="create.name" class="form-control" placeholder="Account display name" />
 
-                        <div>Email:</div>
-                        <input v-model="create.email" class="form-control" placeholder="Account email" />
-
-                        <div>Discord name:</div>
-                        <input v-model="create.discord" class="form-control" placeholder="Discord name" />
-
                         <div>Discord ID:</div>
                         <input v-model="create.discordID" class="form-control" placeholder="Discord ID" />
 
@@ -227,6 +253,7 @@
 <script lang="ts">
     import Vue from "vue";
     import { Loadable, Loading } from "Loading";
+    import Toaster from "Toaster";
 
     import ATable, { ACol, ABody, AFilter, AHeader } from "components/ATable";
     import { AppMenu } from "components/AppMenu";
@@ -236,7 +263,6 @@
     import ToggleButton from "components/ToggleButton";
 
     import "filters/MomentFilter";
-    import Toaster from "Toaster";
 
     import { AppAccount, AppAccountApi } from "api/AppAccountApi";
     import { AppGroup, AppGroupApi } from "api/AppGroupApi";
@@ -261,8 +287,14 @@
 
                 selected: {
                     account: null as AppAccount | null,
+                    group: null as AppGroup | null,
                     groups: Loadable.idle() as Loading<AppAccountGroupMembership[]>,
                     permissions: Loadable.idle() as Loading<AppGroupPermission[]>
+                },
+
+                view: {
+                    left: "account" as "account" | "group",
+
                 },
 
                 create: new AppAccount() as AppAccount
@@ -476,6 +508,14 @@
                 }
 
                 return this.accounts.data.filter(iter => iter.deletedOn == null);
+            },
+
+            displayedGroups: function(): AppGroup[] {
+                if (this.groups.state != "loaded") {
+                    return [];
+                }
+
+                return this.groups.data;
             },
 
             filteredPermissions: function(): AppPermission[] {

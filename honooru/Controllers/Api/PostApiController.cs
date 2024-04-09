@@ -5,6 +5,7 @@ using honooru.Code.ExtensionMethods;
 using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
+using honooru.Models.App.Iqdb;
 using honooru.Models.Config;
 using honooru.Models.Db;
 using honooru.Models.Internal;
@@ -45,13 +46,15 @@ namespace honooru.Controllers.Api {
         private readonly IOptions<StorageOptions> _StorageOptions;
 
         private readonly AppCurrentAccount _CurrentAccount;
-        private readonly PostDb _PostDb;
+        private readonly PostRepository _PostRepository;
         private readonly MediaAssetRepository _MediaAssetRepository;
         private readonly TagRepository _TagRepository;
         private readonly TagTypeRepository _TagTypeRepository;
-        private readonly PostTagDb _PostTagDb;
+        private readonly PostTagRepository _PostTagRepository;
         private readonly FileExtensionService _FileExtensionHelper;
         private readonly TagImplicationRepository _TagImplicationRepository;
+        private readonly TagInfoRepository _TagInfoRepository;
+        private readonly IqdbClient _IqdbClient;
 
         private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailCreationQueue;
         private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
@@ -63,23 +66,24 @@ namespace honooru.Controllers.Api {
 
         public PostApiController(ILogger<PostApiController> logger,
             IOptions<StorageOptions> storageOptions,
-            PostDb postDb, AppCurrentAccount currentAccount,
+            PostRepository postRepo, AppCurrentAccount currentAccount,
             MediaAssetRepository mediaAssetDb, TagDb tagDb,
-            TagTypeRepository tagTypeRepository, PostTagDb postTagDb,
+            TagTypeRepository tagTypeRepository, PostTagRepository postTagDb,
             SearchQueryRepository searchQueryRepository, SearchQueryParser searchQueryParser,
             BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository,
             BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue, FileExtensionService fileExtensionHelper,
-            TagImplicationRepository tagImplicationRepository) {
+            TagImplicationRepository tagImplicationRepository, IqdbClient iqdbClient,
+            TagInfoRepository tagInfoRepository) {
 
             _Logger = logger;
 
             _StorageOptions = storageOptions;
 
-            _PostDb = postDb;
+            _PostRepository = postRepo;
             _CurrentAccount = currentAccount;
             _MediaAssetRepository = mediaAssetDb;
             _TagTypeRepository = tagTypeRepository;
-            _PostTagDb = postTagDb;
+            _PostTagRepository = postTagDb;
             _TagRepository = tagRepository;
 
             _SearchQueryRepository = searchQueryRepository;
@@ -88,6 +92,8 @@ namespace honooru.Controllers.Api {
             _TagInfoUpdateQueue = tagInfoUpdateQueue;
             _FileExtensionHelper = fileExtensionHelper;
             _TagImplicationRepository = tagImplicationRepository;
+            _IqdbClient = iqdbClient;
+            _TagInfoRepository = tagInfoRepository;
         }
 
         /// <summary>
@@ -104,7 +110,7 @@ namespace honooru.Controllers.Api {
         [HttpGet("{postID}")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<Post>> GetByID(ulong postID) {
-            Post? post = await _PostDb.GetByID(postID);
+            Post? post = await _PostRepository.GetByID(postID);
 
             if (post == null) {
                 return ApiNoContent<Post>();
@@ -119,6 +125,7 @@ namespace honooru.Controllers.Api {
         /// <param name="q">input search query</param>
         /// <param name="offset">offset into the search</param>
         /// <param name="limit">how many search results to return, max 500</param>
+        /// <param name="includeTags">if <see cref="SearchResults.Tags"/> will be populated or not</param>
         /// <response code="200">
         ///     the response will contain a <see cref="SearchResults"/> for the search performed
         /// </response>
@@ -127,13 +134,20 @@ namespace honooru.Controllers.Api {
         public async Task<ApiResponse<SearchResults>> Search(
             [FromQuery] string q,
             [FromQuery] uint offset = 0,
-            [FromQuery] uint limit = 100
+            [FromQuery] uint limit = 100,
+            [FromQuery] bool includeTags = true
             ) {
+
+            AppAccount? currentUser = await _CurrentAccount.Get();
+            if (currentUser == null) {
+                return ApiAuthorize<SearchResults>();
+            }
 
             if (limit > 500) {
                 return ApiBadRequest<SearchResults>($"{nameof(limit)} cannot be higher than 500");
             }
 
+            // parse the query into an AST that can be compiled into an SQL query
             Stopwatch timer = Stopwatch.StartNew();
             Ast searchAst = _SearchQueryParser.Parse(q);
             long parseMs = timer.ElapsedMilliseconds; timer.Restart();
@@ -142,15 +156,81 @@ namespace honooru.Controllers.Api {
             query.Offset = offset;
             query.Limit = limit;
 
+            // with the parsed AST, perform the search, passing the current user to include user settings
             timer.Start();
-            List<Post> posts = await _PostDb.Search(query);
+            List<Post> posts = await _PostRepository.Search(query, currentUser);
             long dbMs = timer.ElapsedMilliseconds; timer.Restart();
 
             SearchResults results = new(query);
             results.Results = posts;
 
-            results.Timings.Add($"parseMs={parseMs}");
-            results.Timings.Add($"dbMs={dbMs}");
+            // if the request wants the tags as well, get those here
+            if (includeTags == true) {
+                HashSet<ulong> tagIDs = new();
+                foreach (Post post in results.Results) {
+                    List<PostTag> postTags = await _PostTagRepository.GetByPostID(post.ID);
+                    tagIDs.AddRange(postTags.Select(iter => iter.TagID));
+                }
+
+                List<Tag> tags = await _TagRepository.GetByIDs(tagIDs);
+
+                Dictionary<ulong, TagInfo> infos = (await _TagInfoRepository.GetByIDs(tags.Select(iter => iter.ID))).ToDictionary(iter => iter.ID);
+                Dictionary<ulong, TagType> types = (await _TagTypeRepository.GetByIDs(tags.Select(iter => iter.TypeID).Distinct())).ToDictionary(iter => iter.ID);
+
+                foreach (Tag tag in tags) {
+                    ExtendedTag et = new();
+                    et.ID = tag.ID;
+                    et.Name = tag.Name;
+                    et.TypeID = tag.TypeID;
+
+                    TagType? type = types.GetValueOrDefault(tag.TypeID);
+                    et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
+                    et.HexColor = type?.HexColor ?? "000000";
+
+                    TagInfo? info = infos.GetValueOrDefault(tag.ID);
+                    et.Uses = info?.Uses ?? 0;
+                    et.Description = info?.Description;
+
+                    results.Tags.Add(et);
+                }
+                long tagMs = timer.ElapsedMilliseconds; timer.Restart();
+                results.Timings.Add($"tag={tagMs}ms");
+            }
+
+            results.Timings.Add($"parse={parseMs}ms");
+            results.Timings.Add($"db={dbMs}ms");
+
+            return ApiOk(results);
+        }
+
+        /// <summary>
+        ///     get similar images to the input IQDB hash
+        /// </summary>
+        /// <param name="iqdb">IQDB hash</param>
+        /// <response code="200">
+        ///     the response will contain a list of <see cref="IqdbQueryResult"/>s
+        /// </response>
+        [HttpGet("similar/{iqdb}")]
+        public async Task<ApiResponse<List<IqdbQueryResult>>> SearchByIqdbHash(string iqdb) {
+            if (string.IsNullOrWhiteSpace(iqdb)) {
+                return ApiBadRequest<List<IqdbQueryResult>>($"{nameof(iqdb)} cannot be empty");
+            }
+
+            List<IqdbQueryResult> results = await _IqdbClient.GetSimilar(iqdb);
+
+            foreach (IqdbQueryResult r in results) {
+                string[] parts = r.PostID.Split("-");
+                string md5 = parts[0];
+
+                r.Post = await _PostRepository.GetByMD5(md5);
+                if (r.Post == null) {
+                    r.MediaAsset = await _MediaAssetRepository.GetByMD5(md5);
+                }
+
+                if (r.Post == null && r.MediaAsset == null) {
+                    _Logger.LogWarning($"missing both post and media asset for IQDB entry [PostID/MD5={r.PostID}/{md5}]");
+                }
+            }
 
             return ApiOk(results);
         }
@@ -222,8 +302,13 @@ namespace honooru.Controllers.Api {
             [FromQuery] string? source = ""
             ) {
 
+            AppAccount? currentUser = await _CurrentAccount.Get();
+            if (currentUser == null) {
+                return ApiAuthorize<Post>();
+            }
+
             Post post = new();
-            post.PosterUserID = 0;
+            post.PosterUserID = currentUser.ID;
             post.Timestamp = DateTime.UtcNow;
             post.Title = title;
             post.Description = description;
@@ -252,12 +337,18 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<Post>($"{nameof(MediaAsset)} {assetID} is still processing, try again later");
             }
 
+            if (asset.IqdbHash == null) {
+                return ApiBadRequest<Post>($"{nameof(MediaAsset)} {assetID} does not have an IQDB hash set!");
+            }
+
             post.MD5 = asset.MD5;
             post.FileName = asset.FileName;
             post.FileExtension = asset.FileExtension;
             post.FileSizeBytes = asset.FileSizeBytes;
             post.Status = PostStatus.OK;
+            post.IqdbHash = asset.IqdbHash;
 
+            // parse additional tags and add metadata such as width//height and duration (if video)
             try {
                 string? fileType = _FileExtensionHelper.GetFileType(post.FileExtension);
                 string p = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension);
@@ -359,7 +450,7 @@ namespace honooru.Controllers.Api {
                 tagIds.Add(tagObj.ID);
             }
 
-            post.ID = await _PostDb.Insert(post);
+            post.ID = await _PostRepository.Insert(post);
 
             // queue the thumbnail creation
             ThumbnailCreationQueueEntry entry = new() {
@@ -373,7 +464,7 @@ namespace honooru.Controllers.Api {
                 PostTag postTag = new();
                 postTag.PostID = post.ID;
                 postTag.TagID = tagID;
-                await _PostTagDb.Insert(postTag);
+                await _PostTagRepository.Insert(postTag);
 
                 // queue the uses update now that it's been changed
                 _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
@@ -417,9 +508,14 @@ namespace honooru.Controllers.Api {
             [FromQuery] string? source = null
             ) {
 
-            Post? post = await _PostDb.GetByID(postID);
+            Post? post = await _PostRepository.GetByID(postID);
             if (post == null) {
                 return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            AppAccount? currentUser = await _CurrentAccount.Get();
+            if (currentUser == null) {
+                return ApiAuthorize();
             }
 
             bool doSave = false;
@@ -455,12 +551,14 @@ namespace honooru.Controllers.Api {
             }
 
             if (doSave == true) {
+                post.LastEditorUserID = currentUser.ID;
+                post.LastEdited = DateTime.UtcNow;
                 _Logger.LogDebug($"post updated from query, performing DB update [postID={postID}]");
-                await _PostDb.Update(postID, post);
+                await _PostRepository.Update(postID, post);
             }
 
             if (tags != null) {
-                List<PostTag> postTags = await _PostTagDb.GetByPostID(postID);
+                List<PostTag> postTags = await _PostTagRepository.GetByPostID(postID);
                 List<Tag> currentTags = await _TagRepository.GetByIDs(postTags.Select(iter => iter.TagID));
 
                 // save current tags, removed as we find them in |tags|
@@ -523,7 +621,7 @@ namespace honooru.Controllers.Api {
 
                 foreach (ulong tagID in tagsToRemove) {
                     _Logger.LogTrace($"removing tag from post [tagID={tagID}] [postID={postID}]");
-                    await _PostTagDb.Delete(postID, tagID);
+                    await _PostTagRepository.Delete(postID, tagID);
 
                     // queue the uses update now that it's been changed
                     _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
@@ -533,7 +631,7 @@ namespace honooru.Controllers.Api {
 
                 foreach (ulong tagID in tagsToAdd) {
                     _Logger.LogTrace($"adding new tag to post [tagID={tagID}] [postID={postID}]");
-                    await _PostTagDb.Insert(new PostTag() { PostID = postID, TagID = tagID });
+                    await _PostTagRepository.Insert(new PostTag() { PostID = postID, TagID = tagID });
 
                     // queue the uses update now that it's been changed
                     _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
@@ -552,7 +650,7 @@ namespace honooru.Controllers.Api {
         /// <response code="200">
         ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
         ///     successfully had it's thumbnail queued for recreation.
-        ///     NOTE: this does NOT MEAN the thumbnail was recreated
+        ///     NOTE: this DOES NOT MEAN the thumbnail was recreated, just that is was queued for recreation
         /// </response>
         /// <response code="404">
         ///     no <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> exists
@@ -560,7 +658,7 @@ namespace honooru.Controllers.Api {
         [HttpPost("{postID}/remake-thumbnail")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse> RemakeThumbnail(ulong postID) {
-            Post? post = await _PostDb.GetByID(postID);
+            Post? post = await _PostRepository.GetByID(postID);
             if (post == null) {
                 return ApiNotFound($"{nameof(Post)} {postID}");
             }
@@ -572,6 +670,56 @@ namespace honooru.Controllers.Api {
             };
             _ThumbnailCreationQueue.Queue(entry);
 
+            return ApiOk();
+        }
+
+        /// <summary>
+        ///     mark a <see cref="Post"/> as deleted, which does not remove the file itself.
+        ///     does not remove the IQDB entry either
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to delete</param>
+        /// <response code="200">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     was successfully marked as deleted
+        /// </response>
+        [HttpDelete("{postID}")]
+        [PermissionNeeded(AppPermission.APP_POST_DELETE)]
+        public async Task<ApiResponse> Delete(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            if (post.Status == PostStatus.DELETED) {
+                return ApiBadRequest($"{nameof(Post)} {postID} is already deleted");
+            }
+
+            await _PostRepository.Delete(postID);
+
+            _Logger.LogInformation($"marked post as deleted [postID={postID}]");
+            return ApiOk();
+        }
+
+        /// <summary>
+        ///     completely erase a <see cref="Post"/>, deleting the IQDB entries and all files with it
+        /// </summary>
+        /// <param name="postID">ID of the post to erase</param>
+        /// <returns></returns>
+        [HttpDelete("{postID}/erase")]
+        [PermissionNeeded(AppPermission.APP_POST_ERASE)]
+        public async Task<ApiResponse> Erase(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            if (post.Status == PostStatus.DELETED) {
+                return ApiBadRequest($"{nameof(Post)} {postID} is already deleted");
+            }
+
+            await _PostRepository.Delete(postID);
+
+            _Logger.LogInformation($"marked post as deleted [postID={postID}]");
             return ApiOk();
         }
 

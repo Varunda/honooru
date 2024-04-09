@@ -1,6 +1,8 @@
 ﻿using honooru.Code.ExtensionMethods;
+using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.Db;
+using honooru.Services.Parsing;
 using honooru.Services.Repositories;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -29,10 +31,39 @@ namespace honooru.Services.Db {
             _SearchQueryRepository = searchQueryRepository;
         }
 
-        public async Task<List<Post>> Search(SearchQuery query) {
+        /// <summary>
+        ///     get all <see cref="Post"/>s
+        /// </summary>
+        /// <returns>a list of <see cref="Post"/>s</returns>
+        public async Task<List<Post>> GetAll() {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM post;
+            ");
+
+            await cmd.PrepareAsync();
+
+            List<Post> posts = await _Reader.ReadList(cmd);
+            await conn.CloseAsync();
+
+            return posts;
+        }
+
+        /// <summary>
+        ///     perform a search
+        /// </summary>
+        /// <param name="query">query that will be performed. use a <see cref="SearchQueryParser"/> to obtain this from a string</param>
+        /// <param name="user">
+        ///     account of the user making the request. used for filtering unsafe/explicit content if the user does not want to see it
+        /// </param>
+        /// <returns>
+        ///     a list of <see cref="Post"/>s that fulfill the search parameters from <paramref name="query"/>
+        /// </returns>
+        public async Task<List<Post>> Search(SearchQuery query, AppAccount user) {
             using NpgsqlConnection conn = _DbHelper.Connection();
 
-            NpgsqlCommand cmd = await _SearchQueryRepository.Compile(query.QueryAst);
+            NpgsqlCommand cmd = await _SearchQueryRepository.Compile(query.QueryAst, user);
             cmd.Connection = conn;
             cmd.CommandText += $" LIMIT {query.Limit} OFFSET {query.Offset} ";
             await cmd.Connection.OpenAsync();
@@ -108,9 +139,11 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
-                    poster_user_id, timestamp, status, title, description, last_editor_user_id, md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height
+                    poster_user_id, timestamp, status, title, description, last_editor_user_id, iqdb_hash,
+                    md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height
                 ) VALUES (
-                    @PosterUserID, @Timestamp, @Status, @Title, @Description, 0, @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height
+                    @PosterUserID, @Timestamp, @Status, @Title, @Description, 0, @IqdbHash,
+                    @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height
                 ) RETURNING id;
             ");
 
@@ -119,6 +152,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Status", (short) post.Status);
             cmd.AddParameter("Title", post.Title);
             cmd.AddParameter("Description", post.Description);
+            cmd.AddParameter("IqdbHash", post.IqdbHash);
             cmd.AddParameter("MD5", post.MD5);
             cmd.AddParameter("Rating", (short) post.Rating);
             cmd.AddParameter("FileName", post.FileName);
@@ -137,6 +171,12 @@ namespace honooru.Services.Db {
             return id;
         }
 
+        /// <summary>
+        ///     update an existing <see cref="Post"/> with new information
+        /// </summary>
+        /// <param name="postID"></param>
+        /// <param name="post"></param>
+        /// <returns></returns>
         public async Task Update(ulong postID, Post post) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -145,7 +185,9 @@ namespace honooru.Services.Db {
                 SET title = @Title,
                     description = @Description,
                     rating = @Rating,
-                    source = @Source
+                    source = @Source,
+                    last_editor_user_id = @LastUserEditorID,
+                    last_edited = @LastEdited
                 WHERE
                     id = @ID;
             ");
@@ -155,6 +197,41 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Description", post.Description);
             cmd.AddParameter("Rating", (short) post.Rating);
             cmd.AddParameter("Source", post.Source);
+            cmd.AddParameter("LastUserEditorID", post.LastEditorUserID);
+            cmd.AddParameter("LastEdited", post.LastEdited);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
+
+        public async Task UpdateStatus(ulong postID, PostStatus status) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                UPDATE 
+                    post
+                SET title = @Title,
+                    status = @Status
+                WHERE
+                    id = @ID;
+            ");
+
+            cmd.AddParameter("ID", postID);
+            cmd.AddParameter("Status", status);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
+
+        public async Task Delete(ulong postID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE from post
+                    WHERE id = @ID;
+            ");
+
+            cmd.AddParameter("ID", postID);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

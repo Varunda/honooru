@@ -1,4 +1,6 @@
-﻿using honooru.Code.ExtensionMethods;
+﻿using Google.Protobuf.Reflection;
+using honooru.Code.ExtensionMethods;
+using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Models.Search;
@@ -8,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -16,17 +19,20 @@ namespace honooru.Services.Repositories {
 
         private readonly ILogger<SearchQueryRepository> _Logger;
 
-        private readonly TagDb _TagDb;
+        private readonly TagRepository _TagRepository;
+        private readonly UserSettingRepository _UserSettingRepository;
 
         public SearchQueryRepository(ILogger<SearchQueryRepository> logger,
-            TagDb tagDb) {
+            UserSettingRepository userSettingRepository, TagRepository tagRepository) {
 
             _Logger = logger;
 
-            _TagDb = tagDb;
+            _TagRepository = tagRepository;
+            _UserSettingRepository = userSettingRepository;
         }
 
-        public async Task<NpgsqlCommand> Compile(Ast ast) {
+        public async Task<NpgsqlCommand> Compile(Ast ast, AppAccount user) {
+            List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
 
             NpgsqlCommand sqlCmd = new();
             sqlCmd.CommandType = System.Data.CommandType.Text;
@@ -42,6 +48,24 @@ namespace honooru.Services.Repositories {
             QuerySetup query = new();
 
             cmd += await _Compile(ast.Root, query);
+
+            // if a query did not explicitly say what ratings to include, use the users settings to determine it
+            if (query.SetRating == false) {
+                bool unsafeHide = settings.FirstOrDefault(iter => iter.Name == "postings.unsafe.behavior")?.Value == "hidden";
+                bool explicitHide = settings.FirstOrDefault(iter => iter.Name == "postings.explicit.behavior")?.Value == "hidden";
+
+                _Logger.LogTrace($"user did not specify rating, excluding based on user options [user.ID={user.ID}] [unsafeHide={unsafeHide}] [explicitHide={explicitHide}]");
+
+                // at this part in the query, additions to the WHERE clause are still possible
+                if (unsafeHide == true) {
+                    cmd += " AND p.rating != 2\n";
+                }
+
+                if (explicitHide == true) {
+                    cmd += " AND p.rating != 3\n";
+                }
+            }
+
             cmd += $"ORDER BY {(query.OrderBy ?? "id desc")}";
             sqlCmd.CommandText = cmd;
 
@@ -89,22 +113,22 @@ namespace honooru.Services.Repositories {
             } else if (node.Type == NodeType.NOT) {
                 string normalizedTag = node.Token.Value.ToLower();
 
-                Tag? tag = await _TagDb.GetByName(normalizedTag);
+                Tag? tag = await _TagRepository.GetByName(normalizedTag);
                 if (tag != null) {
                     cmd += $" p.ID NOT IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
                     query.Parameters.Add(tag.ID);
                 } else {
-                    cmd += " 1 = 1 \n";
+                    cmd += " 1 = 1 \n"; // if the tag does not exist, then no post includes this tag, so the term is effectively a noop
                 }
             } else if (node.Type == NodeType.TAG) {
                 string normalizedTag = node.Token.Value.ToLower();
 
-                Tag? tag = await _TagDb.GetByName(normalizedTag);
+                Tag? tag = await _TagRepository.GetByName(normalizedTag);
                 if (tag != null) {
                     cmd = $" p.ID IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
                     query.Parameters.Add(tag.ID);
                 } else {
-                    cmd = " 1 = 1 \n";
+                    cmd = " 0 = 1 \n"; // if the tag does not exist, a search is not valid, as no post contains the tag
                 }
             } else if (node.Type == NodeType.META) {
                 Node field = node.Children[0];
@@ -118,6 +142,23 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.poster_user_id " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(userID);
+                } else if (field.Token.Value == "rating") {
+
+                    int rating;
+                    if (value.Token.Value == "general") {
+                        rating = 1;
+                    } else if (value.Token.Value == "unsafe") {
+                        rating = 2;
+                    } else if (value.Token.Value == "explicit") {
+                        rating = 3;
+                    } else {
+                        throw new Exception($"invalid rating string '{value.Token.Value}', valid values are: general, unsafe, explicit");
+                    }
+
+                    query.SetRating = true;
+
+                    cmd = $" p.rating = " + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(rating);
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {
@@ -158,6 +199,8 @@ namespace honooru.Services.Repositories {
             public uint Offset { get; set; }
 
             public uint Limit { get; set; }
+
+            public bool SetRating { get; set; } = false;
 
         }
 

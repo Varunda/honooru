@@ -1,4 +1,15 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Http
+@using honooru.Models
+@using honooru.Models.App;
+@using honooru.Services;
+@using honooru.Services.Repositories;
+
+@inject AppCurrentAccount _CurrentUser
+@inject AppPermissionRepository _AppPermissionRepository
+@inject UserSettingRepository _UserSettingRepository
+@inject AppAccountGroupMembershipRepository _MembershipRepository;
+
+<!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8" />
@@ -32,6 +43,28 @@
 
 <body>
     <div id="toaster" class="toast-container position-fixed" style="top: 0; right: 0;"></div>
+
+    <script>
+        @{
+            AppAccount? acc = await _CurrentUser.Get();
+            List<AppGroupPermission> permissions = (acc == null) ? new List<AppGroupPermission>() : await _AppPermissionRepository.GetByAccountID(acc.ID);
+            List<UserSetting> settings = (acc == null) ? new List<UserSetting>() : await _UserSettingRepository.GetByAccountID(acc.ID);
+        }
+
+        const appCurrentAccountID = @(acc?.ID ?? (ulong?)0);
+        const appCurrentAccountName = "@(acc?.Name ?? "")";
+        const permissions = @Html.Raw(Json.Serialize(permissions));
+        const settings = @Html.Raw(Json.Serialize(settings));
+
+        window.appCurrentAccount = {
+            ID: appCurrentAccountID,
+            name: appCurrentAccountName,
+            permissions: permissions,
+            settings: settings
+        };
+
+        console.log(`current user ${appCurrentAccountName}/${appCurrentAccountID}`);
+    </script>
 
     <div style="font-family: 'Roboto'">
         <main role="main">

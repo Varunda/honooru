@@ -94,6 +94,7 @@ namespace honooru {
             services.Configure<InstanceOptions>(Configuration.GetSection("Instance"));
             services.Configure<HttpConfig>(Configuration.GetSection("Http"));
             services.Configure<StorageOptions>(Configuration.GetSection("Storage"));
+            services.Configure<IqdbOptions>(Configuration.GetSection("Iqdb"));
 
             // require all endpoints to be authorized unless another policy is defined
             services.AddAuthorization(options => {
@@ -187,6 +188,8 @@ namespace honooru {
                 services.AddHostedService<DiscordService>();
                 services.AddAppDiscord();
             }
+
+            services.AddSingleton<IqdbClient>();
 
             services.AddTransient<AppCurrentAccount>();
 

@@ -10,6 +10,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<AppGroupDbStore>();
             services.AddSingleton<AppGroupPermissionDbStore>();
             services.AddSingleton<AppAccountGroupMembershipDbStore>();
+            services.AddSingleton<UserSettingDb>();
 
             services.AddSingleton<PostDb>();
             services.AddSingleton<MediaAssetDb>();

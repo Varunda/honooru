@@ -70,6 +70,11 @@ namespace honooru.Models.Db {
         public string FileExtension { get; set; } = "";
 
         /// <summary>
+        ///     hash from the IQDB service
+        /// </summary>
+        public string IqdbHash { get; set; } = "";
+
+        /// <summary>
         ///     how many bytes. not sure why c# has file size signed
         /// </summary>
         public long FileSizeBytes { get; set; }

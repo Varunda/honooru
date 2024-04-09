@@ -46,6 +46,7 @@ namespace honooru.Services.Db.Patches {
                     rating smallint NOT NULL,
                     file_name varchar NOT NULL,
                     file_extension varchar NOT NULL,
+                    iqdb_hash varchar NOT NULL,
                     source varchar NOT NULL,
                     file_size_bytes bigint NOT NULL,
                     duration_seconds bigint NOT NULL,
@@ -124,12 +125,13 @@ namespace honooru.Services.Db.Patches {
                     status int NOT NULL,
                     file_name varchar NOT NULL,
                     file_extension varchar NOT NULL,
+                    iqdb_hash varchar NULL,
                     timestamp timestamptz NOT NULL,
                     file_size_bytes bigint NOT NULL,
                     source varchar NOT NULL,
                     additional_tags varchar NOT NULL,
                     title varchar NOT NULL,
-                    descriptiont varchar NOT NULL,
+                    description varchar NOT NULL,
 
                     UNIQUE (md5)
                 );
@@ -152,8 +154,7 @@ namespace honooru.Services.Db.Patches {
                     CONSTRAINT fk_tag_alias_tag_id FOREIGN KEY (tag_id) REFERENCES tag(id)
                 );
 
-                CREATE INDEX IF NOT EXISTS idx_tag_alias_tag_id;
-
+                CREATE INDEX IF NOT EXISTS idx_tag_alias_tag_id ON tag_alias(tag_id);
             ");
 
         }

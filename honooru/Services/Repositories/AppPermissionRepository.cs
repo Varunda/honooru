@@ -21,16 +21,16 @@ namespace honooru.Services.Repositories {
         private const string CACHE_KEY = "App.Permission.{0}"; // {0} => groupd ID
 
         private readonly AppGroupPermissionDbStore _PermissionDb;
-        private readonly AppAccountGroupMembershipDbStore _MembershipDb;
+        private readonly AppAccountGroupMembershipRepository _MembershipRepository;
 
         public AppPermissionRepository(ILogger<AppPermissionRepository> logger, IMemoryCache cache,
-            AppGroupPermissionDbStore permissionDb, AppAccountGroupMembershipDbStore membershipDb) {
+            AppGroupPermissionDbStore permissionDb, AppAccountGroupMembershipRepository membershipRepository) {
 
             _Logger = logger;
             _Cache = cache;
 
             _PermissionDb = permissionDb;
-            _MembershipDb = membershipDb;
+            _MembershipRepository = membershipRepository;
         }
 
         /// <summary>
@@ -41,9 +41,10 @@ namespace honooru.Services.Repositories {
         }
 
         public async Task<List<AppGroupPermission>> GetByAccountID(ulong accountID) {
+            _Logger.LogDebug($"getting permission of account [accountID={accountID}]");
             Dictionary<string, AppGroupPermission> perms = new();
 
-            List<AppAccountGroupMembership> groups = await _MembershipDb.GetByAccountID(accountID);
+            List<AppAccountGroupMembership> groups = await _MembershipRepository.GetByAccountID(accountID);
 
             foreach (AppAccountGroupMembership member in groups) {
                 List<AppGroupPermission> groupPerms = await GetByGroupID(member.GroupID);

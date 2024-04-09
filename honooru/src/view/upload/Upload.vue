@@ -1,9 +1,8 @@
 ﻿<template>
-    <div>
+    <div style="display: grid; grid-template-rows: min-content 1fr; gap: 0.5rem; max-height: 100vh; max-width: 100vw;">
         <app-menu></app-menu>
 
         <div v-if="state == 'upload'">
-
             <div class="d-flex">
                 <div class="flex-grow-1"></div>
 
@@ -12,12 +11,12 @@
                         upload
                     </div>
 
-                    <div class="custom-file mb-1">
-                        <input id="file-upload" type="file" class="custom-file-input" @change="updateName" />
-                        <label class="custom-file-label" for="file-upload" style="color: black!important;">{{fileText}}</label>
+                    <div class="input-group mb-3">
+                        <input id="file-upload" type="file" class="form-control" @change="updateName" />
+                        <label class="custom-file-label" for="file-upload"></label>
                     </div>
 
-                    <div>
+                    <div class="mb-3">
                         <input class="form-control" type="text" v-model="inputUrl" placeholder="URL" />
                     </div>
 
@@ -48,7 +47,7 @@
                     <div>
                         <div class="d-flex align-items-center">
                             <span class="border px-2 mx-1" style="max-width: 30px; flex-grow: 1; height: 1px;"></span>
-                            <span class="h3 flex-grow-0 mr-2">processing</span>
+                            <span class="h3 flex-grow-0 me-2">processing</span>
                             <span class="h5 flex-grow-0">(these uploads are currently being processed, or are queued for processing)</span>
                             <span class="border px-2 mx-1 flex-grow-1" style="height: 1px;"></span>
                         </div>
@@ -70,7 +69,7 @@
                     <div>
                         <div class="d-flex align-items-center">
                             <span class="border px-2 mx-1" style="max-width: 30px; flex-grow: 1; height: 1px;"></span>
-                            <span class="h3 flex-grow-0 mr-2">ready</span>
+                            <span class="h3 flex-grow-0 me-2">ready</span>
                             <span class="h5 flex-grow-0">(these uploads are ready to be tagged)</span>
                             <span class="border px-2 mx-1 flex-grow-1" style="height: 1px;"></span>
                         </div>
@@ -95,7 +94,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
 
         <div v-else-if="state == 'processing'">
@@ -118,8 +116,7 @@
             </div>
         </div>
 
-        <div v-else-if="state == 'view'">
-
+        <template v-else-if="state == 'view'">
             <div v-if="mediaAsset.postID != null" class="d-flex">
                 <span class="flex-grow-1"></span>
 
@@ -134,29 +131,37 @@
                 <span class="flex-grow-1"></span>
             </div>
 
-            <div v-else style="display: grid; grid-template-columns: 400px 1fr; gap: 0.5rem;">
-                <div>
+            <div v-else style="display: grid; grid-template-columns: 400px 1fr 200px; gap: 0.5rem; overflow: hidden">
+                <div class="overflow-y-auto">
                     <div class="mb-2">
                         <label class="mb-0">rating</label>
                         <div class="btn-group w-100">
-                            <button class="btn" :class="[ posting.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="posting.rating = 'explicit'">
+                            <button class="btn" :class="[ posting.rating == 'explicit' ? 'btn-danger' : 'btn-secondary' ]" @click="posting.rating = 'explicit'">
                                 explicit
                             </button>
-                            <button class="btn" :class="[ posting.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="posting.rating = 'unsafe'">
+                            <button class="btn" :class="[ posting.rating == 'unsafe' ? 'btn-warning' : 'btn-secondary' ]" @click="posting.rating = 'unsafe'">
                                 unsafe
                             </button>
                             <button class="btn" :class="[ posting.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="posting.rating = 'general'">
                                 general
                             </button>
                         </div>
+
+                        <div v-if="error.rating == true" class="is-invalid text-danger">
+                            missing rating!
+                        </div>
                     </div>
 
                     <div class="mb-2">
                         <label class="mb-0">tags</label>
-                        <post-search v-model="posting.tags" type="textarea"></post-search>
+                        <post-search v-model="posting.tags" type="textarea" @keyup.control.enter="makePost"></post-search>
+
+                        <div v-if="error.tags == true" class="text-danger">
+                            missing tags!
+                        </div>
                     </div>
 
-                    <div class="mb-0">
+                    <div class="mb-2">
                         <label class="mb-0">title</label>
                         <input type="text" class="form-control" v-model="posting.title" />
                     </div>
@@ -177,7 +182,8 @@
                             <info-hover text="these tags will be added when posted"></info-hover>
                         </label>
 
-                        <textarea class="form-control" v-model="posting.additionalTags" readonly disabled style="background-color: var(--gray); color: var(--dark);">
+                        <textarea class="form-control" v-model="posting.additionalTags" readonly disabled
+                                  style="background-color: var(--bs-gray-dark); color: var(--bs-gray-light); cursor: not-allowed">
                         </textarea>
                     </div>
 
@@ -185,18 +191,38 @@
                         Control + Enter to post
                     </span>
 
-                    <button class="btn btn-primary" @click="makePost">
+                    <button class="btn btn-primary" @click="makePost" :disabled="!canPost">
                         upload
                     </button>
 
                     <div v-if="posting.post.state == 'error'">
                         <api-error :error="posting.post.problem"></api-error>
                     </div>
+
+                    <hr class="border" />
+
+                    <div>
+                        <button class="btn btn-danger" @click="deleteUpload">
+                            delete
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <file-view :md5="mediaAsset.md5" :file-extension="mediaAsset.fileExtension"></file-view>
+                <div class="overflow-y-auto">
+                    <file-view :md5="mediaAsset.md5" :file-extension="mediaAsset.fileExtension"></file-view>
+                </div>
+
+                <div class="overflow-y-auto pl-2 ml-2 border-left">
+                    <div v-if="mediaAsset.iqdbHash == null">
+                        hash is not set!
+                    </div>
+
+                    <similarity v-else :hash="mediaAsset.iqdbHash" :exclude-media-asset-id="mediaAsset.guid"></similarity>
+                </div>
             </div>
-        </div>
+        </template>
 
     </div>
 </template>
@@ -214,12 +240,15 @@
 
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
+    import Similarity from "components/app/Similarity.vue";
 
     import { MediaAsset, MediaAssetApi } from "api/MediaAssetApi";
-    import { PostApi, Post } from "api/PostApi";
+    import { PostApi, Post, IqdbSearchResult } from "api/PostApi";
 
     import "filters/ByteFilter";
     import "filters/MomentFilter";
+    import "filters/LocaleFilter";
+import Toaster from "../../Toaster";
 
     class UploadStepEntry {
         public current: UploadStepProgress | null = null;
@@ -270,7 +299,14 @@
                     title: "" as string,
                     description: "" as string,
                     additionalTags: "" as string
+                },
+
+                /*
+                error: {
+                    rating: false as boolean,
+                    tags: false as boolean
                 }
+                */
             }
         },
 
@@ -315,6 +351,17 @@
 
         mounted: function(): void {
             this.$nextTick(() => {
+                document.addEventListener("keyup", (ev: KeyboardEvent) => {
+                    // this means another input is currently in focus
+                    if (document.activeElement != document.body) {
+                        return;
+                    }
+
+                    if (ev.key == "Enter" && ev.ctrlKey) {
+                        this.makePost();
+                    }
+                });
+
                 if (this.state == "upload") {
                     MediaAssetApi.getProcessing().then((data: Loading<MediaAsset[]>) => {
                         this.upload.processing = data;
@@ -409,10 +456,15 @@
                     this.upload.progress = this.upload.total = 0;
                     console.log(`uploaded ${asset.data.guid} with hash of ${asset.data.md5}`);
 
-                    if (this.connection != null) {
+                    if (asset.data.status == 3) { // 3 = DONE
+                        console.log(`media asset done upload, going to tag list`);
+                        this.state = "view";
+                    } else if (this.connection != null) {
                         await this.connection.invoke("SubscribeToMediaAsset", asset.data.guid);
                         console.log(`connected to hub`);
                         this.state = "processing";
+                    } else if (this.connection == null) {
+                        console.error(`expected connection to not be null here!`);
                     }
                 }
             },
@@ -420,6 +472,20 @@
             makePost: async function(): Promise<void> {
                 if (this.mediaAsset == null) {
                     console.warn(`cannot makePost: mediaAsset is null`);
+                    return;
+                }
+
+                /*
+                if (this.posting.rating == "") {
+                    this.error.rating = true;
+                }
+
+                if (this.posting.tags == "") {
+                    this.error.tags = true;
+                }
+                */
+
+                if (this.error.rating == true || this.error.tags == true) {
                     return;
                 }
 
@@ -439,8 +505,6 @@
                 if (files.length > 0) {
                     this.fileText = files.item(0)?.name ?? "missing name";
                 }
-
-                console.log(ev);
             },
 
             onUpdateProgress: function(ev: any): void {
@@ -486,12 +550,41 @@
                     "progress-bar-striped": e.finished == true,
                     "progress-bar-animated": e.finished == true
                 }
+            },
+
+            deleteUpload: async function(): Promise<void> {
+                if (this.mediaAssetID == null) {
+                    return;
+                }
+
+                const l: Loading<void> = await MediaAssetApi.remove(this.mediaAssetID);
+                if (l.state == "loaded") {
+                    location.href = "/upload";
+                    return;
+                } else if (l.state == "error") {
+                    Loadable.toastError(l, "delete media asset");
+                } else {
+                    console.error(`unchecked state from deleting a media asset: ${l.state}`);
+                }
             }
         },
 
         computed: {
             uploadWidth: function(): string {
                 return `${this.upload.progress / Math.max(this.upload.total) * 100}%`;
+            },
+
+            error: function() {
+                return {
+                    // not sure why these casts are needed. auto-complete can see these properties, and frontend doesn't complain
+                    rating: (this as any).posting.rating == "",
+                    tags: (this as any).posting.tags == ""
+                }
+            },
+
+            canPost: function(): boolean {
+                return this.error.rating == false
+                    && this.error.tags == false;
             }
         },
 
@@ -499,9 +592,8 @@
             InfoHover, ApiError,
             AppMenu,
             ProgressBar,
-            FileView, PostSearch
+            FileView, PostSearch, Similarity
         }
-
     });
     export default Upload;
 </script>

@@ -50,6 +50,7 @@ namespace honooru.Services.Hosted.Startup {
             CreateFolderIfNeeded("180x180");
             CreateFolderIfNeeded("upload");
             CreateFolderIfNeeded("work");
+            CreateFolderIfNeeded("temp");
 
             return Task.CompletedTask;
         }

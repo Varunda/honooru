@@ -1,8 +1,11 @@
 ﻿using honooru.Models.App;
+using honooru.Models.Config;
 using honooru.Services.Db;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,12 +15,14 @@ namespace honooru.Services.Repositories {
 
         private readonly ILogger<MediaAssetRepository> _Logger;
         private readonly MediaAssetDb _MediaAssetDb;
+        private readonly IOptions<StorageOptions> _StorageOptions;
 
         public MediaAssetRepository(ILogger<MediaAssetRepository> logger,
-            MediaAssetDb mediaAssetDb) {
+            MediaAssetDb mediaAssetDb, IOptions<StorageOptions> storageOptions) {
 
             _Logger = logger;
             _MediaAssetDb = mediaAssetDb;
+            _StorageOptions = storageOptions;
         }
 
         public Task<List<MediaAsset>> GetAll() {
@@ -40,8 +45,32 @@ namespace honooru.Services.Repositories {
             return _MediaAssetDb.Upsert(asset);
         }
 
-        public Task Delete(Guid assetID) {
-            return _MediaAssetDb.Delete(assetID);
+        /// <summary>
+        ///     delete a <see cref="MediaAsset"/>, and clean up all files associated with it
+        /// </summary>
+        /// <param name="assetID">ID of the asset to delete</param>
+        /// <returns>a task once the async operation is complete</returns>
+        public async Task Delete(Guid assetID) {
+            MediaAsset? asset = await GetByID(assetID);
+            if (asset == null) {
+                return;
+            }
+
+            await _MediaAssetDb.Delete(assetID);
+
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension));
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.MD5 + "." + asset.FileExtension));
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.Guid + "." + asset.FileExtension));
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension));
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.Guid + "." + asset.FileExtension));
+        }
+
+        private void _DeletePossiblePath(string path) {
+            _Logger.LogTrace($"checking if deletion for file is needed [path={path}]");
+            if (File.Exists(path) == true) {
+                _Logger.LogDebug($"deleting file for media asset [path={path}]");
+                File.Delete(path);
+            }
         }
 
     }

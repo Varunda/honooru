@@ -27,6 +27,7 @@ namespace honooru.Services.Db.Readers {
             asset.Timestamp = reader.GetDateTime("timestamp");
             asset.FileSizeBytes = reader.GetInt64("file_size_bytes");
             asset.Source = reader.GetString("source");
+            asset.IqdbHash = reader.GetNullableString("iqdb_hash");
             asset.AdditionalTags = reader.GetString("additional_tags");
             asset.Title = reader.GetString("title");
             asset.Description = reader.GetString("description");

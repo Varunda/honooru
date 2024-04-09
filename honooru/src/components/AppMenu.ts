@@ -1,5 +1,7 @@
 ﻿import Vue from "vue";
 
+import AccountUtil from "util/AccountUtil";
+
 export const AppMenu = Vue.extend({
     template: `
         <nav class="navbar navbar-expand">
@@ -37,7 +39,26 @@ export const AppMenu = Vue.extend({
                     </li>
 
                 </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            {{accountName}}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li><a class="dropdown-item" href="/settings">settings</a></li>
+                            <li><a class="dropdown-item" href="/posts">logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
             </div>
         </nav>
     `,
+
+    computed: {
+        accountName: function(): string {
+            return AccountUtil.get().name;
+        }
+    }
 });

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using honooru.Models.Internal;
+using System;
 
 namespace honooru.Models {
 
@@ -13,7 +14,7 @@ namespace honooru.Models {
         public ulong ID { get; set; }
 
         /// <summary>
-        ///     What <see cref="AppAccount"/> this permission is granted to
+        ///     What <see cref="AppGroup"/> this permission is granted to
         /// </summary>
         public ulong GroupID { get; set; }
 

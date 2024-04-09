@@ -33,6 +33,8 @@ namespace honooru.Services.Util {
             { "jpg", "image" },
             { "jpeg", "image" },
             { "png", "image" },
+            { "gif", "image" },
+            { "bmp", "image" },
 
             // video
             { "mp4", "video" },

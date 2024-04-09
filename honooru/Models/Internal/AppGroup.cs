@@ -4,6 +4,8 @@ namespace honooru.Models.Internal {
 
     public class AppGroup {
 
+        public static readonly ulong Admin = 1;
+
         /// <summary>
         ///     ID of the group
         /// </summary>

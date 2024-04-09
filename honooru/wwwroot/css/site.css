@@ -72,7 +72,7 @@
 }
 
 .wt-header {
-    background-color: var(--secondary);
+    background-color: var(--bs-secondary);
     padding: 0.25rem 0.5rem;
     border-top: 1px solid #dee2e6;
     border-bottom: 1px solid #dee2e6;
@@ -161,7 +161,6 @@
 
 .list-group-sm > .list-group-item {
     padding: 0.25rem 0.5rem;
-
 }
 
 .no-underline-links a {
@@ -171,4 +170,17 @@
 
 .no-underline-links a:hover {
     text-decoration: underline !important;
+}
+
+.dropdown-menu-right {
+    right: 0 !important;
+    left: auto !important;
+}
+
+.blurred-image {
+    filter: blur(12px);
+}
+
+.blurred-image:hover {
+    filter: none;
 }

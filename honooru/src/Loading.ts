@@ -1,4 +1,5 @@
-﻿
+﻿import Toaster from "./Toaster";
+
 /**
  * Wrapper around an external resource being loaded (usually from the API) 
  */
@@ -148,6 +149,14 @@ export class Loadable {
         }
 
         throw `failed to wrap, unchecked state: '${wrap.state}'`;
+    }
+
+    public static toastError<T>(l: Loading<T>, title: string): void {
+        if (l.state != "error") {
+            return;
+        }
+
+        Toaster.add(title, `<code>${l.problem.title}</code>`, "danger");
     }
 
     public static promise<T>(data: Promise<T>): Promise<Loading<T>> {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using honooru.Models.Db;
+using System;
 using System.Text.Json.Serialization;
 
 namespace honooru.Models.App {
@@ -18,7 +19,7 @@ namespace honooru.Models.App {
         /// <summary>
         ///     md5 hash of the media asset
         /// </summary>
-        [JsonPropertyName("md5")]
+        [JsonPropertyName("md5")] // prevents the JSON property being named mD5
         public string MD5 { get; set; } = "";
 
         /// <summary>
@@ -57,9 +58,20 @@ namespace honooru.Models.App {
         /// </summary>
         public string AdditionalTags { get; set; } = "";
 
+        /// <summary>
+        ///     if set, used as the <see cref="Post.Title"/> when the asset is turned into a post
+        /// </summary>
         public string Title { get; set; } = "";
 
+        /// <summary>
+        ///     if set, used as the <see cref="Post.Description"/> when the asset is turned into a post
+        /// </summary>
         public string Description { get; set; } = "";
+
+        /// <summary>
+        ///     hash of the <see cref="IqdbEntry"/> this media asset has. Is null until it is set
+        /// </summary>
+        public string? IqdbHash { get; set; } = null;
 
     }
 

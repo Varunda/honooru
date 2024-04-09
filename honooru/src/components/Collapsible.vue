@@ -47,13 +47,13 @@
 
         methods: {
             addListeners: function(): void {
-                $(`#${this.elementID}`).on("show.bs.collapse", () => {
+                document.getElementById(this.elementID)?.addEventListener("show.bs.collapse", () => {
                     this.direction = true;
                     this.startAnimation();
                     //console.log(`showing`);
                 });
 
-                $(`#${this.elementID}`).on("hide.bs.collapse", () => {
+                document.getElementById(this.elementID)?.addEventListener("hide.bs.collapse", () => {
                     this.direction= false;
                     this.startAnimation();
                     //console.log(`hidding`);

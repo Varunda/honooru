@@ -45,6 +45,13 @@ namespace honooru.Models.Internal {
         public readonly static AppPermission AppUpload = new(APP_UPLOAD, "upload posts");
 
         public const string APP_TAG_EDIT = "App.Tag.Edit";
+        public readonly static AppPermission AppTagEdit = new(APP_TAG_EDIT, "edit tags");
+
+        public const string APP_POST_DELETE = "App.Post.Delete";
+        public readonly static AppPermission AppPostDelete = new(APP_POST_DELETE, "delete a post");
+
+        public const string APP_POST_ERASE = "App.Post.Erase";
+        public readonly static AppPermission AppPostErase = new(APP_POST_ERASE, "erase a post");
 
     }
 }

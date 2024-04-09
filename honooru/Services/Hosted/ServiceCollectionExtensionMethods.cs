@@ -14,6 +14,7 @@ namespace honooru.Services.Hosted {
             services.AddSingleton<ExampleBackgroundService>();
 
             services.AddHostedService<HostedUploadStepProgressBroadcast>();
+            services.AddHostedService<HealthServiceChecker>();
         }
 
         public static void AddAppQueueProcessorServices(this IServiceCollection services) {

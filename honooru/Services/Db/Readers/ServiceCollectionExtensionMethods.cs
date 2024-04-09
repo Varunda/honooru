@@ -15,6 +15,7 @@ namespace honooru.Services.Db.Readers {
             services.AddSingleton<IDataReader<AppGroupPermission>, AppGroupPermissionReader>();
             services.AddSingleton<IDataReader<AppGroup>, AppGroupReader>();
             services.AddSingleton<IDataReader<AppAccountGroupMembership>, AppAccountGroupMembershipReader>();
+            services.AddSingleton<IDataReader<UserSetting>, UserSettingReader>();
 
             services.AddSingleton<IDataReader<Post>, PostReader>();
             services.AddSingleton<IDataReader<MediaAsset>, MediaAssetReader>();

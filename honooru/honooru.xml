@@ -614,6 +614,37 @@
                 <paramref name="accountID"/> was 1, which is the system account, which is not allowed
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.Account.UserSettingApiController.GetByCurrentUser">
+            <summary>
+                get the <see cref="T:honooru.Models.App.UserSetting"/>s of the current user
+            </summary>
+            <response code="200">
+                the response will contain a list of <see cref="T:honooru.Models.App.UserSetting"/> with
+                <see cref="P:honooru.Models.App.UserSetting.AccountID"/> of the user making the request
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.Account.UserSettingApiController.GetOtherByAccountID(System.UInt64)">
+            <summary>
+                get the <see cref="T:honooru.Models.App.UserSetting"/>s of another user
+            </summary>
+            <param name="accountID">ID of the user to get the settings of</param>
+            <response code="200">
+                a list of <see cref="T:honooru.Models.App.UserSetting"/>s with <see cref="P:honooru.Models.App.UserSetting.AccountID"/> of <paramref name="accountID"/>
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.Account.UserSettingApiController.Update(System.String,System.String)">
+            <summary>
+                update a <see cref="T:honooru.Models.App.UserSetting"/> of the user making the request
+            </summary>
+            <param name="name">name of the <see cref="T:honooru.Models.App.UserSetting"/> to update, or one will be created if it does not exist</param>
+            <param name="value">value of the <see cref="T:honooru.Models.App.UserSetting"/></param>
+            <response code="200">
+                the <see cref="T:honooru.Models.App.UserSetting"/> with <see cref="P:honooru.Models.App.UserSetting.AccountID"/> of the account making the request,
+                and <see cref="P:honooru.Models.App.UserSetting.Name"/> of <paramref name="name"/>,
+                had it's <see cref="P:honooru.Models.App.UserSetting.Value"/> updated to <paramref name="value"/>
+            </response>
+            <exception cref="T:System.Exception"></exception>
+        </member>
         <member name="M:honooru.Controllers.Api.AppGroupPermissionApiController.GetByGroupID(System.UInt64)">
             <summary>
                 Get the permissions an account has
@@ -668,6 +699,23 @@
             </summary>
             <response code="200">
                 A list of <see cref="T:honooru.Models.Internal.AppPermission"/>s
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.AdminApiController.RemakeAllThumbnails">
+            <summary>
+                submit all posts for thumbnail recreation
+            </summary>
+            <response code="200">
+                all posts were submitted for thumbnail recreation. the recreation could still be going, there is
+                no way to check the progress of the queue
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.AdminApiController.RemakeAllIqdbEntries">
+            <summary>
+                submit all posts to recreate IQDB hashes
+            </summary>
+            <response code="200">
+                the request is complete. this response code has no bearing on the success of the IQDB entry recreation
             </response>
         </member>
         <member name="M:honooru.Controllers.Api.DebugApiController.GetRequestIp">
@@ -764,6 +812,45 @@
                 </ul>
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController._HandleAsset(honooru.Models.App.MediaAsset,System.IO.Stream,System.String)">
+            <summary>
+                common code to handle asset stuff
+            </summary>
+            <param name="asset"></param>
+            <param name="targetFile"></param>
+            <param name="filePath"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.RegenerateIqdbHash(System.Guid)">
+            <summary>
+                regenerate the <see cref="P:honooru.Models.App.MediaAsset.IqdbHash"/>
+            </summary>
+            <param name="assetID">ID of the <see cref="T:honooru.Models.App.MediaAsset"/> to regenerate the IQDB hash of</param>
+            <response code="200">
+                the <see cref="P:honooru.Models.App.MediaAsset.IqdbHash"/> field of the <see cref="T:honooru.Models.App.MediaAsset"/>
+                with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/> was successfully updated,
+                and included in the returned response
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/> exists
+            </response>
+            <response code="500">
+                the IQDB service is not currently available
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.MediaAssetApiController.Delete(System.Guid)">
+            <summary>
+                delete a media asset
+            </summary>
+            <param name="assetID">GUID of the media asset to delete</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/>
+                was successfully deleted, and removed from the IQDB service
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.App.MediaAsset"/> with <see cref="P:honooru.Models.App.MediaAsset.Guid"/> of <paramref name="assetID"/> exists
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.PostApiController.GetByID(System.UInt64)">
             <summary>
                 get a <see cref="T:honooru.Models.Db.Post"/> by its <see cref="P:honooru.Models.Db.Post.ID"/>
@@ -777,15 +864,25 @@
                 no <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/> exists
             </response>
         </member>
-        <member name="M:honooru.Controllers.Api.PostApiController.Search(System.String,System.UInt32,System.UInt32)">
+        <member name="M:honooru.Controllers.Api.PostApiController.Search(System.String,System.UInt32,System.UInt32,System.Boolean)">
             <summary>
                 search for posts
             </summary>
             <param name="q">input search query</param>
             <param name="offset">offset into the search</param>
             <param name="limit">how many search results to return, max 500</param>
+            <param name="includeTags">if <see cref="P:honooru.Models.Api.SearchResults.Tags"/> will be populated or not</param>
             <response code="200">
                 the response will contain a <see cref="T:honooru.Models.Api.SearchResults"/> for the search performed
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.SearchByIqdbHash(System.String)">
+            <summary>
+                get similar images to the input IQDB hash
+            </summary>
+            <param name="iqdb">IQDB hash</param>
+            <response code="200">
+                the response will contain a list of <see cref="T:honooru.Models.App.Iqdb.IqdbQueryResult"/>s
             </response>
         </member>
         <member name="M:honooru.Controllers.Api.PostApiController.Create(System.Guid,System.String,System.String,System.String,System.String,System.String)">
@@ -878,11 +975,29 @@
             <response code="200">
                 the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/>
                 successfully had it's thumbnail queued for recreation.
-                NOTE: this does NOT MEAN the thumbnail was recreated
+                NOTE: this DOES NOT MEAN the thumbnail was recreated, just that is was queued for recreation
             </response>
             <response code="404">
                 no <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/> exists
             </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.Delete(System.UInt64)">
+            <summary>
+                mark a <see cref="T:honooru.Models.Db.Post"/> as deleted, which does not remove the file itself.
+                does not remove the IQDB entry either
+            </summary>
+            <param name="postID">ID of the <see cref="T:honooru.Models.Db.Post"/> to delete</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/>
+                was successfully marked as deleted
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.Erase(System.UInt64)">
+            <summary>
+                completely erase a <see cref="T:honooru.Models.Db.Post"/>, deleting the IQDB entries and all files with it
+            </summary>
+            <param name="postID">ID of the post to erase</param>
+            <returns></returns>
         </member>
         <member name="M:honooru.Controllers.Api.TagAliasApiController.GetByTagID(System.UInt64)">
             <summary>
@@ -1080,6 +1195,27 @@
                 the progress on each step
             </summary>
         </member>
+        <member name="P:honooru.Models.App.Iqdb.IqdbQueryResult.PostID">
+            <summary>
+                this post ID is the MD5 used to store the data in IQDB
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.Iqdb.IqdbQueryResult.MD5">
+            <summary>
+                a lotta time this is the same as <see cref="P:honooru.Models.App.Iqdb.IqdbQueryResult.PostID"/>, but for videos, <see cref="P:honooru.Models.App.Iqdb.IqdbQueryResult.PostID"/> has -frame-#
+                appended to <see cref="P:honooru.Models.App.Iqdb.IqdbQueryResult.PostID"/>, so this field only has the MD5 of the resources
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.Iqdb.IqdbQueryResult.Score">
+            <summary>
+                score from -100 to 100 that indicates how closely this IQDB entry matches the input hash
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.Iqdb.IqdbQueryResult.Hash">
+            <summary>
+                hash of the IQDB entry
+            </summary>
+        </member>
         <member name="P:honooru.Models.App.MediaAsset.Guid">
             <summary>
                 temp guid the file is saved under
@@ -1129,6 +1265,21 @@
         <member name="P:honooru.Models.App.MediaAsset.AdditionalTags">
             <summary>
                 additional tags that are added during parsing
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.MediaAsset.Title">
+            <summary>
+                if set, used as the <see cref="P:honooru.Models.Db.Post.Title"/> when the asset is turned into a post
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.MediaAsset.Description">
+            <summary>
+                if set, used as the <see cref="P:honooru.Models.Db.Post.Description"/> when the asset is turned into a post
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.MediaAsset.IqdbHash">
+            <summary>
+                hash of the <see cref="T:honooru.Models.App.IqdbEntry"/> this media asset has. Is null until it is set
             </summary>
         </member>
         <member name="F:honooru.Models.App.MediaAssetStatus.DEFAULT">
@@ -1291,6 +1442,11 @@
         <member name="P:honooru.Models.Db.Post.FileExtension">
             <summary>
                 file extension, WITH a leading .
+            </summary>
+        </member>
+        <member name="P:honooru.Models.Db.Post.IqdbHash">
+            <summary>
+                hash from the IQDB service
             </summary>
         </member>
         <member name="P:honooru.Models.Db.Post.FileSizeBytes">
@@ -1619,7 +1775,7 @@
         </member>
         <member name="P:honooru.Models.AppGroupPermission.GroupID">
             <summary>
-                What <see cref="T:honooru.Models.AppAccount"/> this permission is granted to
+                What <see cref="T:honooru.Models.Internal.AppGroup"/> this permission is granted to
             </summary>
         </member>
         <member name="P:honooru.Models.AppGroupPermission.Permission">
@@ -2046,6 +2202,24 @@
             <param name="assetID"></param>
             <returns></returns>
         </member>
+        <member name="M:honooru.Services.Db.PostDb.GetAll">
+            <summary>
+                get all <see cref="T:honooru.Models.Db.Post"/>s
+            </summary>
+            <returns>a list of <see cref="T:honooru.Models.Db.Post"/>s</returns>
+        </member>
+        <member name="M:honooru.Services.Db.PostDb.Search(honooru.Models.Api.SearchQuery,honooru.Models.AppAccount)">
+            <summary>
+                perform a search
+            </summary>
+            <param name="query">query that will be performed. use a <see cref="T:honooru.Services.Parsing.SearchQueryParser"/> to obtain this from a string</param>
+            <param name="user">
+                account of the user making the request. used for filtering unsafe/explicit content if the user does not want to see it
+            </param>
+            <returns>
+                a list of <see cref="T:honooru.Models.Db.Post"/>s that fulfill the search parameters from <paramref name="query"/>
+            </returns>
+        </member>
         <member name="M:honooru.Services.Db.PostDb.GetByID(System.UInt64)">
             <summary>
                 get a single <see cref="T:honooru.Models.Db.Post"/> by its <see cref="P:honooru.Models.Db.Post.ID"/>
@@ -2074,6 +2248,14 @@
             <returns>
                 the <see cref="P:honooru.Models.Db.Post.ID"/> of the DB entry that was just inserted
             </returns>
+        </member>
+        <member name="M:honooru.Services.Db.PostDb.Update(System.UInt64,honooru.Models.Db.Post)">
+            <summary>
+                update an existing <see cref="T:honooru.Models.Db.Post"/> with new information
+            </summary>
+            <param name="postID"></param>
+            <param name="post"></param>
+            <returns></returns>
         </member>
         <member name="M:honooru.Services.Db.TagDb.GetAll(System.Threading.CancellationToken)">
             <summary>
@@ -2253,6 +2435,74 @@
             <summary>
                 Get the web host of this instance. Defaults to localhost if not given
             </summary>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.UpdateHealth">
+            <summary>
+                perform a health update of the IQDB service
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.CheckHealth">
+            <summary>
+                check the health of the external IQDB service
+            </summary>
+            <returns>
+                a <see cref="T:honooru.Models.ServiceHealthEntry"/> for the service
+            </returns>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.GetByPostID(System.String)">
+            <summary>
+                get a <see cref="T:honooru.Models.App.IqdbEntry"/> from the IQDB service
+            </summary>
+            <param name="postID">ID of the post to get from the IQDB service, usually an md5 hash</param>
+            <returns>
+                the <see cref="T:honooru.Models.App.IqdbEntry"/> with <see cref="P:honooru.Models.App.IqdbEntry.PostID"/> of <paramref name="postID"/>,
+                or <c>null</c> if the IQDB service does not have it
+            </returns>
+            <exception cref="T:System.Exception">if the response from the IQDB service did not have the correct fields</exception>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.GetSimilar(System.String)">
+            <summary>
+                using an IQDB image hash (which is a HAAR signarture), get similar images to the input hash
+            </summary>
+            <param name="iqdb">hash. must starts with the string "iqdb_"</param>
+            <returns>
+                a list of <see cref="T:honooru.Models.App.Iqdb.IqdbQueryResult"/> from the IQDB service, in descending or (Z->A)
+                based on <see cref="P:honooru.Models.App.Iqdb.IqdbQueryResult.Score"/>. all values in <see cref="P:honooru.Models.App.Iqdb.IqdbQueryResult.Post"/> are null.
+                <br></br>
+                an empty list is returned if the IQDB service is not available
+            </returns>
+            <exception cref="T:System.Exception">
+                if <paramref name="iqdb"/> is not valid
+            </exception>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.Create(System.String,System.String,System.String)">
+            <summary>
+                create a new <see cref="T:honooru.Models.App.IqdbEntry"/>
+            </summary>
+            <param name="path">path that the file is read from</param>
+            <param name="md5">md5 of the upload. usually the MD5 of the post, but it can be appended with -frame-# for video uploads</param>
+            <param name="fileExt">extension of the file</param>
+            <returns>
+                a <see cref="T:honooru.Models.App.IqdbEntry"/> that was created, or <c>null</c> if the IQDB service is not reachable
+            </returns>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.Insert(System.Byte[],System.String,System.String)">
+            <summary>
+                insert a new entry, used as video hashing creates multiple entries
+            </summary>
+            <param name="bytes">bytes of the jpg file</param>
+            <param name="name"></param>
+            <param name="md5"></param>
+            <returns></returns>
+            <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="M:honooru.Services.IqdbClient.Remove(System.String)">
+            <summary>
+                remove an IQDB entry from the IQDB service
+            </summary>
+            <param name="postID"></param>
+            <returns></returns>
         </member>
         <member name="M:honooru.Services.Parsing.AstBuilder._c(honooru.Models.Search.NodeType,honooru.Models.Search.Token,honooru.Models.Search.Node)">
             <summary>
@@ -2509,6 +2759,13 @@
                 of <paramref name="groupID"/> has that matches one of the permission keys in <paramref name="permissions"/>.
                 Or <c>null</c> if the user does not have any of those permissions
             </returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.MediaAssetRepository.Delete(System.Guid)">
+            <summary>
+                delete a <see cref="T:honooru.Models.App.MediaAsset"/>, and clean up all files associated with it
+            </summary>
+            <param name="assetID">ID of the asset to delete</param>
+            <returns>a task once the async operation is complete</returns>
         </member>
         <member name="T:honooru.Services.Repositories.TagRepository">
             <summary>

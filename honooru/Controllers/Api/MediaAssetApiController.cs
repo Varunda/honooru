@@ -51,6 +51,7 @@ namespace honooru.Controllers.Api {
         private readonly FileExtensionService _FileExtensionHelper;
         private readonly UploadStepsProcessor _UploadStepsHandler;
         private readonly UrlMediaExtractorHandler _UrlExtractor;
+        private readonly IqdbClient _IqdbClient;
 
         private readonly BaseQueue<UploadSteps> _UploadStepsQueue;
 
@@ -60,7 +61,7 @@ namespace honooru.Controllers.Api {
             MediaAssetRepository mediaAssetRepository, FileExtensionService fileExtensionHelper,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> mediaAssetHub,
             UploadStepsProcessor uploadStepsHandler, BaseQueue<UploadSteps> uploadStepsQueue,
-            UrlMediaExtractorHandler urlExtractor) {
+            UrlMediaExtractorHandler urlExtractor, IqdbClient iqdbClient) {
 
             _Logger = logger;
 
@@ -75,6 +76,7 @@ namespace honooru.Controllers.Api {
             _UploadStepsHandler = uploadStepsHandler;
             _UploadStepsQueue = uploadStepsQueue;
             _UrlExtractor = urlExtractor;
+            _IqdbClient = iqdbClient;
         }
 
         /// <summary>
@@ -97,19 +99,7 @@ namespace honooru.Controllers.Api {
                 return ApiNoContent<MediaAsset>();
             }
 
-            Thing[] arr = [];
-            arr[0].A = "abc";
-
             return ApiOk(asset);
-        }
-
-        struct Thing {
-            public string A { get; set; } = "";
-
-            public Thing(string a) {
-                A = a;
-            }
-
         }
 
         /// <summary>
@@ -288,6 +278,14 @@ namespace honooru.Controllers.Api {
             if (fileType == null) {
                 _Logger.LogWarning($"failed to get file type from extension [extension={extension}]");
                 return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (failed to get file type)");
+            } else if (fileType == "image") {
+                if (extension != "gif") {
+                    asset.AdditionalTags += " image";
+                } else {
+                    asset.AdditionalTags += " animated";
+                }
+            } else if (fileType == "video") {
+                asset.AdditionalTags += " video animated";
             }
 
             _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}] [fileType={fileType}]");
@@ -309,6 +307,13 @@ namespace honooru.Controllers.Api {
             return response;
         }
 
+        /// <summary>
+        ///     common code to handle asset stuff
+        /// </summary>
+        /// <param name="asset"></param>
+        /// <param name="targetFile"></param>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
         private async Task<ApiResponse<MediaAsset>> _HandleAsset(MediaAsset asset, Stream targetFile, string filePath) {
             // IMPORTANT: move back to the start of the file so the md5 hashing uses the whole file stream
             targetFile.Seek(0, SeekOrigin.Begin);
@@ -316,9 +321,6 @@ namespace honooru.Controllers.Api {
             targetFile.Close(); // IMPORTANT: if this is not closed, the handle is left open, and the file cannot be moved
             string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
             _Logger.LogInformation($"computed hash [md5={md5Str}] [filePath={filePath}]");
-
-            MD5 hash = MD5.Create();
-            hash.TransformBlock([], 0, 0, [], 0);
 
             // if a post with the md5 of this upload already exists, don't proceed
             Post? existingPost = await _PostDb.GetByMD5(md5Str);
@@ -365,8 +367,9 @@ namespace honooru.Controllers.Api {
             }
 
             steps.AddFinalMoveStep();
+            steps.AddImageHashStep();
 
-            if (steps.Steps.Count > 1) {
+            if (steps.Steps.Count > 2) {
                 asset.Status = MediaAssetStatus.QUEUED;
                 await _MediaAssetRepository.Upsert(asset);
 
@@ -380,6 +383,77 @@ namespace honooru.Controllers.Api {
             _Logger.LogDebug($"all done! [steps.Count={steps.Steps.Count}]");
 
             return ApiOk(asset);
+        }
+
+        /// <summary>
+        ///     regenerate the <see cref="MediaAsset.IqdbHash"/>
+        /// </summary>
+        /// <param name="assetID">ID of the <see cref="MediaAsset"/> to regenerate the IQDB hash of</param>
+        /// <response code="200">
+        ///     the <see cref="MediaAsset.IqdbHash"/> field of the <see cref="MediaAsset"/>
+        ///     with <see cref="MediaAsset.Guid"/> of <paramref name="assetID"/> was successfully updated,
+        ///     and included in the returned response
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="assetID"/> exists
+        /// </response>
+        /// <response code="500">
+        ///     the IQDB service is not currently available
+        /// </response>
+        [HttpPost("{assetID}/regenerate-iqdb")]
+        public async Task<ApiResponse<IqdbEntry>> RegenerateIqdbHash(Guid assetID) {
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(assetID);
+            if (asset == null) {
+                return ApiNotFound<IqdbEntry>($"{nameof(MediaAsset)} {assetID}");
+            }
+
+            ServiceHealthEntry health = await _IqdbClient.CheckHealth();
+            if (health.Enabled == false) {
+                return ApiInternalError<IqdbEntry>($"IQDB client cannot handle requests currently: {health.Message}");
+            }
+
+            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension);
+            _Logger.LogDebug($"regenerated IQDB hash [assetID={assetID}] [path={path}]");
+
+            IqdbEntry? entry = await _IqdbClient.Create(path, asset.MD5, asset.FileExtension);
+
+            if (entry == null) {
+                return ApiInternalError<IqdbEntry>($"failed to generate IQDB hash, please check console logs");
+            }
+
+            _Logger.LogInformation($"regenerated hash for media asset [assetID={assetID}] [hash={entry.Hash}]");
+
+            asset.IqdbHash = entry.Hash;
+            await _MediaAssetRepository.Upsert(asset);
+
+            return ApiOk(entry);
+        }
+
+        /// <summary>
+        ///     delete a media asset
+        /// </summary>
+        /// <param name="assetID">GUID of the media asset to delete</param>
+        /// <response code="200">
+        ///     the <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="assetID"/>
+        ///     was successfully deleted, and removed from the IQDB service
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="assetID"/> exists
+        /// </response>
+        [HttpDelete("{assetID}")]
+        public async Task<ApiResponse> Delete(Guid assetID) {
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(assetID);
+            if (asset == null) {
+                return ApiNotFound($"{nameof(MediaAsset)} {assetID}");
+            }
+
+            if (asset.IqdbHash != null) {
+                await _IqdbClient.RemoveByMD5(asset.MD5);
+            }
+
+            await _MediaAssetRepository.Delete(assetID);
+
+            return ApiOk();
         }
 
         public static bool HasFileContentDisposition(ContentDispositionHeaderValue contentDisposition) {

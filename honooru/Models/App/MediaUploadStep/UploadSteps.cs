@@ -33,6 +33,11 @@ namespace honooru.Models.App.MediaUploadStep {
             return this;
         }
 
+        public UploadSteps AddImageHashStep() {
+            Steps.Add(new GenerateImageHashUploadStep.Order(Asset, StorageOptions));
+            return this;
+        }
+
     }
 
 }
