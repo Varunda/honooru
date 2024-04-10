@@ -159,6 +159,8 @@ namespace honooru.Services.Db.Patches {
                 CREATE INDEX IF NOT EXISTS idx_tag_alias_tag_id ON tag_alias(tag_id);
             ");
 
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
         }
 
     }
