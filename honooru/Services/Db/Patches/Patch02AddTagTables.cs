@@ -73,7 +73,7 @@ namespace honooru.Services.Db.Patches {
                 );
     
                 INSERT INTO tag_type (
-                    id, name, hex_color, alias
+                    id, name, hex_color, alias, sort
                 ) OVERRIDING SYSTEM VALUE VALUES
                     (1, 'General', '009be6', 'gen', 5),
                     (2, 'Artist', 'ff8a8b', 'art', 2),
