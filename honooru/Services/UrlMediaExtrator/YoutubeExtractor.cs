@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using YoutubeDLSharp;
 
@@ -33,8 +34,8 @@ namespace honooru.Services.UrlMediaExtrator {
             _Logger.LogInformation($"downloading url using yt-dlp extractor [url={url.OriginalString}] [path={path}]");
 
             YoutubeDL ytdl = new();
-            ytdl.YoutubeDLPath = "./ffmpeg/yt-dlp.exe";
-            ytdl.FFmpegPath = "./ffmpeg/ffmpeg.exe";
+            ytdl.YoutubeDLPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "./ffmpeg/yt-dlp.exe" : "./ffmpeg/yt-dlp";
+            ytdl.FFmpegPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "./ffmpeg/ffmpeg.exe" : "./ffmpeg/ffmpeg";
             ytdl.OutputFolder = path;
 
             float previousProgress = 0f;
