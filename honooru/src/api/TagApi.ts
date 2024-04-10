@@ -7,6 +7,7 @@ export class Tag {
     public id: number = 0;
     public name: string = "";
     public typeID: number = 0;
+    public timestamp: Date = new Date();
 }
 
 export class ExtendedTag {
@@ -14,6 +15,7 @@ export class ExtendedTag {
     public name: string = "";
     public typeID: number = 0;
     public typeName: string = "";
+    public typeOrder: number = 0;
     public hexColor: string = "";
     public uses: number = 0;
     public description: string | null = null;
@@ -31,7 +33,8 @@ export class TagApi extends ApiWrapper<Tag> {
 
     public static parse(elem: any): Tag {
         return {
-            ...elem
+            ...elem,
+            timestamp: new Date(elem.timestamp)
         }
     }
 

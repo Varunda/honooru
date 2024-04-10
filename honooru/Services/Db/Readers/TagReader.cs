@@ -13,6 +13,7 @@ namespace honooru.Services.Db.Readers {
             tag.ID = reader.GetUInt64("id");
             tag.Name = reader.GetString("name");
             tag.TypeID = reader.GetUInt64("type_id");
+            tag.Timestamp = reader.GetDateTime("timestamp");
 
             return tag;
         }

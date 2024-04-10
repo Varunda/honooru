@@ -66,6 +66,7 @@ namespace honooru.Services.Db.Patches {
                     name varchar NOT NULL,
                     hex_color varchar NOT NULL,
                     alias varchar NOT NULL,
+                    order smallint NOT NULL,
 
                     UNIQUE(name),
                     UNIQUE(alias)
@@ -74,19 +75,20 @@ namespace honooru.Services.Db.Patches {
                 INSERT INTO tag_type (
                     id, name, hex_color, alias
                 ) OVERRIDING SYSTEM VALUE VALUES
-                    (1, 'General', '009be6', 'gen'),
-                    (2, 'Artist', 'ff8a8b', 'art'),
-                    (3, 'Player', '35c64a', 'play'),
-                    (4, 'Group', '0000ff', 'grp'),
-                    (5, 'Base', 'ff00ff', 'base'),
-                    (6, 'Meta', 'ead084', 'meta'),
-                    (7, 'Source', 'c797ff', 'source')
+                    (1, 'General', '009be6', 'gen', 5),
+                    (2, 'Artist', 'ff8a8b', 'art', 2),
+                    (3, 'Player', '35c64a', 'play', 3),
+                    (4, 'Group', '0000ff', 'grp', 4),
+                    (5, 'Base', 'ff00ff', 'base', 6),
+                    (6, 'Meta', 'ead084', 'meta', 7),
+                    (7, 'Source', 'c797ff', 'source', 1)
                 ON CONFLICT (id) DO NOTHING;
 
                 CREATE TABLE IF NOT EXISTS tag (
                     id bigint NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1),
                     name varchar NOT NULL,
                     type_id bigint NOT NULL,
+                    timestamp timestamptz NOT NULL,
 
                     UNIQUE(name),
                     CONSTRAINT fk_tag_type_type_id FOREIGN KEY(type_id) REFERENCES tag_type(id)

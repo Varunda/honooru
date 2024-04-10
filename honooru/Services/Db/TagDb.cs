@@ -106,9 +106,9 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO tag (
-                    name, type_id 
+                    name, type_id, timestamp
                 ) VALUES (
-                    @Name, @TypeID
+                    @Name, @TypeID, now()
                 ) RETURNING id;
             ");
 

@@ -3,6 +3,16 @@
         <app-menu></app-menu>
 
         <div class="row">
+            <div class="col-6">
+                <app-accounts></app-accounts>
+            </div>
+
+            <div class="col-6">
+                <app-groups></app-groups>
+            </div>
+        </div>
+
+        <div class="row">
             <div class="col-2">
                 <h2 class="wt-header text-center">
                     <span class="btn-group w-100">
@@ -269,6 +279,9 @@
     import { AppGroupPermission, AppGroupPermissionApi } from "api/AppGroupPermissionApi";
     import { AppPermission, AppPermissionApi } from "api/AppPermissionApi";
     import { AppAccountGroupMembership, AppAccountGroupMembershipApi } from "api/AppAccountGroupMembershipApi";
+
+    import AppAccounts from "./components/AppAccounts.vue";
+    import AppGroups from "./components/AppGroups.vue";
 
     export const AccountManagement = Vue.extend({
         props: {
@@ -543,7 +556,8 @@
         components: {
             ATable, ACol, ABody, AFilter, AHeader,
             AppMenu,
-            InfoHover, Busy, Collapsible, ToggleButton
+            InfoHover, Busy, Collapsible, ToggleButton,
+            AppAccounts, AppGroups
         }
     });
     export default AccountManagement;

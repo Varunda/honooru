@@ -992,6 +992,24 @@
                 was successfully marked as deleted
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.PostApiController.Restore(System.UInt64)">
+            <summary>
+                restore a deleted post
+            </summary>
+            <param name="postID">ID of the <see cref="T:honooru.Models.Db.Post"/> to restore</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/>
+                successfully had its <see cref="P:honooru.Models.Db.Post.Status"/> updated to <see cref="F:honooru.Models.Db.PostStatus.OK"/>
+            </response>
+            <response code="400">
+                the <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/>
+                does not have a <see cref="P:honooru.Models.Db.Post.Status"/> of <see cref="F:honooru.Models.Db.PostStatus.DELETED"/>.
+                only deleted posts can be restored
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.Db.Post"/> with <see cref="P:honooru.Models.Db.Post.ID"/> of <paramref name="postID"/> exists
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.PostApiController.Erase(System.UInt64)">
             <summary>
                 completely erase a <see cref="T:honooru.Models.Db.Post"/>, deleting the IQDB entries and all files with it
@@ -1009,14 +1027,55 @@
                 of <paramref name="tagID"/>
             </response>
         </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.GetByID(System.UInt64)">
+            <summary>
+                get the basic <see cref="T:honooru.Models.App.Tag"/> information by ID
+            </summary>
+            <param name="tagID">ID of the <see cref="T:honooru.Models.App.Tag"/> to get</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/>
+            </response>
+            <response code="204">
+                no <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/> exists
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.GetExtenedByID(System.UInt64)">
+            <summary>
+                get the <see cref="T:honooru.Models.Api.ExtendedTag"/> information about a tag
+            </summary>
+            <param name="tagID">ID of the <see cref="T:honooru.Models.App.Tag"/> to get the <see cref="T:honooru.Models.Api.ExtendedTag"/> of</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.Api.ExtendedTag"/> that corresponds to the <see cref="T:honooru.Models.App.Tag"/>
+                with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/>
+            </response>
+            <response code="204">
+                no <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/> exists
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.GetByName(System.String)">
+            <summary>
+                get the <see cref="T:honooru.Models.Api.ExtendedTag"/> of the the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.Name"/> of <paramref name="name"/>
+            </summary>
+            <param name="name">name of the <see cref="T:honooru.Models.App.Tag"/> (case does not matter)</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.Api.ExtendedTag"/> for the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.Name"/> of <paramref name="name"/>
+            </response>
+            <response code="204">
+                no <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.Name"/> of <paramref name="name"/> exists
+            </response>
+        </member>
         <member name="M:honooru.Controllers.Api.TagApiController.Search(System.String,System.Nullable{System.Int32},System.String,System.Nullable{System.Boolean})">
             <summary>
-                search for all tags that 
+                search for all tags based on a name. this performs a string distance search as well,
+                so tags that are similar to the input are returned as well. see https://en.wikipedia.org/wiki/Levenshtein_distance for more.
             </summary>
-            <param name="name"></param>
-            <param name="limit"></param>
-            <param name="sortBy"></param>
-            <param name="sortAscending"></param>
+            <param name="name">name of the tags to search for. required</param>
+            <param name="limit">sets the maximum of how many tags are returned in the search results. defaults to 20</param>
+            <param name="sortBy">
+                how to sort the returned results. valid values are: "uses", "name".
+                defaults to "uses", which uses <see cref="P:honooru.Models.Api.ExtendedTag.Uses"/>
+            </param>
+            <param name="sortAscending">if the sorted results will be in ascending (0 to 9) order or descending (9 to 0). defaults to false</param>
             <returns></returns>
             <exception cref="T:System.Exception"></exception>
         </member>
@@ -1039,6 +1098,28 @@
             </response>
             <response code="404">
                 no <see cref="T:honooru.Models.App.TagType"/> with <see cref="P:honooru.Models.App.TagType.ID"/> of <paramref name="typeID"/> exists
+            </response>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.Update(System.UInt64,honooru.Models.Api.ExtendedTag)">
+            <summary>
+                update an existing tag with new info
+            </summary>
+            <param name="tagID"></param>
+            <param name="tag"></param>
+            <returns></returns>
+        </member>
+        <member name="M:honooru.Controllers.Api.TagApiController.RecountTagUsage(System.UInt64)">
+            <summary>
+                submit a tag for recount
+            </summary>
+            <param name="tagID">ID of the tag to recount</param>
+            <response code="200">
+                the <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/>
+                was successfully queued for a usage recount. this does not mean that the recount
+                is complete
+            </response>
+            <response code="404">
+                no <see cref="T:honooru.Models.App.Tag"/> with <see cref="P:honooru.Models.App.Tag.ID"/> of <paramref name="tagID"/> exists
             </response>
         </member>
         <member name="M:honooru.Controllers.Api.TagImplicationApiController.Create(System.UInt64,System.UInt64)">
@@ -1325,12 +1406,17 @@
         </member>
         <member name="P:honooru.Models.App.Tag.Name">
             <summary>
-                name of this tag
+                name of this tag. must be unique
             </summary>
         </member>
         <member name="P:honooru.Models.App.Tag.TypeID">
             <summary>
                 ID of the <see cref="T:honooru.Models.App.TagType"/> this tag is for
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.Tag.Timestamp">
+            <summary>
+                when this <see cref="T:honooru.Models.App.Tag"/> was created
             </summary>
         </member>
         <member name="P:honooru.Models.App.TagAlias.Alias">
@@ -1382,6 +1468,11 @@
         <member name="P:honooru.Models.App.TagType.Alias">
             <summary>
                 alias of the tag type. for example, if the name is general, the alias of gen: could be used
+            </summary>
+        </member>
+        <member name="P:honooru.Models.App.TagType.Order">
+            <summary>
+                order to display tags within this type. smaller numbers mean highest in order (0 is first)
             </summary>
         </member>
         <member name="P:honooru.Models.Db.Post.ID">
@@ -2762,10 +2853,17 @@
         </member>
         <member name="M:honooru.Services.Repositories.MediaAssetRepository.Delete(System.Guid)">
             <summary>
-                delete a <see cref="T:honooru.Models.App.MediaAsset"/>, and clean up all files associated with it
+                delete a <see cref="T:honooru.Models.App.MediaAsset"/>. use <see cref="M:honooru.Services.Repositories.MediaAssetRepository.Erase(System.Guid)"/> if you want to remove the files as well
             </summary>
             <param name="assetID">ID of the asset to delete</param>
             <returns>a task once the async operation is complete</returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.MediaAssetRepository.Erase(System.Guid)">
+            <summary>
+                erase a <see cref="T:honooru.Models.App.MediaAsset"/>, which also deletes all files associated with it
+            </summary>
+            <param name="assetID"></param>
+            <returns></returns>
         </member>
         <member name="T:honooru.Services.Repositories.TagRepository">
             <summary>
@@ -2844,6 +2942,13 @@
             <param name="tagName"></param>
             <returns></returns>
         </member>
+        <member name="M:honooru.Services.Repositories.TagRepository.CreateExtended(System.Collections.Generic.IEnumerable{honooru.Models.App.Tag})">
+            <summary>
+                create <see cref="T:honooru.Models.Api.ExtendedTag"/>s from <see cref="T:honooru.Models.App.Tag"/>s
+            </summary>
+            <param name="tags">list of <see cref="T:honooru.Models.App.Tag"/>s to convert into a list of <see cref="T:honooru.Models.Api.ExtendedTag"/>s</param>
+            <returns></returns>
+        </member>
         <member name="M:honooru.Services.Repositories.TagRepository.Insert(honooru.Models.App.Tag)">
             <summary>
                 insert a new <see cref="T:honooru.Models.App.Tag"/>
@@ -2871,6 +2976,31 @@
             <param name="target">An array of the code points of the second string</param>
             <param name="threshold">Maximum allowable distance</param>
             <returns>Int.MaxValue if threshhold exceeded; otherwise the Damerau-Leveshteim distance between the strings</returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagTypeRepository.GetAll">
+            <summary>
+                get all <see cref="T:honooru.Models.App.TagType"/>s
+            </summary>
+            <returns>
+                a list of <see cref="T:honooru.Models.App.TagType"/>s
+            </returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagTypeRepository.GetByID(System.UInt64)">
+            <summary>
+                get the <see cref="T:honooru.Models.App.TagType"/> with <see cref="P:honooru.Models.App.TagType.ID"/> of <paramref name="typeID"/>
+            </summary>
+            <param name="typeID">ID of the <see cref="T:honooru.Models.App.TagType"/> to get</param>
+            <returns>
+                the <see cref="T:honooru.Models.App.TagType"/> with <see cref="P:honooru.Models.App.TagType.ID"/> of <paramref name="typeID"/>,
+                or <c>null</c> if it does not exist
+            </returns>
+        </member>
+        <member name="M:honooru.Services.Repositories.TagTypeRepository.GetByIDs(System.Collections.Generic.IEnumerable{System.UInt64})">
+            <summary>
+                get a list of <see cref="T:honooru.Models.App.TagType"/>s based on <see cref="P:honooru.Models.App.TagType.ID"/>
+            </summary>
+            <param name="ids"></param>
+            <returns></returns>
         </member>
         <member name="M:honooru.Services.Repositories.TagTypeRepository.GetByNameOrAlias(System.String)">
             <summary>

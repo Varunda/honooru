@@ -1,4 +1,5 @@
-﻿using honooru.Models.App;
+﻿using honooru.Models.Api;
+using honooru.Models.App;
 using honooru.Services.Db;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -26,10 +27,11 @@ namespace honooru.Services.Repositories {
         private readonly TagDb _TagDb;
         private readonly TagInfoRepository _TagInfoRepository;
         private readonly TagAliasRepository _TagAliasRepository;
+        private readonly TagTypeRepository _TagTypeRepository;
 
         public TagRepository(ILogger<TagRepository> logger, IMemoryCache cache,
             TagDb tagDb, TagInfoRepository tagInfoRepository,
-            TagAliasRepository tagAliasRepository) {
+            TagAliasRepository tagAliasRepository, TagTypeRepository tagTypeRepository) {
 
             _Logger = logger;
             _Cache = cache;
@@ -37,6 +39,7 @@ namespace honooru.Services.Repositories {
             _TagDb = tagDb;
             _TagInfoRepository = tagInfoRepository;
             _TagAliasRepository = tagAliasRepository;
+            _TagTypeRepository = tagTypeRepository;
         }
 
         /// <summary>
@@ -156,8 +159,10 @@ namespace honooru.Services.Repositories {
                     TypeID = type?.ID ?? 1
                 };
 
+                _Logger.LogTrace($"creating new tag [name={name}] [typeID={tag.TypeID}]");
                 tag.ID = await Insert(tag);
             } else if (type != null && tag.TypeID != type.ID) {
+                _Logger.LogTrace($"updating tag type [name={name}] [ID={tag.ID}] [type.Name={type.Name}]");
                 tag.TypeID = type.ID;
                 await Update(tag);
             }
@@ -295,6 +300,40 @@ namespace honooru.Services.Repositories {
 
             res.Valid = true;
             return res;
+        }
+
+        /// <summary>
+        ///     create <see cref="ExtendedTag"/>s from <see cref="Tag"/>s
+        /// </summary>
+        /// <param name="tags">list of <see cref="Tag"/>s to convert into a list of <see cref="ExtendedTag"/>s</param>
+        /// <returns></returns>
+        public async Task<List<ExtendedTag>> CreateExtended(IEnumerable<Tag> tags) {
+            List<ExtendedTag> ex = new();
+
+            foreach (Tag tag in tags) {
+                ex.Add(await CreateExtended(tag));
+            }
+
+            return ex;
+        }
+
+        public async Task<ExtendedTag> CreateExtended(Tag tag) {
+            TagInfo? info = await _TagInfoRepository.GetByID(tag.ID);
+            TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
+
+            ExtendedTag et = new();
+            et.ID = tag.ID;
+            et.Name = tag.Name;
+            et.TypeID = tag.TypeID;
+
+            et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
+            et.HexColor = type?.HexColor ?? "000000";
+            et.TypeOrder = type?.Order ?? 0;
+
+            et.Uses = info?.Uses ?? 0;
+            et.Description = info?.Description;
+
+            return et;
         }
 
         /// <summary>

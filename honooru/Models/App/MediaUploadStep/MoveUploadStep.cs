@@ -41,7 +41,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
                 progressCallback(0m);
                 File.Move(input, output);
-                progressCallback(1m);
+                progressCallback(100m);
                 return Task.FromResult(true);
             }
 

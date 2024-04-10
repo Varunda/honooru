@@ -1,8 +1,10 @@
 ﻿using Google.Protobuf.Reflection;
+using honooru.Code.Constants;
 using honooru.Code.ExtensionMethods;
 using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
+using honooru.Models.Db;
 using honooru.Models.Search;
 using honooru.Services.Db;
 using honooru.Services.Parsing;
@@ -64,6 +66,11 @@ namespace honooru.Services.Repositories {
                 if (explicitHide == true) {
                     cmd += " AND p.rating != 3\n";
                 }
+            }
+
+            // if the query didn't set a status, assume the status is OK
+            if (query.SetStatus == false) {
+                cmd += " AND p.status = 1\n";
             }
 
             cmd += $"ORDER BY {(query.OrderBy ?? "id desc")}";
@@ -144,13 +151,13 @@ namespace honooru.Services.Repositories {
                     query.Parameters.Add(userID);
                 } else if (field.Token.Value == "rating") {
 
-                    int rating;
+                    PostRating rating;
                     if (value.Token.Value == "general") {
-                        rating = 1;
+                        rating = PostRating.GENERAL;
                     } else if (value.Token.Value == "unsafe") {
-                        rating = 2;
+                        rating = PostRating.UNSAFE;
                     } else if (value.Token.Value == "explicit") {
-                        rating = 3;
+                        rating = PostRating.EXPLICIT;
                     } else {
                         throw new Exception($"invalid rating string '{value.Token.Value}', valid values are: general, unsafe, explicit");
                     }
@@ -158,11 +165,30 @@ namespace honooru.Services.Repositories {
                     query.SetRating = true;
 
                     cmd = $" p.rating = " + $"${query.Parameters.Count + 1}\n";
-                    query.Parameters.Add(rating);
+                    query.Parameters.Add((short)rating);
+                } else if (field.Token.Value == "status") {
+                    PostStatus status;
+
+                    if (value.Token.Value == "ok") {
+                        status = PostStatus.OK;
+                    } else if (value.Token.Value == "deleted") {
+                        status = PostStatus.DELETED;
+                    } else {
+                        throw new Exception($"invalid status string '{value.Token.Value}', valid values are: ok, deleted");
+                    }
+
+                    query.SetStatus = true;
+
+                    cmd = $" p.status = " + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add((short)status);
+                } else if (field.Token.Value == "md5") {
+                    cmd = $" p.md5 " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(value.Token.Value);
+
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {
-                    throw new Exception($"invalid search field: {field}");
+                    throw new Exception($"invalid search field: {field} ({field.Token.Value} is not a valid search term)");
                 }
             }
 
@@ -201,6 +227,8 @@ namespace honooru.Services.Repositories {
             public uint Limit { get; set; }
 
             public bool SetRating { get; set; } = false;
+
+            public bool SetStatus { get; set; } = false;
 
         }
 

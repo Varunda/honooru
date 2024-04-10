@@ -43,28 +43,7 @@ namespace honooru.Controllers.Api {
             List<PostTag> postTags = await _PostTagDb.GetByPostID(postID);
 
             List<Tag> tags = await _TagRepository.GetByIDs(postTags.Select(iter => iter.TagID));
-
-            Dictionary<ulong, TagInfo> infos = (await _TagInfoRepository.GetByIDs(tags.Select(iter => iter.ID))).ToDictionary(iter => iter.ID);
-            Dictionary<ulong, TagType> types = (await _TagTypeRepository.GetByIDs(tags.Select(iter => iter.TypeID).Distinct())).ToDictionary(iter => iter.ID);
-
-            List<ExtendedTag> ex = new List<ExtendedTag>(tags.Count);
-
-            foreach (Tag tag in tags) {
-                ExtendedTag et = new();
-                et.ID = tag.ID;
-                et.Name = tag.Name;
-                et.TypeID = tag.TypeID;
-
-                TagType? type = types.GetValueOrDefault(tag.TypeID);
-                et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
-                et.HexColor = type?.HexColor ?? "000000";
-
-                TagInfo? info = infos.GetValueOrDefault(tag.ID);
-                et.Uses = info?.Uses ?? 0;
-                et.Description = info?.Description;
-
-                ex.Add(et);
-            }
+            List<ExtendedTag> ex = await _TagRepository.CreateExtended(tags);
 
             return ApiOk(ex);
         }

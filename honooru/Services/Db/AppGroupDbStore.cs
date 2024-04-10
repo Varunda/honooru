@@ -56,6 +56,30 @@ namespace honooru.Services.Db {
             return group;
         }
 
+        public async Task<ulong> Insert(AppGroup group) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                INSERT INTO app_group (
+                    name, hex_color, implies
+                ) VALUES (
+                    @Name, @HexColor, @Implies
+                )
+                RETURNING id;
+            ");
+
+            cmd.AddParameter("Name", group.Name);
+            cmd.AddParameter("HexColor", group.HexColor);
+            cmd.AddParameter("Implies", string.Join(" ", group.Implies));
+
+            await cmd.PrepareAsync();
+
+            ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
+
+            await conn.CloseAsync();
+
+            return id;
+        }
+
         public async Task<ulong> Upsert(AppGroup group) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"

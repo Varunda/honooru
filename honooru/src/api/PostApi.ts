@@ -138,6 +138,10 @@ export class PostApi extends ApiWrapper<Post> {
         return PostApi.get().delete(`/api/post/${postID}`);
     }
 
+    public static restore(postID: number): Promise<Loading<void>> {
+        return PostApi.get().post(`/api/post/${postID}/restore`);
+    }
+
     public static erase(postID: number): Promise<Loading<void>> {
         return PostApi.get().delete(`/api/post/${postID}/erase`);
     }

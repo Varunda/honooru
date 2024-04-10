@@ -2,7 +2,7 @@
 <template>
     <div id="post-search-parent">
         <div v-if="type == 'input'" class="input-group">
-            <input class="form-control pr-0" placeholder="search..." v-model="search" id="search-input"
+            <input class="form-control pr-0" placeholder="search..." v-model="search" :id="'search-input-' + ID"
             />
 
             <span class="input-group-append">
@@ -12,7 +12,7 @@
             </span>
         </div>
 
-        <textarea v-else-if="type == 'textarea'" v-model="search" id="search-input" class="form-control px-1">
+        <textarea v-else-if="type == 'textarea'" v-model="search" :id="'search-input-' + ID" class="form-control px-1">
         </textarea>
 
     </div>
@@ -35,6 +35,8 @@
 
         data: function() {
             return {
+                ID: Math.floor(Math.random() * 100000) as number,
+
                 tribute: null as Tribute<ExtendedTag> | null,
                 search: "" as string,
                 searchInput: {} as HTMLElement,
@@ -45,9 +47,9 @@
             this.search = this.value;
 
             this.$nextTick(() => {
-                this.searchInput = document.getElementById("search-input") as any;
+                this.searchInput = document.getElementById(`search-input-${this.ID}`) as any;
                 if (this.searchInput == null || this.searchInput == undefined) {
-                    throw `failed to find #search-input!`;
+                    throw `failed to find #search-input-${this.ID}!`;
                 }
 
                 this.tribute = new Tribute<ExtendedTag>({

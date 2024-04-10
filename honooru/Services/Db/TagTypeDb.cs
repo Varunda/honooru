@@ -93,15 +93,16 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO tag_type (
-                    name, hex_color, alias
+                    name, hex_color, alias, order
                 ) VALUES (
-                    @Name, @HexColor, @Alias
+                    @Name, @HexColor, @Alias, @Order
                 ) RETURNING id;
             ");
 
             cmd.AddParameter("Name", type.Name);
             cmd.AddParameter("HexColor", type.HexColor);
             cmd.AddParameter("Alias", type.Alias);
+            cmd.AddParameter("Order", type.Order);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
@@ -116,7 +117,8 @@ namespace honooru.Services.Db {
                 UPDATE tag_type
                     SET name = @Name,
                         hex_color = @HexColor,
-                        alias = @Alias
+                        alias = @Alias,
+                        order = @Order
                     WHERE id = @ID;
             ");
 
@@ -124,6 +126,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Name", type.Name);
             cmd.AddParameter("HexColor", type.HexColor);
             cmd.AddParameter("Alias", type.Alias);
+            cmd.AddParameter("Order", type.Order);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);

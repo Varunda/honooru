@@ -2,7 +2,9 @@
 using honooru.Services.Db;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -15,6 +17,8 @@ namespace honooru.Services.Repositories {
 
         private readonly IMemoryCache _Cache;
 
+        private const string CACHE_KEY_MAP = "TagType.All.Dictionary";
+
         public TagTypeRepository(ILogger<TagTypeRepository> logger,
             TagTypeDb tagTypeDb, IMemoryCache cache) {
 
@@ -23,14 +27,47 @@ namespace honooru.Services.Repositories {
             _Cache = cache;
         }
 
-        public Task<List<TagType>> GetAll() {
-            return _TagTypeDb.GetAll();
+        /// <summary>
+        ///     get all <see cref="TagType"/>s
+        /// </summary>
+        /// <returns>
+        ///     a list of <see cref="TagType"/>s
+        /// </returns>
+        public async Task<List<TagType>> GetAll() {
+            return (await _GetDictionary()).Values.ToList();
         }
 
-        public Task<TagType?> GetByID(ulong typeID) {
-            return _TagTypeDb.GetByID(typeID);
+        private async Task<Dictionary<ulong, TagType>> _GetDictionary() {
+            if (_Cache.TryGetValue(CACHE_KEY_MAP, out Dictionary<ulong, TagType>? dict) == false || dict == null) {
+                List<TagType> types = await _TagTypeDb.GetAll();
+
+                dict = types.ToDictionary(iter => iter.ID);
+
+                _Cache.Set(CACHE_KEY_MAP, dict, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(10)
+                });
+            }
+
+            return dict;
         }
 
+        /// <summary>
+        ///     get the <see cref="TagType"/> with <see cref="TagType.ID"/> of <paramref name="typeID"/>
+        /// </summary>
+        /// <param name="typeID">ID of the <see cref="TagType"/> to get</param>
+        /// <returns>
+        ///     the <see cref="TagType"/> with <see cref="TagType.ID"/> of <paramref name="typeID"/>,
+        ///     or <c>null</c> if it does not exist
+        /// </returns>
+        public async Task<TagType?> GetByID(ulong typeID) {
+            return (await _GetDictionary()).GetValueOrDefault(typeID);
+        }
+
+        /// <summary>
+        ///     get a list of <see cref="TagType"/>s based on <see cref="TagType.ID"/>
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
         public async Task<List<TagType>> GetByIDs(IEnumerable<ulong> ids) {
             List<TagType> types = new();
 

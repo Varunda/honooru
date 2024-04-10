@@ -46,11 +46,20 @@ namespace honooru.Services.Repositories {
         }
 
         /// <summary>
-        ///     delete a <see cref="MediaAsset"/>, and clean up all files associated with it
+        ///     delete a <see cref="MediaAsset"/>. use <see cref="Erase(Guid)"/> if you want to remove the files as well
         /// </summary>
         /// <param name="assetID">ID of the asset to delete</param>
         /// <returns>a task once the async operation is complete</returns>
         public async Task Delete(Guid assetID) {
+            await _MediaAssetDb.Delete(assetID);
+        }
+
+        /// <summary>
+        ///     erase a <see cref="MediaAsset"/>, which also deletes all files associated with it
+        /// </summary>
+        /// <param name="assetID"></param>
+        /// <returns></returns>
+        public async Task Erase(Guid assetID) {
             MediaAsset? asset = await GetByID(assetID);
             if (asset == null) {
                 return;

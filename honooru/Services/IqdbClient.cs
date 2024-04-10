@@ -325,6 +325,7 @@ namespace honooru.Services {
                     byte[] bytes = jpgStream.ToArray();
                     ret = await Insert(bytes, md5, md5);
 
+                    _Logger.LogDebug($"deleting temp file [output={output}]");
                     File.Delete(output);
                 } else {
                     int i = 0;
@@ -351,6 +352,7 @@ namespace honooru.Services {
 
                         ++i;
 
+                        _Logger.LogDebug($"deleting temp file [output={output}]");
                         File.Delete(output);
                     }
                 }

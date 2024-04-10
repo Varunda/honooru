@@ -78,6 +78,19 @@
                         <textarea :disabled="!editing" :readonly="!editing" class="form-control" v-model="tagCopy.description"></textarea>
                     </div>
 
+                    <div class="mb-2">
+                        <label class="d-block">
+                            quick change type
+                            <info-hover text="click to quickly change the type of this tag"></info-hover>
+                        </label>
+
+                        <div v-if="tagTypes.state == 'loaded'" class="btn-group">
+                            <button v-for="type in tagTypes.data" class="btn btn-sm" :style="{ 'background-color': '#' + type.hexColor }" @click="changeType(type.id)">
+                                {{type.name}}
+                            </button>
+                        </div>
+                    </div>
+
                     <div v-if="editing">
                         <button class="btn btn-success" @click="saveEdit">
                             save
@@ -265,7 +278,6 @@
                 if (ev.key == "Enter" && ev.ctrlKey) {
                     this.saveEdit();
                 }
-
             });
         },
 
@@ -299,6 +311,12 @@
             getTagTypes: async function(): Promise<void> {
                 this.tagTypes = Loadable.loading();
                 this.tagTypes = await TagTypeApi.getAll();
+
+                if (this.tagTypes.state == "loaded") {
+                    this.tagTypes = Loadable.loaded(this.tagTypes.data.sort((a, b) => {
+                        return a.name.localeCompare(b.name);
+                    }));
+                }
             },
 
             getTagAliases: async function(tagID: number): Promise<void> {
@@ -353,6 +371,11 @@
             recountPostUsage: async function(): Promise<void> {
                 Toaster.add(`update queued`, "queued an updated to the tag usage count", "info");
                 await TagApi.queueRecount(this.tagID);
+            },
+
+            changeType: async function(typeID: number): Promise<void> {
+                this.tagCopy.typeID = typeID;
+                await this.saveEdit();
             }
         },
 

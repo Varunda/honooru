@@ -1,5 +1,6 @@
 ﻿using honooru.Models;
 using honooru.Models.Api;
+using honooru.Models.App;
 using honooru.Models.Config;
 using honooru.Models.Db;
 using honooru.Services.Db;
@@ -17,19 +18,21 @@ namespace honooru.Services.Repositories {
 
         private readonly ILogger<PostRepository> _Logger;
         private readonly IMemoryCache _Cache;
+        private readonly PostTagRepository _PostTagRepository;
 
         private readonly PostDb _PostDb;
         private readonly IOptions<StorageOptions> _StorageOptions;
 
         public PostRepository(ILogger<PostRepository> logger,
             IMemoryCache cache, PostDb postDb,
-            IOptions<StorageOptions> storageOptions) {
+            IOptions<StorageOptions> storageOptions, PostTagRepository postTagRepository) {
 
             _Logger = logger;
 
             _Cache = cache;
             _PostDb = postDb;
             _StorageOptions = storageOptions;
+            _PostTagRepository = postTagRepository;
         }
 
         public Task<List<Post>> GetAll() {
@@ -57,23 +60,28 @@ namespace honooru.Services.Repositories {
         }
 
         public async Task Delete(ulong postID) {
-            Post? post = await GetByID(postID);
-            if (post == null) {
-                return;
-            }
-
             await _PostDb.UpdateStatus(postID, PostStatus.DELETED);
         }
 
-        public async Task Earse(ulong postID) {
+        public async Task Restore(ulong postID) {
+            await _PostDb.UpdateStatus(postID, PostStatus.OK);
+        }
+
+        public async Task Erase(ulong postID) {
             Post? post = await GetByID(postID);
             if (post == null) {
                 return;
             }
 
-            await _PostDb.Delete(postID);
-
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension));
+
+            List<PostTag> tags = await _PostTagRepository.GetByPostID(postID);
+            _Logger.LogDebug($"deleting tags from post (due to erase) [postID={postID}] [tags.Count={tags.Count}]");
+            foreach (PostTag tag in tags) {
+                await _PostTagRepository.Delete(tag);
+            }
+
+            await _PostDb.Delete(postID);
         }
 
         private void _DeletePossiblePath(string path) {

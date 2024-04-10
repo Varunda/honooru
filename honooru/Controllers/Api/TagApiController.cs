@@ -40,6 +40,16 @@ namespace honooru.Controllers.Api {
             _TagInfoUpdateQueue = tagInfoUpdateQueue;
         }
 
+        /// <summary>
+        ///     get the basic <see cref="Tag"/> information by ID
+        /// </summary>
+        /// <param name="tagID">ID of the <see cref="Tag"/> to get</param>
+        /// <response code="200">
+        ///     the <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/>
+        /// </response>
+        /// <response code="204">
+        ///     no <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/> exists
+        /// </response>
         [HttpGet("{tagID}")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<Tag>> GetByID(ulong tagID) {
@@ -51,6 +61,17 @@ namespace honooru.Controllers.Api {
             return ApiOk(tag);
         }
 
+        /// <summary>
+        ///     get the <see cref="ExtendedTag"/> information about a tag
+        /// </summary>
+        /// <param name="tagID">ID of the <see cref="Tag"/> to get the <see cref="ExtendedTag"/> of</param>
+        /// <response code="200">
+        ///     the <see cref="ExtendedTag"/> that corresponds to the <see cref="Tag"/>
+        ///     with <see cref="Tag.ID"/> of <paramref name="tagID"/>
+        /// </response>
+        /// <response code="204">
+        ///     no <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/> exists
+        /// </response>
         [HttpGet("{tagID}/extended")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<ExtendedTag>> GetExtenedByID(ulong tagID) {
@@ -59,23 +80,21 @@ namespace honooru.Controllers.Api {
                 return ApiNoContent<ExtendedTag>();
             }
 
-            TagInfo? info = await _TagInfoRepository.GetByID(tagID);
-            TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
-
-            ExtendedTag et = new();
-            et.ID = tag.ID;
-            et.Name = tag.Name;
-            et.TypeID = tag.TypeID;
-
-            et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
-            et.HexColor = type?.HexColor ?? "000000";
-
-            et.Uses = info?.Uses ?? 0;
-            et.Description = info?.Description;
+            ExtendedTag et = await _TagRepository.CreateExtended(tag);
 
             return ApiOk(et);
         }
 
+        /// <summary>
+        ///     get the <see cref="ExtendedTag"/> of the the <see cref="Tag"/> with <see cref="Tag.Name"/> of <paramref name="name"/>
+        /// </summary>
+        /// <param name="name">name of the <see cref="Tag"/> (case does not matter)</param>
+        /// <response code="200">
+        ///     the <see cref="ExtendedTag"/> for the <see cref="Tag"/> with <see cref="Tag.Name"/> of <paramref name="name"/>
+        /// </response>
+        /// <response code="204">
+        ///     no <see cref="Tag"/> with <see cref="Tag.Name"/> of <paramref name="name"/> exists
+        /// </response>
         [HttpGet("name")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<ExtendedTag>> GetByName([FromQuery] string name) {
@@ -85,30 +104,21 @@ namespace honooru.Controllers.Api {
                 return ApiNoContent<ExtendedTag>();
             }
 
-            TagInfo? info = await _TagInfoRepository.GetByID(tag.ID);
-            TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
-
-            ExtendedTag et = new();
-            et.ID = tag.ID;
-            et.Name = tag.Name;
-            et.TypeID = tag.TypeID;
-
-            et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
-            et.HexColor = type?.HexColor ?? "000000";
-
-            et.Uses = info?.Uses ?? 0;
-            et.Description = info?.Description;
-
+            ExtendedTag et = await _TagRepository.CreateExtended(tag);
             return ApiOk(et);
         }
 
         /// <summary>
-        ///     search for all tags that 
+        ///     search for all tags based on a name. this performs a string distance search as well,
+        ///     so tags that are similar to the input are returned as well. see https://en.wikipedia.org/wiki/Levenshtein_distance for more.
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="limit"></param>
-        /// <param name="sortBy"></param>
-        /// <param name="sortAscending"></param>
+        /// <param name="name">name of the tags to search for. required</param>
+        /// <param name="limit">sets the maximum of how many tags are returned in the search results. defaults to 20</param>
+        /// <param name="sortBy">
+        ///     how to sort the returned results. valid values are: "uses", "name".
+        ///     defaults to "uses", which uses <see cref="ExtendedTag.Uses"/>
+        /// </param>
+        /// <param name="sortAscending">if the sorted results will be in ascending (0 to 9) order or descending (9 to 0). defaults to false</param>
         /// <returns></returns>
         /// <exception cref="System.Exception"></exception>
         [HttpGet("search")]
@@ -140,28 +150,7 @@ namespace honooru.Controllers.Api {
 
             List<Tag> tags = await _TagRepository.SearchByName(name.Trim(), CancellationToken.None);
 
-            Dictionary<ulong, TagInfo> infos = (await _TagInfoRepository.GetByIDs(tags.Select(iter => iter.ID))).ToDictionary(iter => iter.ID);
-            Dictionary<ulong, TagType> types = (await _TagTypeRepository.GetByIDs(tags.Select(iter => iter.TypeID).Distinct())).ToDictionary(iter => iter.ID);
-
-            List<ExtendedTag> ex = new List<ExtendedTag>(tags.Count);
-
-            foreach (Tag tag in tags) {
-                ExtendedTag et = new();
-                et.ID = tag.ID;
-                et.Name = tag.Name;
-                et.TypeID = tag.TypeID;
-
-                TagType? type = types.GetValueOrDefault(tag.TypeID);
-                et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
-                et.HexColor = type?.HexColor ?? "000000";
-
-                TagInfo? info = infos.GetValueOrDefault(tag.ID);
-                et.Uses = info?.Uses ?? 0;
-                et.Description = info?.Description;
-
-                ex.Add(et);
-            }
-
+            List<ExtendedTag> ex = await _TagRepository.CreateExtended(tags);
             ex.Sort((a, b) => {
                 if (sortBy == "uses") {
                     if (sortAscending == true) {
@@ -235,6 +224,12 @@ namespace honooru.Controllers.Api {
             return ApiOk(newTag);
         }
 
+        /// <summary>
+        ///     update an existing tag with new info
+        /// </summary>
+        /// <param name="tagID"></param>
+        /// <param name="tag"></param>
+        /// <returns></returns>
         [HttpPost("{tagID}")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse<Tag>> Update(ulong tagID, [FromBody] ExtendedTag tag) {
@@ -275,6 +270,18 @@ namespace honooru.Controllers.Api {
             return ApiOk(etag);
         }
 
+        /// <summary>
+        ///     submit a tag for recount
+        /// </summary>
+        /// <param name="tagID">ID of the tag to recount</param>
+        /// <response code="200">
+        ///     the <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/>
+        ///     was successfully queued for a usage recount. this does not mean that the recount
+        ///     is complete
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/> exists
+        /// </response>
         [HttpPost("{tagID}/recount")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse> RecountTagUsage(ulong tagID) {

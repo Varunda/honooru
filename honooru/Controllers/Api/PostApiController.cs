@@ -132,7 +132,7 @@ namespace honooru.Controllers.Api {
         [HttpGet("search")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<SearchResults>> Search(
-            [FromQuery] string q,
+            [FromQuery] string q = "",
             [FromQuery] uint offset = 0,
             [FromQuery] uint limit = 100,
             [FromQuery] bool includeTags = true
@@ -145,6 +145,11 @@ namespace honooru.Controllers.Api {
 
             if (limit > 500) {
                 return ApiBadRequest<SearchResults>($"{nameof(limit)} cannot be higher than 500");
+            }
+
+            // set a default search of the most recent posts if one is not given
+            if (string.IsNullOrWhiteSpace(q)) {
+                q = "sort:id_desc";
             }
 
             // parse the query into an AST that can be compiled into an SQL query
@@ -173,26 +178,7 @@ namespace honooru.Controllers.Api {
                 }
 
                 List<Tag> tags = await _TagRepository.GetByIDs(tagIDs);
-
-                Dictionary<ulong, TagInfo> infos = (await _TagInfoRepository.GetByIDs(tags.Select(iter => iter.ID))).ToDictionary(iter => iter.ID);
-                Dictionary<ulong, TagType> types = (await _TagTypeRepository.GetByIDs(tags.Select(iter => iter.TypeID).Distinct())).ToDictionary(iter => iter.ID);
-
-                foreach (Tag tag in tags) {
-                    ExtendedTag et = new();
-                    et.ID = tag.ID;
-                    et.Name = tag.Name;
-                    et.TypeID = tag.TypeID;
-
-                    TagType? type = types.GetValueOrDefault(tag.TypeID);
-                    et.TypeName = type?.Name ?? $"<missing {tag.TypeID}>";
-                    et.HexColor = type?.HexColor ?? "000000";
-
-                    TagInfo? info = infos.GetValueOrDefault(tag.ID);
-                    et.Uses = info?.Uses ?? 0;
-                    et.Description = info?.Description;
-
-                    results.Tags.Add(et);
-                }
+                results.Tags = await _TagRepository.CreateExtended(tags);
                 long tagMs = timer.ElapsedMilliseconds; timer.Restart();
                 results.Timings.Add($"tag={tagMs}ms");
             }
@@ -701,6 +687,38 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
+        ///     restore a deleted post
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to restore</param>
+        /// <response code="200">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     successfully had its <see cref="Post.Status"/> updated to <see cref="PostStatus.OK"/>
+        /// </response>
+        /// <response code="400">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     does not have a <see cref="Post.Status"/> of <see cref="PostStatus.DELETED"/>.
+        ///     only deleted posts can be restored
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> exists
+        /// </response>
+        [HttpPost("{postID}/restore")]
+        public async Task<ApiResponse> Restore(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            if (post.Status != PostStatus.DELETED) {
+                return ApiBadRequest($"{nameof(Post)} {postID} is not deleted");
+            }
+
+            await _PostRepository.Restore(postID);
+
+            return ApiOk();
+        }
+
+        /// <summary>
         ///     completely erase a <see cref="Post"/>, deleting the IQDB entries and all files with it
         /// </summary>
         /// <param name="postID">ID of the post to erase</param>
@@ -717,7 +735,7 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest($"{nameof(Post)} {postID} is already deleted");
             }
 
-            await _PostRepository.Delete(postID);
+            await _PostRepository.Erase(postID);
 
             _Logger.LogInformation($"marked post as deleted [postID={postID}]");
             return ApiOk();

@@ -90,7 +90,7 @@ namespace honooru.Services.UrlMediaExtrator {
                 if (videoData.Data.Extractor.StartsWith("twitch")) {
                     asset.AdditionalTags += " twitch";
                 } else if (videoData.Data.Extractor == "youtube") {
-                    asset.AdditionalTags += "youtube";
+                    asset.AdditionalTags += " youtube";
                 }
 
                 asset.Title = videoData.Data.Title ?? "";

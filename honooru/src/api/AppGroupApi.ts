@@ -22,4 +22,8 @@ export class AppGroupApi extends ApiWrapper<AppGroup> {
         return AppGroupApi.get().readList(`/api/group`, AppGroupApi.parse);
     }
 
+    public static create(name: string): Promise<Loading<void>> {
+        return AppGroupApi.get().post(`/api/group?name=${name}&hex=ff0000`);
+    }
+
 }

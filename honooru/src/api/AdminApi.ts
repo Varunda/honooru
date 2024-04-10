@@ -13,4 +13,8 @@ export class AdminApi extends ApiWrapper<void> {
         return AdminApi.get().post(`/api/admin/remake-all-iqdb-entries`);
     }
 
+    public static cacheEvict(key: string): Promise<Loading<void>> {
+        return AdminApi.get().post(`/api/admin/cache-evict?key=${key}`);
+    }
+
 }

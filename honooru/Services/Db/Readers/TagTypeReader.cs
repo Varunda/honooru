@@ -14,6 +14,7 @@ namespace honooru.Services.Db.Readers {
             type.Name = reader.GetString("name");
             type.HexColor = reader.GetString("hex_color");
             type.Alias = reader.GetString("alias");
+            type.Order = reader.GetInt16("order");
 
             return type;
         }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace honooru.Models.App {
@@ -45,7 +46,7 @@ namespace honooru.Models.App {
         public ulong ID { get; set; }
 
         /// <summary>
-        ///     name of this tag
+        ///     name of this tag. must be unique
         /// </summary>
         public string Name { get; set; } = "";
 
@@ -53,6 +54,11 @@ namespace honooru.Models.App {
         ///     ID of the <see cref="TagType"/> this tag is for
         /// </summary>
         public ulong TypeID { get; set; }
+
+        /// <summary>
+        ///     when this <see cref="Tag"/> was created
+        /// </summary>
+        public DateTime Timestamp { get; set; }
 
     }
 }

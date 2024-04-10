@@ -10,7 +10,11 @@
         <div v-else-if="posts.state == 'loaded'">
             <div style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); display: grid; gap: 0.5rem;">
                 <div v-for="post in posts.data.results" class="overflow-hidden" style="max-width: 180px;" :class="containerClasses(post)">
-                    <a :href="'/post/' + post.id">
+                    <span v-if="post.durationSeconds > 0" class="position-absolute font-monospace bg-dark ms-2" style="font-size: 0.8rem;">
+                        {{post.durationSeconds | mduration}}
+                    </span>
+
+                    <a :href="'/post/' + post.id + '?q=' + q">
                         <img :src="'/media/180x180/' + post.md5 + '.png'" style="width: 180px; height: 180px;"
                              :class="imageClasses(post)" />
                     </a>
@@ -19,13 +23,6 @@
 
             <div v-if="posts.data.results.length == 0">
                 no posts found!
-            </div>
-
-            <div class="text-center">
-                timings:
-                <span v-for="timing in posts.data.timings" class="font-monospace">
-                    {{timing}}
-                </span>
             </div>
 
             <div v-if="blurUnsafe || blurExplicit" class="text-muted text-center">
@@ -59,6 +56,13 @@
 
                 are not return in this search because of your <a href="/settings">settings</a>
             </div>
+
+            <div class="text-center text-muted font-monospace">
+                timings:
+                <code v-for="timing in posts.data.timings">
+                    {{timing}}
+                </code>
+            </div>
         </div>
 
         <div v-else-if="posts.state == 'error'">
@@ -79,6 +83,8 @@
 
     import { Post, SearchResults, PostApi } from "api/PostApi";
     import { UserSetting } from "api/UserSettingApi";
+
+    import "filters/MomentFilter";
 
     import AccountUtil from "util/AccountUtil";
 

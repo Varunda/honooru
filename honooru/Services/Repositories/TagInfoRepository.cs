@@ -2,6 +2,7 @@
 using honooru.Services.Db;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace honooru.Services.Repositories {
 
         private readonly IMemoryCache _Cache;
 
+        private const string CACHE_KEY_ID = "TagInfo.{0}"; // {0} => tag ID
+
         public TagInfoRepository(ILogger<TagInfoRepository> logger,
             TagInfoDb tagInfoDb, IMemoryCache cache) {
 
@@ -24,8 +27,16 @@ namespace honooru.Services.Repositories {
             _Cache = cache;
         }
 
-        public Task<TagInfo?> GetByID(ulong tagID) {
-            return _TagInfoDb.GetByID(tagID);
+        public async Task<TagInfo?> GetByID(ulong tagID) {
+            string cacheKey = string.Format(CACHE_KEY_ID, tagID);
+            if (_Cache.TryGetValue(cacheKey, out TagInfo? info) == false) {
+                info = await _TagInfoDb.GetByID(tagID);
+                _Cache.Set(cacheKey, info, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(10)
+                });
+            }
+
+            return info;
         }
 
         public async Task<List<TagInfo>> GetByIDs(IEnumerable<ulong> ids) {
@@ -41,6 +52,9 @@ namespace honooru.Services.Repositories {
         }
 
         public Task Upsert(TagInfo info) {
+            string cacheKey = string.Format(CACHE_KEY_ID, info.ID);
+            _Cache.Remove(cacheKey);
+
             return _TagInfoDb.Upsert(info);
         }
 

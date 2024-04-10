@@ -1,4 +1,5 @@
-﻿using honooru.Models;
+﻿using honooru.Code;
+using honooru.Models;
 using honooru.Models.Internal;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +28,17 @@ namespace honooru.Controllers.Api.Account {
             return ApiOk(groups);
         }
 
+        [HttpPost]
+        [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
+        public async Task<ApiResponse> Create([FromQuery] string name, [FromQuery] string hex) {
+            AppGroup group = new();
+            group.Name = name;
+
+            _Logger.LogInformation($"creating new {nameof(AppGroup)} [name={name}]");
+            group.ID = await _AppGroupRepository.Insert(group);
+
+            return ApiOk();
+        }
 
     }
 }

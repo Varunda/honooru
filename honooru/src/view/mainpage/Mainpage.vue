@@ -1,7 +1,6 @@
 ﻿<template>
     <div>
-        <app-menu>
-        </app-menu>
+        <app-menu></app-menu>
 
         <hr class="border" />
 

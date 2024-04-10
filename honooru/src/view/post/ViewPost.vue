@@ -6,18 +6,18 @@
         <div style="display: grid; grid-template-columns: 400px 1fr 180px; gap: 0.5rem; overflow: hidden">
             <div class="overflow-y-auto">
                 <div class="mb-2">
-                    <post-search @keyup.enter="performSearch" @do-search="performSearch"></post-search>
+                    <post-search v-model="query" @keyup.enter="performSearch" @do-search="performSearch"></post-search>
                 </div>
 
                 <div class="mb-2">
                     <label class="mb-0">rating</label>
                     <div class="btn-group w-100">
                         <button class="btn" :disabled="!editing"
-                                :class="[ edit.rating == 'explicit' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
+                                :class="[ edit.rating == 'explicit' ? 'btn-danger' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
                             explict
                         </button>
                         <button class="btn" :disabled="!editing" 
-                                :class="[ edit.rating == 'unsafe' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
+                                :class="[ edit.rating == 'unsafe' ? 'btn-warning' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
                             unsafe
                         </button>
                         <button class="btn" :disabled="!editing"
@@ -27,30 +27,33 @@
                     </div>
                 </div>
 
-                <div class="honooru-tags">
+                <div class="honooru-tags" style="line-height: 1.3; font-family: 'Monospace'">
                     <div v-if="tags.state == 'idle'"></div>
                     <div v-else-if="tags.state == 'loading'">
                         loading tags...
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <div v-for="block in sortedTags" class="mb-3 no-underline-links" style="line-height: 1.2">
-                            <h6 class="mb-1 px-2 py-1 rounded" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }">
+                        <div v-for="block in sortedTags" class="mb-3 no-underline-links">
+                            <h6 class="mb-1 px-2 py-1 rounded" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }"
+                                data-bs-toggle="collapse" :data-bs-target="'#tag-block-type-' + block.typeID">
                                 <strong>{{block.name}}</strong>
                             </h6>
 
-                            <div v-for="tag in block.tags" :style="{ 'color': '#' + tag.hexColor }">
-                                <a :href="'/tag/' + tag.id" :class="{ 'text-success': tag.description, 'text-secondary': !tag.description }">
-                                    <info-hover :text="tag.description || ''"></info-hover>
-                                </a>
-                                <a :href="'/posts?q=' + tag.name">
-                                    <span :style="{ 'color': '#' + tag.hexColor }">
-                                        {{tag.name}}
+                            <div :id="'tag-block-type-' + block.typeID" class="collapse show">
+                                <div v-for="tag in block.tags" :style="{ 'color': '#' + tag.hexColor }">
+                                    <a :href="'/tag/' + tag.id" :class="{ 'text-success': tag.description, 'text-secondary': !tag.description }">
+                                        <info-hover :text="tag.description || ''"></info-hover>
+                                    </a>
+                                    <a :href="'/posts?q=' + tag.name">
+                                        <span :style="{ 'color': '#' + tag.hexColor }">
+                                            {{tag.name}}
+                                        </span>
+                                    </a>
+                                    <span class="text-muted">
+                                        ({{tag.uses}})
                                     </span>
-                                </a>
-                                <span class="text-muted">
-                                    ({{tag.uses}})
-                                </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -85,15 +88,15 @@
                 </div>
 
                 <div>
-                    <button v-if="editing == false" class="btn btn-sm btn-primary" @click="startEdit">
+                    <permissioned-button v-if="editing == false" permission="App.Post.Edit" class="btn btn-primary" @click="startEdit">
                         edit
-                    </button>
+                    </permissioned-button>
 
-                    <button v-if="editing == true" class="btn btn-sm btn-secondary" @click="cancelEdit">
+                    <button v-if="editing == true" class="btn btn-secondary" @click="cancelEdit">
                         cancel
                     </button>
 
-                    <button v-if="editing == true" class="btn btn-sm btn-success" @click="saveEdit">
+                    <button v-if="editing == true" class="btn btn-success" @click="saveEdit">
                         save
                     </button>
                 </div>
@@ -116,18 +119,38 @@
                         </tr>
 
                         <tr>
+                            <td>status</td>
+                            <td>
+                                <span v-if="post.data.status == 1">
+                                    ok
+                                </span>
+                                <span v-else-if="post.data.status == 2" class="text-danger">
+                                    deleted
+                                </span>
+                                <span v-else class="text-warning">
+                                    unchecked status: {{post.data.status}}
+                                </span>
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td>timestamp</td>
                             <td>{{post.data.timestamp | moment}}</td>
                         </tr>
 
                         <tr>
+                            <td>file name</td>
+                            <td class="font-monospace">{{post.data.fileName}}</td>
+                        </tr>
+
+                        <tr>
                             <td>md5</td>
-                            <td>{{post.data.md5}}</td>
+                            <td class="font-monospace">{{post.data.md5}}</td>
                         </tr>
 
                         <tr>
                             <td>file size</td>
-                            <td>{{post.data.fileSizeBytes | bytes}}</td>
+                            <td class="font-monospace">{{post.data.fileSizeBytes | bytes}}</td>
                         </tr>
 
                         <tr>
@@ -137,7 +160,7 @@
 
                         <tr>
                             <td>dimensions</td>
-                            <td>{{post.data.width}}x{{post.data.height}}</td>
+                            <td class="font-monospace">{{post.data.width}}x{{post.data.height}}</td>
                         </tr>
 
                         <tr v-if="post.data.durationSeconds > 0">
@@ -153,17 +176,23 @@
 
                 <h5>misc controls</h5>
 
-                <button class="btn btn-sm btn-secondary d-block mb-1" @click="remakeThumbnail">
+                <button class="btn btn-secondary d-block mb-1" @click="remakeThumbnail">
                     remake thumbnail
                 </button>
 
-                <button class="btn btn-sm btn-danger d-block mb-1">
-                    delete
-                </button>
+                <div v-if="post.state == 'loaded'">
+                    <permissioned-button v-if="post.data.status == 1" permission="App.Post.Delete" class="btn btn-danger d-block mb-1" @click="deletePost">
+                        delete
+                    </permissioned-button>
 
-                <button class="btn btn-sm btn-danger d-block mb-1">
+                    <permissioned-button v-else-if="post.data.status == 2" permission="App.Post.Restore" class="btn btn-success d-block mb-1" @click="restorePost">
+                        restore
+                    </permissioned-button>
+                </div>
+
+                <permissioned-button permission="App.Post.Erase" class="btn btn-danger d-block mb-1" @click="erasePost">
                     erase
-                </button>
+                </permissioned-button>
             </div>
 
             <div class="overflow-y-auto">
@@ -230,10 +259,12 @@
     import Vue from "vue";
     import { Loadable, Loading } from "Loading";
     import Toaster from "Toaster";
+    import AccountUtil from "util/AccountUtil";
 
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
+    import PermissionedButton from "components/PermissionedButton.vue";
 
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
@@ -249,11 +280,12 @@
 
     import { marked, MarkedExtension, Token, TokenizerAndRendererExtension } from "marked";
     import * as DOMPurify from "dompurify";
-import AccountUtil from "../../util/AccountUtil";
 
     class TagBlock {
+        public typeID: number = 0;
         public name: string = "";
         public hexColor: string = "";
+        public order: number = 0;
         public tags: ExtendedTag[] = [];
     }
 
@@ -409,9 +441,20 @@ import AccountUtil from "../../util/AccountUtil";
                     rating: "" as string
                 },
 
+                query: "" as string,
+
                 editing: false as boolean,
 
                 htmlDesc: Loadable.idle() as Loading<string>,
+            }
+        },
+
+        created: function(): void {
+            const params: URLSearchParams = new URLSearchParams(location.search);
+            if (params.has("q")) {
+                this.query = params.get("q")!;
+            } else {
+                this.query = "";
             }
         },
 
@@ -543,6 +586,34 @@ import AccountUtil from "../../util/AccountUtil";
                 history.pushState({ path: url.href }, "", `/posts?${url.searchParams.toString()}`);
                 location.href = `/posts?${url.searchParams.toString()}`;
             },
+
+            deletePost: async function(): Promise<void> {
+                const l: Loading<void> = await PostApi.remove(this.postID);
+                if (l.state == "loaded") {
+                    Toaster.add("post deleted", `successfully deleted post ${this.postID}`, "success");
+                    await this.loadAll();
+                }
+            },
+
+            restorePost: async function(): Promise<void> {
+                const l: Loading<void> = await PostApi.restore(this.postID);
+                if (l.state == "loaded") {
+                    Toaster.add("post restored", `successfully restored post ${this.postID}`, "success");
+                    await this.loadAll();
+                }
+            },
+
+            erasePost: async function(): Promise<void> {
+                if (prompt("Are you sure you want to do this? This CANNOT BE REVERSED. Type the post ID to confirm") != this.postID.toString()) {
+                    return;
+                }
+
+                const l: Loading<void> = await PostApi.erase(this.postID);
+                if (l.state == "loaded") {
+                    Toaster.add("post erased", `successfully erased post ${this.postID}`, "success");
+                    await this.loadAll();
+                }
+            }
         },
 
         computed: {
@@ -562,6 +633,8 @@ import AccountUtil from "../../util/AccountUtil";
                         block.name = tag.typeName;
                         block.hexColor = tag.hexColor;
                         block.tags = [];
+                        block.order = tag.typeOrder;
+                        block.typeID = tag.typeID;
                     }
 
                     block.tags.push(tag);
@@ -569,7 +642,9 @@ import AccountUtil from "../../util/AccountUtil";
                     map.set(tag.typeID, block);
                 }
 
-                const blocks: TagBlock[] = Array.from(map.values());
+                const blocks: TagBlock[] = Array.from(map.values()).sort((a, b) => {
+                    return a.order - b.order;
+                });
 
                 for (const b of blocks) {
                     b.tags.sort((a, b) => {
@@ -592,7 +667,7 @@ import AccountUtil from "../../util/AccountUtil";
         },
 
         components: {
-            InfoHover, ApiError,
+            InfoHover, ApiError, PermissionedButton,
             AppMenu,
             FileView, PostSearch, Similarity
         }

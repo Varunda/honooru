@@ -210,14 +210,14 @@ namespace honooru.Services.Db {
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 UPDATE 
                     post
-                SET title = @Title,
+                SET
                     status = @Status
                 WHERE
                     id = @ID;
             ");
 
             cmd.AddParameter("ID", postID);
-            cmd.AddParameter("Status", status);
+            cmd.AddParameter("Status", (short) status);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

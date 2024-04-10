@@ -9,6 +9,7 @@ using honooru.Services;
 using honooru.Services.Queues;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -25,6 +26,7 @@ namespace honooru.Controllers.Api {
 
         private readonly ILogger<AdminApiController> _Logger;
         private readonly IOptions<StorageOptions> _StorageOptions;
+        private readonly IMemoryCache _Cache;
 
         private readonly PostRepository _PostRepository;
         private readonly MediaAssetRepository _MediaAssetRepository;
@@ -35,7 +37,7 @@ namespace honooru.Controllers.Api {
         public AdminApiController(ILogger<AdminApiController> logger,
             PostRepository postRepository, BaseQueue<ThumbnailCreationQueueEntry> thumbnailQueue,
             IqdbClient iqdb, IOptions<StorageOptions> storageOptions,
-            MediaAssetRepository mediaAssetRepository) {
+            MediaAssetRepository mediaAssetRepository, IMemoryCache cache) {
 
             _Logger = logger;
 
@@ -44,6 +46,7 @@ namespace honooru.Controllers.Api {
             _Iqdb = iqdb;
             _StorageOptions = storageOptions;
             _MediaAssetRepository = mediaAssetRepository;
+            _Cache = cache;
         }
 
         /// <summary>
@@ -111,6 +114,15 @@ namespace honooru.Controllers.Api {
                     _Logger.LogError(ex, $"failed to recreate all IQDB entries");
                 }
             }).Start();
+
+            return ApiOk();
+        }
+
+        [HttpPost("cache-evict")]
+        public ApiResponse CacheEvict([FromQuery] string key) {
+            _Logger.LogInformation($"removing entry from cache key={key}]");
+
+            _Cache.Remove(key);
 
             return ApiOk();
         }

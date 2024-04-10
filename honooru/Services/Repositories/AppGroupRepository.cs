@@ -26,5 +26,13 @@ namespace honooru.Services.Repositories {
             return _AppGroupDb.GetByID(groupID);
         }
 
+        public Task<ulong> Insert(AppGroup group) {
+            return _AppGroupDb.Insert(group);
+        }
+
+        public Task Upsert(AppGroup group) {
+            return _AppGroupDb.Upsert(group);
+        }
+
     }
 }

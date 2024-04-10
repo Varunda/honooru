@@ -176,6 +176,7 @@ namespace honooru.Controllers.Api {
                 steps.AddExtractStep(url);
                 steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
                 steps.AddFinalMoveStep();
+                steps.AddImageHashStep();
 
                 _UploadStepsQueue.Queue(steps);
 
@@ -451,7 +452,7 @@ namespace honooru.Controllers.Api {
                 await _IqdbClient.RemoveByMD5(asset.MD5);
             }
 
-            await _MediaAssetRepository.Delete(assetID);
+            await _MediaAssetRepository.Erase(assetID);
 
             return ApiOk();
         }

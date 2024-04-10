@@ -1,11 +1,11 @@
-﻿import { AppPermission } from "../api/AppPermissionApi";
-import { UserSetting } from "../api/UserSettingApi";
+﻿import { AppGroupPermission } from "api/AppGroupPermissionApi";
+import { UserSetting } from "api/UserSettingApi";
 
 
 export class AppCurrentAccount {
     public ID: number = 0;
     public name: string = "";
-    public permissions: AppPermission[] = [];
+    public permissions: AppGroupPermission[] = [];
     public settings: UserSetting[] = [];
 }
 
@@ -24,7 +24,7 @@ export default class AccountUtil {
     }
 
     public static hasPermission(name: string): boolean {
-        return AccountUtil.get().permissions.find(iter => iter.id.toLowerCase() == name.toLowerCase()) != undefined;
+        return AccountUtil.get().permissions.find(iter => iter.permission.toLowerCase() == name.toLowerCase()) != undefined;
     }
 
 }

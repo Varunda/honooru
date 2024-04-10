@@ -10,6 +10,8 @@
 
         public string TypeName { get; set; } = "";
 
+        public short TypeOrder { get; set; }
+
         public string HexColor { get; set; } = "";
 
         public ulong Uses { get; set; }

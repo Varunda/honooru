@@ -22,5 +22,10 @@
         /// </summary>
         public string Alias { get; set; } = "";
 
+        /// <summary>
+        ///     order to display tags within this type. smaller numbers mean highest in order (0 is first)
+        /// </summary>
+        public short Order { get; set; }
+
     }
 }

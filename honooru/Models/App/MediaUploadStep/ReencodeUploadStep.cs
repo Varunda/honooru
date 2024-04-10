@@ -46,6 +46,11 @@ namespace honooru.Models.App.MediaUploadStep {
 
                 _Logger.LogInformation($"performing re-encode work [videoFormat={order.VideoFormat.Name}] [audioFormat={order.AudioCodec.Name}] [input={input}] [output={output}]");
 
+                if (File.Exists(output) == true) {
+                    _Logger.LogInformation($"re-encoded file already exists, skipping [output={output}] [md5={order.Asset.MD5}]");
+                    return true;
+                }
+
                 if (File.Exists(input) == false) {
                     throw new Exception($"input file '{input}' does not exist");
                 }
