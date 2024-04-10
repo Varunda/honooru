@@ -93,7 +93,7 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO tag_type (
-                    name, hex_color, alias, order
+                    name, hex_color, alias, sort
                 ) VALUES (
                     @Name, @HexColor, @Alias, @Order
                 ) RETURNING id;
@@ -118,7 +118,7 @@ namespace honooru.Services.Db {
                     SET name = @Name,
                         hex_color = @HexColor,
                         alias = @Alias,
-                        order = @Order
+                        sort = @Order
                     WHERE id = @ID;
             ");
 
