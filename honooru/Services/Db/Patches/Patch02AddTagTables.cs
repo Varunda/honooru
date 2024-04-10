@@ -66,7 +66,7 @@ namespace honooru.Services.Db.Patches {
                     name varchar NOT NULL,
                     hex_color varchar NOT NULL,
                     alias varchar NOT NULL,
-                    order smallint NOT NULL,
+                    ""order"" smallint NOT NULL,
 
                     UNIQUE(name),
                     UNIQUE(alias)
