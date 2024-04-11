@@ -28,7 +28,8 @@ namespace honooru.Controllers {
             _FileExtensionHelper = fileExtensionHelper;
         }
 
-        [PermissionNeeded(AppPermission.APP_VIEW)]
+        //[PermissionNeeded(AppPermission.APP_VIEW)]
+        [AllowAnonymous]
         public IActionResult Get() {
             string? urlPath = Request.Path.Value;
             if (urlPath == null) {
