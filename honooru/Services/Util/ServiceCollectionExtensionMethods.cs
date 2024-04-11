@@ -5,6 +5,7 @@ namespace honooru.Services.Util {
 
         public static void AddUtilServices(this IServiceCollection services) {
             services.AddTransient<FileExtensionService>();
+            services.AddTransient<PathEnvironmentService>();
         }
 
     }

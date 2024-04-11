@@ -87,33 +87,38 @@ namespace honooru.Controllers.Api {
             List<MediaAsset> assets = await _MediaAssetRepository.GetAll();
             _Logger.LogInformation($"regenerating IQDB entries [posts.Count={posts.Count}]");
 
-            new Thread(async () => {
-                try {
-                    _Logger.LogDebug($"starting background thread for recreating IQDB hashes");
+            try {
+                new Thread(async () => {
+                    try {
+                        _Logger.LogDebug($"starting background thread for recreating IQDB hashes");
 
-                    foreach (Post post in posts) {
-                        await _Iqdb.RemoveByMD5(post.MD5);
+                        foreach (Post post in posts) {
+                            await _Iqdb.RemoveByMD5(post.MD5);
 
-                        string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension);
-                        IqdbEntry? entry = await _Iqdb.Create(path, post.MD5, post.FileExtension);
-                    }
-
-                    foreach (MediaAsset asset in assets) {
-                        if (asset.MD5 == "") {
-                            continue;
+                            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension);
+                            IqdbEntry? entry = await _Iqdb.Create(path, post.MD5, post.FileExtension);
                         }
 
-                        await _Iqdb.RemoveByMD5(asset.MD5);
+                        foreach (MediaAsset asset in assets) {
+                            // skip if not hashed
+                            if (asset.MD5 == "" || asset.IqdbHash == null) {
+                                continue;
+                            }
 
-                        string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension);
-                        IqdbEntry? entry = await _Iqdb.Create(path, asset.MD5, asset.FileExtension);
+                            await _Iqdb.RemoveByMD5(asset.MD5);
+
+                            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension);
+                            IqdbEntry? entry = await _Iqdb.Create(path, asset.MD5, asset.FileExtension);
+                        }
+
+                        _Logger.LogInformation($"recreated all IQDB entries [posts.Count={posts.Count}]");
+                    } catch (Exception ex) {
+                        _Logger.LogError(ex, $"failed to recreate all IQDB entries");
                     }
-
-                    _Logger.LogInformation($"recreated all IQDB entries [posts.Count={posts.Count}]");
-                } catch (Exception ex) {
-                    _Logger.LogError(ex, $"failed to recreate all IQDB entries");
-                }
-            }).Start();
+                }).Start();
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"thread exception when remaking all IQDB entries");
+            }
 
             return ApiOk();
         }

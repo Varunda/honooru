@@ -408,6 +408,10 @@ namespace honooru.Controllers.Api {
                 return ApiNotFound<IqdbEntry>($"{nameof(MediaAsset)} {assetID}");
             }
 
+            if (asset.Status != MediaAssetStatus.DONE) {
+                return ApiBadRequest<IqdbEntry>($"{nameof(MediaAsset)} {assetID} is not {MediaAssetStatus.DONE}, is {asset.Status} instead");
+            }
+
             ServiceHealthEntry health = await _IqdbClient.CheckHealth();
             if (health.Enabled == false) {
                 return ApiInternalError<IqdbEntry>($"IQDB client cannot handle requests currently: {health.Message}");
@@ -416,6 +420,7 @@ namespace honooru.Controllers.Api {
             string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension);
             _Logger.LogDebug($"regenerated IQDB hash [assetID={assetID}] [path={path}]");
 
+            await _IqdbClient.RemoveByMD5(asset.MD5);
             IqdbEntry? entry = await _IqdbClient.Create(path, asset.MD5, asset.FileExtension);
 
             if (entry == null) {

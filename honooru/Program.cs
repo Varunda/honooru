@@ -44,7 +44,6 @@ namespace honooru {
             Console.WriteLine($"starting at {DateTime.UtcNow:u}");
 
             GlobalFFOptions.Configure(new FFOptions() {
-                BinaryFolder = "./ffmpeg",
                 TemporaryFilesFolder = "./ffmpeg/temp"
             });
 
@@ -176,6 +175,7 @@ namespace honooru {
                 })
                 .ConfigureAppConfiguration(appConfig => {
                     appConfig.AddUserSecrets<Startup>();
+                    appConfig.AddJsonFile("secrets.json");
                 }).ConfigureWebHostDefaults(webBuilder => {
                     webBuilder.UseStartup<Startup>();
                 });

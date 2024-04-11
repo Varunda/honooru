@@ -67,7 +67,8 @@ namespace honooru.Services.Repositories {
 
             await _MediaAssetDb.Delete(assetID);
 
-            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension));
+            // this can delete posts if they share the same MD5
+            //_DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension));
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.MD5 + "." + asset.FileExtension));
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.Guid + "." + asset.FileExtension));
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension));

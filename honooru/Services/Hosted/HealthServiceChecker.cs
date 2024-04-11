@@ -23,7 +23,6 @@ namespace honooru.Services.Hosted {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-
             _Logger.LogInformation($"starting health service checker");
 
             while (stoppingToken.IsCancellationRequested == false) {
@@ -39,7 +38,7 @@ namespace honooru.Services.Hosted {
                 await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
             }
 
-            _Logger.LogInformation($"stopping health service chekcer");
+            _Logger.LogInformation($"stopping health service checker");
         }
 
     }

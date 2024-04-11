@@ -107,7 +107,7 @@ namespace honooru.Services {
             try {
                 HttpResponseMessage response = await _HttpClient.GetAsync(url);
 
-                if (response.StatusCode != System.Net.HttpStatusCode.OK) {
+                if (response.StatusCode != HttpStatusCode.OK) {
                     health.Enabled = false;
                     health.Message = $"got non-200 OK response from IQDB [url={url}] [StatusCode={response.StatusCode}]";
                     _Logger.LogWarning(health.Message);
@@ -134,7 +134,12 @@ namespace honooru.Services {
                     return health;
                 }
             } catch (Exception ex) {
-                if (ex is HttpRequestException hex && hex.Message.StartsWith("No connection could be made because the target machine actively refused it")) {
+                if (ex is HttpRequestException hex 
+                    && (
+                        hex.Message.StartsWith("No connection could be made because the target machine actively refused it")
+                        || hex.Message.StartsWith("Connection refused"))
+                    ) {
+
                     _Logger.LogWarning($"caught timeout to {url}: {hex.Message}");
                 } else {
                     _Logger.LogError(ex, $"failed to check health of IQDB service: {ex.Message}");

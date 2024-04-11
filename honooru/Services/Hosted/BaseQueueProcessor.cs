@@ -65,8 +65,10 @@ namespace honooru.Services.Hosted {
 
                     _ServiceHealthMonitor.Set(_ServiceName, healthEntry);
 
-                } catch (Exception ex) {
+                } catch (Exception ex) when (stoppingToken.IsCancellationRequested == false) {
                     _Logger.LogError(ex, $"error in queue processor {_ServiceName}");
+                } catch (Exception) when (stoppingToken.IsCancellationRequested) {
+                    _Logger.LogInformation($"stop requested");
                 }
             }
 

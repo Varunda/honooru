@@ -114,6 +114,10 @@
                     </div>
                 </div>
             </div>
+
+            <button class="btn btn-danger" @click="deleteUpload">
+                delete
+            </button>
         </div>
 
         <template v-else-if="state == 'view'">
@@ -205,7 +209,6 @@
                         <button class="btn btn-danger" @click="deleteUpload">
                             delete
                         </button>
-
                     </div>
 
                 </div>
@@ -215,7 +218,11 @@
                 </div>
 
                 <div class="overflow-y-auto pl-2 ml-2 border-left">
-                    <div v-if="mediaAsset.iqdbHash == null">
+                    <button class="w-100 btn btn-primary" @click="recomputeIqdbHash">
+                        regenerate IQDB hash
+                    </button>
+
+                    <div v-if="mediaAsset.iqdbHash == null" class="text-danger">
                         hash is not set!
                     </div>
 
@@ -377,6 +384,22 @@ import Toaster from "../../Toaster";
         },
 
         methods: {
+            bindMediaAsset: async function(assetID: string): Promise<void> {
+                const data: Loading<MediaAsset> = await MediaAssetApi.getByID(assetID);
+                if (data.state == "loaded") {
+                    if (data.data.status == 2) { // 2 = processing
+                        this.state = "processing";
+                    } else if (data.data.status == 3) { // 3 = done
+                        this.mediaAsset = data.data;
+                        this.state = "view";
+
+                        this.setMediaAsset(data.data);
+                    } else {
+                        console.log(`unchecked status: ${data.data.status}`);
+                    }
+                }
+            },
+
             getMediaAssetID: function(): string | null {
                 const search: URLSearchParams = new URLSearchParams(location.search);
                 const id: string | null = search.get("m");
@@ -385,6 +408,7 @@ import Toaster from "../../Toaster";
             },
 
             setMediaAssetID: function(id: string): void {
+                this.mediaAssetID = id;
                 const url = new URL(location.href);
                 url.searchParams.set("m", id);
                 history.pushState({ path: url.href }, "", `/upload?${url.searchParams.toString()}`);
@@ -448,6 +472,7 @@ import Toaster from "../../Toaster";
             },
 
             _handleAsset: async function(asset: Loading<MediaAsset>): Promise<void> {
+                console.log(asset.state);
                 if (asset.state == "loaded") {
                     this.mediaAsset = asset.data;
 
@@ -466,6 +491,9 @@ import Toaster from "../../Toaster";
                     } else if (this.connection == null) {
                         console.error(`expected connection to not be null here!`);
                     }
+                } else if (asset.state == "error") {
+                    console.error(`failed to upload asset: ${asset.problem.detail}`);
+                    Toaster.add("upload failed!", `failed to upload:<br><code>${asset.problem.title}</code>`, "danger");
                 }
             },
 
@@ -474,16 +502,6 @@ import Toaster from "../../Toaster";
                     console.warn(`cannot makePost: mediaAsset is null`);
                     return;
                 }
-
-                /*
-                if (this.posting.rating == "") {
-                    this.error.rating = true;
-                }
-
-                if (this.posting.tags == "") {
-                    this.error.tags = true;
-                }
-                */
 
                 if (this.error.rating == true || this.error.tags == true) {
                     return;
@@ -552,8 +570,24 @@ import Toaster from "../../Toaster";
                 }
             },
 
+            recomputeIqdbHash: async function(): Promise<void> {
+                if (this.mediaAssetID == null) {
+                    console.warn(`cannot recompute iqdb hash: mediaAssetID is null`);
+                    return;
+                }
+
+                const l: Loading<void> = await MediaAssetApi.regenerateIqdb(this.mediaAssetID);
+                if (l.state == "loaded") {
+                    Toaster.add("done!", "regenerated IQDB hash", "success");
+                    this.bindMediaAsset(this.mediaAssetID);
+                } else if (l.state == "error") {
+                    Loadable.toastError(l, "regenerating iqdb hash");
+                }
+            },
+
             deleteUpload: async function(): Promise<void> {
                 if (this.mediaAssetID == null) {
+                    console.error(`media asset is null, not deleting upload`);
                     return;
                 }
 
