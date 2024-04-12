@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace honooru.Services.Db {
 
+    /// <summary>
+    ///     service to interact with the tag type table in the DB
+    /// </summary>
     public class TagTypeDb {
 
         private readonly ILogger<TagTypeDb> _Logger;
@@ -23,6 +26,10 @@ namespace honooru.Services.Db {
             _DbHelper = dbHelper;
         }
 
+        /// <summary>
+        ///     get all <see cref="TagType"/>s in the DB
+        /// </summary>
+        /// <returns></returns>
         public async Task<List<TagType>> GetAll() {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -38,6 +45,11 @@ namespace honooru.Services.Db {
             return types;
         }
 
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.ID"/>
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <returns></returns>
         public async Task<TagType?> GetByID(ulong ID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -55,6 +67,11 @@ namespace honooru.Services.Db {
             return type;
         }
 
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.Name"/>
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public async Task<TagType?> GetByName(string name) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -72,6 +89,11 @@ namespace honooru.Services.Db {
             return type;
         }
 
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.Alias"/>
+        /// </summary>
+        /// <param name="alias"></param>
+        /// <returns></returns>
         public async Task<TagType?> GetByAlias(string alias) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -89,6 +111,13 @@ namespace honooru.Services.Db {
             return type;
         }
 
+        /// <summary>
+        ///     insert a new <see cref="TagType"/> and return the <see cref="TagType.ID"/> that was just inserted into the DB
+        /// </summary>
+        /// <param name="type">parameters of the <see cref="TagType"/> to insert</param>
+        /// <returns>
+        ///     the <see cref="TagType.ID"/> of the <see cref="TagType"/> that was just inserted into the DB
+        /// </returns>
         public async Task<ulong> Insert(TagType type) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -111,6 +140,13 @@ namespace honooru.Services.Db {
             return id;
         }
 
+        /// <summary>
+        ///     update an existing <see cref="TagType"/> with new info
+        /// </summary>
+        /// <param name="type"><see cref="TagType"/> to update. Uses <see cref="TagType.ID"/></param>
+        /// <returns>
+        ///     <paramref name="type"/>
+        /// </returns>
         public async Task<TagType> Update(TagType type) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -129,7 +165,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Order", type.Order);
             await cmd.PrepareAsync();
 
-            ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
+            await cmd.ExecuteNonQueryAsync();
             await conn.CloseAsync();
 
             return type;

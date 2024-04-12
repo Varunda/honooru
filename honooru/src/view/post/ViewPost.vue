@@ -236,8 +236,11 @@
                         <div v-else>
                             unchecked state of htmlDesc: {{htmlDesc.state}}
                         </div>
-
                     </div>
+
+                    <div class="border mb-2"></div>
+
+                    <post-child-view :post-id="postID"></post-child-view>
                 </div>
 
                 <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
@@ -269,6 +272,7 @@
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
     import Similarity from "components/app/Similarity.vue";
+    import PostChildView from "components/app/PostChildView.vue";
 
     import { Post, PostApi } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
@@ -669,7 +673,7 @@
         components: {
             InfoHover, ApiError, PermissionedButton,
             AppMenu,
-            FileView, PostSearch, Similarity
+            FileView, PostSearch, Similarity, PostChildView
         }
 
     });

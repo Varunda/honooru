@@ -4,18 +4,20 @@ honooru is an archive site that uses tags
 
 ## General Info
 
-honooru is a .NET 6 web server
+honooru is a .NET 8 web server
 
 ### Technologies used
 
-Tech | Use
---- | ---
-.NET 6 | backbone for everything
-ASP.NET Core MVC | routing
-SignalR | WebSocket connections for realtime updates
-VueJS | frontend framework
-Typescript | all frontend logic
-PostgreSQL | database
+Tech | Use | Link
+--- | --- | ---
+.NET 8 | backbone for everything | --
+ASP.NET Core MVC | routing | --
+SignalR | WebSocket connections | --
+VueJS (v2) | frontend framework | --
+Typescript | all frontend logic | --
+PostgreSQL | database | --
+YoutubeDLSharp | extracting youtube videos | https://github.com/Bluegrams/YoutubeDLSharp
+FFMpegCore | ffmpeg wrapper for c# | https://github.com/rosenbjerg/FFMpegCore
 
 ## Setup
 
@@ -39,6 +41,12 @@ PostgreSQL | database
 1. change `syncronous_commit` to `off` instead of the default `on`.
     - https://www.postgresql.org/docs/current/wal-async-commit.html
     - Find your `postgresql.conf`, then to reload call `SELECT pg_reload_conf();`
+1. install yt-dlp
+    - for Ubuntu: https://github.com/yt-dlp/yt-dlp/wiki/Installation#apt
+    - for Windows, download and install, update your PATH to include it
+1. install ffmpeg and ffprobe
+    - for Ubuntu: use apt
+    - for Windows: install and include in PATH
 1. compile the frontend code
     - install the node modules
         - `npm install`

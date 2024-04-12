@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -20,6 +21,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Services {
@@ -238,6 +240,8 @@ namespace honooru.Services {
                 throw;
             }
 
+            // because posts can have multiple uploads (in the case of videos), we want to find the IQDB entry
+            //      with the highest similarity score
             Dictionary<string, IqdbQueryResult> finds = new();
 
             List<IqdbQueryResult> results = new();
@@ -248,17 +252,13 @@ namespace honooru.Services {
 
                 IqdbQueryResult r = new();
                 r.PostID = iter["post_id"]?.GetValue<string>() ?? throw new Exception($"missing 'post_id' from {iter}");
-
-                // for video frame uploads, only include the post once
-                string[] parts = r.PostID.Split("-");
-                string md5 = parts[0];
-                r.MD5 = md5;
-
+                r.MD5 = iter["md5"]?.GetValue<string>() ?? throw new Exception($"missing 'md5' from {iter}");
                 r.Hash = iter["hash"]?.GetValue<string>() ?? throw new Exception($"missing 'hash' from {iter}");
                 r.Score = iter["score"]?.GetValue<float>() ?? throw new Exception($"missing 'score' from {iter}");
 
-                if (((finds.GetValueOrDefault(md5)?.Score) ?? -100f) < r.Score) {
-                    finds[md5] = r;
+                // only include 1 entry for each md5
+                if (((finds.GetValueOrDefault(r.MD5)?.Score) ?? -100f) < r.Score) {
+                    finds[r.MD5] = r;
                 }
             }
 
@@ -290,6 +290,7 @@ namespace honooru.Services {
             string? fileType = _FileExtensionUtility.GetFileType(fileExt);
             if (fileType == "image") {
                 byte[] bytes;
+                // check if the file is a jpg already. jpg files are what need to be uploaded
                 if (fileExt == "jpg" || fileExt == "jpeg") {
                     bytes = await File.ReadAllBytesAsync(path);
                 } else {
@@ -307,7 +308,10 @@ namespace honooru.Services {
             } else if (fileType == "video") {
                 IqdbEntry? ret = null;
 
+                Stopwatch timer = Stopwatch.StartNew();
                 IMediaAnalysis videoInfo = FFProbe.Analyse(path);
+                long analyzeMs = timer.ElapsedMilliseconds; timer.Restart();
+                _Logger.LogDebug($"finished analyzing video [timer={analyzeMs}ms] [path={path}]");
 
                 if (videoInfo.Duration < TimeSpan.FromSeconds(1)) {
                     _Logger.LogDebug($"generating iqdb frame for video [path={path}]");
@@ -336,6 +340,7 @@ namespace honooru.Services {
                     int i = 0;
                     for (TimeSpan frame = TimeSpan.FromSeconds(1); frame < videoInfo.Duration; frame *= 2) {
                         _Logger.LogDebug($"generating iqdb frame for video [i={i}] [frame={frame}] [path={path}]");
+                        long frameMs = timer.ElapsedMilliseconds; timer.Restart();
 
                         string output = Path.Combine(_StorageOptions.Value.RootDirectory, "temp", md5 + $"-frame-{i}.png");
 
@@ -354,6 +359,9 @@ namespace honooru.Services {
                         await mImage.WriteAsync(jpgStream);
                         byte[] bytes = jpgStream.ToArray();
                         ret = await Insert(bytes, md5 + $"-frame-{i}", md5);
+                        long convertMs = timer.ElapsedMilliseconds; timer.Restart();
+
+                        _Logger.LogDebug($"generated frame data [frameMs={frameMs}ms] [convertMs={convertMs}]");
 
                         ++i;
 

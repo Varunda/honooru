@@ -159,7 +159,8 @@ namespace honooru.Controllers.Api {
 
             SearchQuery query = new(searchAst);
             query.Offset = offset;
-            query.Limit = limit;
+            query.Limit = limit * 10; // get 10 pages
+            _Logger.LogDebug($"query parsed [offset={offset}] [limit={limit}]");
 
             // with the parsed AST, perform the search, passing the current user to include user settings
             timer.Start();
@@ -167,7 +168,8 @@ namespace honooru.Controllers.Api {
             long dbMs = timer.ElapsedMilliseconds; timer.Restart();
 
             SearchResults results = new(query);
-            results.Results = posts;
+            results.Results = posts[..(int)limit]; // this is probably fine ????
+            results.PageCount = posts.Count / (int)limit;
 
             // if the request wants the tags as well, get those here
             if (includeTags == true) {

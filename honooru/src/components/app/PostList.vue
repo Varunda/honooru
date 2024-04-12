@@ -9,16 +9,9 @@
 
         <div v-else-if="posts.state == 'loaded'">
             <div style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); display: grid; gap: 0.5rem;">
-                <div v-for="post in posts.data.results" class="overflow-hidden" style="max-width: 180px;" :class="containerClasses(post)">
-                    <span v-if="post.durationSeconds > 0" class="position-absolute font-monospace bg-dark ms-2" style="font-size: 0.8rem;">
-                        {{post.durationSeconds | mduration}}
-                    </span>
 
-                    <a :href="'/post/' + post.id + '?q=' + q">
-                        <img :src="'/media/180x180/' + post.md5 + '.png'" style="width: 180px; height: 180px;"
-                             :class="imageClasses(post)" />
-                    </a>
-                </div>
+                <post-thumbnail v-for="post in posts.data.results" :key="post.id" :post="post" :query="q">
+                </post-thumbnail>
             </div>
 
             <div v-if="posts.data.results.length == 0">
@@ -80,6 +73,7 @@
     import { Loading, Loadable } from "Loading";
 
     import ApiError from "components/ApiError";
+    import PostThumbnail from "components/app/PostThumbnail.vue";
 
     import { Post, SearchResults, PostApi } from "api/PostApi";
     import { UserSetting } from "api/UserSettingApi";
@@ -91,7 +85,8 @@
     export const PostList = Vue.extend({
         props: {
             q: { type: String, required: true },
-            limit: { type: Number, required: false, default: 100 }
+            limit: { type: Number, required: false, default: 100 },
+            offset: { type: Number, required: false, default: 0 }
         },
 
         data: function() {
@@ -106,33 +101,11 @@
 
         methods: {
             search: async function(): Promise<void> {
-                console.log(`searching [query=${this.q}]`);
+                console.log(`searching [limit=${this.limit}] [offset=${this.offset}] [query=${this.q}]`);
                 this.posts = Loadable.loading();
-                this.posts = await PostApi.search(this.q, this.limit);
+                this.posts = await PostApi.search(this.q, this.limit, this.offset);
                 this.$emit("search-done", this.posts);
             },
-
-            containerClasses: function(p: Post): string {
-                if (p.rating == 2 && this.blurUnsafe) {
-                    return "border border-warning rounded";
-                }
-
-                if (p.rating == 3 && this.blurExplicit) {
-                    return "border border-danger rounded";
-                }
-
-                return "";
-            },
-
-            imageClasses: function(p: Post) {
-                if ((p.rating == 2 && this.blurUnsafe)
-                    || (p.rating == 3 && this.blurExplicit)) {
-
-                    return "blurred-image";
-                }
-
-                return "";
-            }
         },
 
         watch: {
@@ -157,10 +130,12 @@
             hideExplicit: function(): boolean {
                 return AccountUtil.getSetting("postings.explicit.behavior")?.value == "hidden";
             },
+
+
         },
 
         components: {
-            ApiError
+            ApiError, PostThumbnail
         }
 
     });

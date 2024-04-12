@@ -33,7 +33,7 @@ namespace honooru.Services.Repositories {
             _UserSettingRepository = userSettingRepository;
         }
 
-        public async Task<NpgsqlCommand> Compile(Ast ast, AppAccount user) {
+        public async Task<NpgsqlCommand> Compile(SearchQuery ast, AppAccount user) {
             List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
 
             NpgsqlCommand sqlCmd = new();
@@ -49,7 +49,7 @@ namespace honooru.Services.Repositories {
 
             QuerySetup query = new();
 
-            cmd += await _Compile(ast.Root, query);
+            cmd += await _Compile(ast.QueryAst.Root, query);
 
             // if a query did not explicitly say what ratings to include, use the users settings to determine it
             if (query.SetRating == false) {
@@ -73,7 +73,9 @@ namespace honooru.Services.Repositories {
                 cmd += " AND p.status = 1\n";
             }
 
-            cmd += $"ORDER BY {(query.OrderBy ?? "id desc")}";
+            cmd += $" ORDER BY {(query.OrderBy ?? "id desc")}\n";
+            cmd += $" OFFSET {ast.Offset}\n";
+            cmd += $" LIMIT {ast.Limit}\n";
             sqlCmd.CommandText = cmd;
 
             foreach (object? param in query.Parameters) {
@@ -181,10 +183,23 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.status = " + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add((short)status);
-                } else if (field.Token.Value == "md5") {
+                } else if (field.Token.Value == "md5") { // select by md5
                     cmd = $" p.md5 " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(value.Token.Value);
+                } else if (field.Token.Value == "parent") { // select posts with this post ID as a parent
+                    if (ulong.TryParse(value.Token.Value, out ulong postID) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
 
+                    cmd = $" p.id IN (SELECT distinct(child_post_id) FROM post_child WHERE parent_post_id = ${query.Parameters.Count + 1})\n";
+                    query.Parameters.Add(postID);
+                } else if (field.Token.Value == "child") { // select posts with this post ID as a child
+                    if (ulong.TryParse(value.Token.Value, out ulong postID) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.id IN (SELECT distinct(parent_post_id) FROM post_child WHERE child_post_id = ${query.Parameters.Count + 1})\n";
+                    query.Parameters.Add(postID);
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {
@@ -215,8 +230,6 @@ namespace honooru.Services.Repositories {
         }
 
         private class QuerySetup {
-
-            //public string Cmd { get; set; } = "";
 
             public List<object?> Parameters { get; set; } = new();
 

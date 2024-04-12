@@ -18,6 +18,8 @@ namespace honooru.Models.Api {
 
         public List<Post> Results { get; set; } = new();
 
+        public int PageCount { get; set; }
+
         public List<ExtendedTag> Tags { get; set; } = new();
 
     }

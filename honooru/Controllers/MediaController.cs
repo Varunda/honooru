@@ -48,7 +48,7 @@ namespace honooru.Controllers {
 
             string[] extParts = md5.Split(".");
             if (extParts.Length != 2) {
-                return BadRequest($"needed 2 '.'s from {md5}");
+                return BadRequest($"failed to split {md5} into a file name and extention (got {extParts.Length} instead of 2)");
             }
             string fileExt = extParts[1];
 

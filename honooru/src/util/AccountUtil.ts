@@ -11,6 +11,8 @@ export class AppCurrentAccount {
 
 export default class AccountUtil {
 
+    private static _settings: Map<string, UserSetting> | null = null;
+
     public static get(): AppCurrentAccount {
         return (window as any).appCurrentAccount;
     }
@@ -20,7 +22,14 @@ export default class AccountUtil {
     }
 
     public static getSetting(name: string): UserSetting | undefined {
-        return AccountUtil.get().settings.find(iter => iter.name == name);
+        if (AccountUtil._settings == null) {
+            AccountUtil._settings = new Map();
+            for (const setting of AccountUtil.get().settings) {
+                AccountUtil._settings.set(setting.name, setting);
+            }
+        }
+
+        return AccountUtil._settings.get(name);
     }
 
     public static hasPermission(name: string): boolean {

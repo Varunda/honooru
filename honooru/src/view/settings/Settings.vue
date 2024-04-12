@@ -104,6 +104,22 @@
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        post list count
+                    </h5>
+
+                    <h6 class="card-subtitle mb-2 text-muted">
+                        how many posts will be returned when searching
+                    </h6>
+
+                    <div class="form-group">
+                        <input v-model.number="settings.postCount" class="form-control" />
+                    </div>
+                </div>
+            </div>
+
             <hr class="border" />
 
             <button class="btn btn-success" @click="save" :disabled="saving.state == 'loading'">
@@ -138,6 +154,8 @@
                 settings: {
                     explicitBehavior: "" as string,
                     unsafeBehavior: "" as string,
+
+                    postCount: 0 as number
                 }
             }
         },
@@ -165,6 +183,7 @@
 
                 this.settings.explicitBehavior = map.get("postings.explicit.behavior")?.value ?? "shown";
                 this.settings.unsafeBehavior = map.get("postings.unsafe.behavior")?.value ?? "shown";
+                this.settings.postCount = Number.parseInt(map.get("postings.count")?.value ?? "10");
             },
 
             save: async function(): Promise<void> {
@@ -188,6 +207,10 @@
 
                 if (map.get("postings.unsafe.behavior")?.value != this.settings.unsafeBehavior) {
                     await UserSettingApi.update("postings.unsafe.behavior", this.settings.unsafeBehavior);
+                }
+
+                if (Number.parseInt(map.get("postings.count")?.value ?? "10") != this.settings.postCount) {
+                    await UserSettingApi.update("postings.count", this.settings.unsafeBehavior);
                 }
 
                 this.saving = Loadable.loaded(undefined);

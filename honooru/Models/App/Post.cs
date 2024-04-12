@@ -100,7 +100,7 @@ namespace honooru.Models.Db {
 
         OK = 1,
 
-        DELETED = 2
+        DELETED = 2,
 
     }
 

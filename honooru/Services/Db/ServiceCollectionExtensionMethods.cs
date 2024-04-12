@@ -20,6 +20,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<TagInfoDb>();
             services.AddSingleton<TagAliasDb>();
             services.AddSingleton<TagImplicationDb>();
+            services.AddSingleton<PostChildDb>();
         }
 
     }

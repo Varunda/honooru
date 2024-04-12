@@ -25,6 +25,7 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<MediaAssetRepository>();
             services.AddSingleton<TagAliasRepository>();
             services.AddSingleton<TagImplicationRepository>();
+            services.AddSingleton<PostChildRepository>();
         }
 
     }

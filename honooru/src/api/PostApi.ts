@@ -16,6 +16,7 @@ export class SearchResults {
     public parsedAst: string = "";
     public results: Post[] = [];
     public tags: ExtendedTag[] = [];
+    public pageCount: number = 0;
 }
 
 export class Post {
@@ -65,6 +66,7 @@ export class PostApi extends ApiWrapper<Post> {
         return {
             parsedAst: elem.parsedAst,
             query: PostApi.parseSearchResultsQuery(elem.query),
+            pageCount: elem.pageCount,
             timings: elem.timings,
             results: elem.results.map((iter: any) => PostApi.parse(iter)),
             tags: elem.tags.map((iter: any) => TagApi.parseExtendedTag(iter))
@@ -83,8 +85,8 @@ export class PostApi extends ApiWrapper<Post> {
         return PostApi.get().readSingle(`/api/post/${postID}`, PostApi.parse);
     }
 
-    public static async search(q: string, limit: number = 100): Promise<Loading<SearchResults>> {
-        return PostApi.get().readSingle(`/api/post/search?q=${encodeURI(q)}&limit=${limit}`, PostApi.parseSearchResults);
+    public static async search(q: string, limit: number = 100, offset: number = 0): Promise<Loading<SearchResults>> {
+        return PostApi.get().readSingle(`/api/post/search?q=${encodeURI(q)}&limit=${limit}&offset=${offset}`, PostApi.parseSearchResults);
     }
 
     public static async upload(mediaAssetID: string, tags: string, rating: string,

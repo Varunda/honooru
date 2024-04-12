@@ -32,7 +32,31 @@
                 </div>
 
                 <div>
-                    <post-list :q="search" @search-done="searchDone"></post-list>
+                    <post-list :q="search" :limit="limit" :offset="offset" @search-done="searchDone"></post-list>
+
+                    <div>
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item">
+                                    <a class="page-link bi-chevron-double-left" :href="links.first"></a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link bi-chevron-left" :href="links.previous"></a>
+                                </li>
+
+                                <li v-for="p in (currentPage + pageCount)" class="page-item">
+                                    <a class="page-link" :class="{ 'active': currentPage == p }" :href="'/posts?q=' + query + '&offset=' + ((p - 1) * limit)">{{p + currentPage - 1}}</a>
+                                </li>
+
+                                <li class="page-item">
+                                    <a class="page-link bi-chevron-right" :href="links.next"></a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link bi-chevron-double-right" :href="links.last"></a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,6 +66,7 @@
 <script lang="ts">
     import Vue from "vue";
     import { Loading, Loadable } from "Loading";
+    import AccountUtil from "util/AccountUtil";
 
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
@@ -51,6 +76,7 @@
 
     import { SearchResults } from "api/PostApi";
     import { ExtendedTag } from "api/TagApi";
+    import { UserSetting } from "api/UserSettingApi";
 
     export const Posts = Vue.extend({
         props: {
@@ -61,6 +87,8 @@
             return {
                 query: "" as string,
                 search: "" as string,
+                limit: 10 as number,
+                offset: 0 as number,
 
                 usedTags: new Set as Set<string>,
 
@@ -76,6 +104,24 @@
                 this.query = "";
             }
 
+            const setting: UserSetting | undefined = AccountUtil.getSetting("postings.count");
+            if (setting != null) {
+                this.limit = Number.parseInt(setting.value);
+                if (Number.isNaN(this.limit)) {
+                    console.warn(`failed to parse limit value of ${setting.value} to a valid int, defaulting to 10`);
+                    this.limit = 10;
+                } else {
+                    console.log(`setting limit to ${this.limit}`);
+                }
+            }
+
+            if (params.has("offset")) {
+                this.offset = Number.parseInt(params.get("offset")!);
+                if (Number.isNaN(this.offset)) {
+                    console.warn(`failed to parse offset value of ${params.get("offset")} to a valid int, defaulting to 0`);
+                }
+            }
+
             this.usedTags = new Set(this.query.trim().toLowerCase().split(" "));
 
             this.search = this.query;
@@ -83,9 +129,19 @@
 
         methods: {
             performSearch: function(query: string): void {
-                console.log(`performing search [query=${query}]`);
+                let limit = 10;
+                const setting: UserSetting | undefined = AccountUtil.getSetting("postings.count");
+                if (setting != null) {
+                    limit = Number.parseInt(setting.value);
+                    if (Number.isNaN(limit)) {
+                        limit = 10;
+                    }
+                }
+
+                console.log(`performing search [limit=${limit}] [query=${query}]`);
                 const params: URLSearchParams = new URLSearchParams();
                 params.set("q", query);
+                params.set("limit", limit.toString());
                 location.href = `/posts?${params.toString()}`;
             },
 
@@ -99,8 +155,13 @@
             },
 
             removeTag: function(tag: string): void {
-                this.query = this.query.replace(tag, " ");
-                this.query += " -" + tag;
+                // if the tag is in the query, remove it
+                if (this.query.indexOf(tag) > -1) {
+                    this.query = this.query.replace(tag, " ");
+                } else { // otherwise add it to the ignore tag
+                    this.query += " -" + tag;
+                }
+
                 this.performSearch(this.query);
             }
         },
@@ -124,6 +185,32 @@
 
             linkTags: function(): string {
                 return encodeURI(Array.from(this.usedTags).join(" "));
+            },
+
+            currentPage: function(): number {
+                console.log(`${this.offset} ${this.limit} ${this.offset / this.limit}`);
+                return Math.max(1, Math.floor(this.offset / this.limit));
+            },
+
+            pageCount: function(): number {
+                if (this.posts.state != "loaded") {
+                    return 0;
+                }
+
+                return this.posts.data.pageCount;
+            },
+
+            links: function() {
+                const query: string = this.query;
+                const currentPage: number = this.currentPage;
+                const limit: number = this.limit;
+
+                return {
+                    first: `/posts?q=${query}`,
+                    previous: `/posts?q=${query}&offset=${Math.max(0, currentPage - 1) * limit}`,
+                    next: `/posts?q=${query}&offset=${(currentPage + 1) * limit}`,
+                    last: ""
+                }
             }
         },
 

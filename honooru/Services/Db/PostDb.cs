@@ -63,9 +63,8 @@ namespace honooru.Services.Db {
         public async Task<List<Post>> Search(SearchQuery query, AppAccount user) {
             using NpgsqlConnection conn = _DbHelper.Connection();
 
-            NpgsqlCommand cmd = await _SearchQueryRepository.Compile(query.QueryAst, user);
+            NpgsqlCommand cmd = await _SearchQueryRepository.Compile(query, user);
             cmd.Connection = conn;
-            cmd.CommandText += $" LIMIT {query.Limit} OFFSET {query.Offset} ";
             await cmd.Connection.OpenAsync();
 
             _Logger.LogDebug(cmd.Print());
