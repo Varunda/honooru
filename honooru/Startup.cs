@@ -127,6 +127,7 @@ namespace honooru {
                 options.CallbackPath = "/auth/callback"; // configured callback
 
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 options.SaveTokens = true;
 
                 // map the returned JSON from Discord to auth claims
