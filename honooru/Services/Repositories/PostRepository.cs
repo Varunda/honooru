@@ -73,7 +73,7 @@ namespace honooru.Services.Repositories {
                 return;
             }
 
-            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension));
+            _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.FileLocation));
 
             List<PostTag> tags = await _PostTagRepository.GetByPostID(postID);
             _Logger.LogDebug($"deleting tags from post (due to erase) [postID={postID}] [tags.Count={tags.Count}]");

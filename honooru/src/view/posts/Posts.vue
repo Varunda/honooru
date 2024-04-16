@@ -32,31 +32,9 @@
                 </div>
 
                 <div>
-                    <post-list :q="search" :limit="limit" :offset="offset" @search-done="searchDone"></post-list>
+                    <post-list :q="search" :limit="limit" :offset="offset" @search-done="searchDone" class="mb-3"></post-list>
 
-                    <div>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item">
-                                    <a class="page-link bi-chevron-double-left" :href="links.first"></a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link bi-chevron-left" :href="links.previous"></a>
-                                </li>
-
-                                <li v-for="p in (currentPage + pageCount)" class="page-item">
-                                    <a class="page-link" :class="{ 'active': currentPage == p }" :href="'/posts?q=' + query + '&offset=' + ((p - 1) * limit)">{{p + currentPage - 1}}</a>
-                                </li>
-
-                                <li class="page-item">
-                                    <a class="page-link bi-chevron-right" :href="links.next"></a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link bi-chevron-double-right" :href="links.last"></a>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
+                    <posts-page :query="query" :offset="offset" :limit="limit" :page-count="pageCount"></posts-page>
                 </div>
             </div>
         </div>
@@ -73,6 +51,8 @@
     import ApiError from "components/ApiError";
     import PostSearch from "components/app/PostSearch.vue";
     import PostList from "components/app/PostList.vue";
+
+    import PostsPage from "./components/PostsPage.vue";
 
     import { SearchResults } from "api/PostApi";
     import { ExtendedTag } from "api/TagApi";
@@ -97,6 +77,8 @@
         },
 
         beforeMount: function(): void {
+            document.title = "Honooru / Posts";
+
             const params: URLSearchParams = new URLSearchParams(location.search);
             if (params.has("q")) {
                 this.query = params.get("q")!;
@@ -188,8 +170,7 @@
             },
 
             currentPage: function(): number {
-                console.log(`${this.offset} ${this.limit} ${this.offset / this.limit}`);
-                return Math.max(1, Math.floor(this.offset / this.limit));
+                return Math.floor(this.offset / this.limit);
             },
 
             pageCount: function(): number {
@@ -198,19 +179,6 @@
                 }
 
                 return this.posts.data.pageCount;
-            },
-
-            links: function() {
-                const query: string = this.query;
-                const currentPage: number = this.currentPage;
-                const limit: number = this.limit;
-
-                return {
-                    first: `/posts?q=${query}`,
-                    previous: `/posts?q=${query}&offset=${Math.max(0, currentPage - 1) * limit}`,
-                    next: `/posts?q=${query}&offset=${(currentPage + 1) * limit}`,
-                    last: ""
-                }
             }
         },
 
@@ -218,7 +186,8 @@
             InfoHover, ApiError,
             AppMenu,
             PostList,
-            PostSearch
+            PostSearch,
+            PostsPage
         }
     });
     export default Posts;

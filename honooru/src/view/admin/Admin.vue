@@ -4,10 +4,10 @@
         <app-menu></app-menu>
 
         <div>
-            <div class="border" style="max-width: 300px">
+            <div class="border" style="max-width: 400px">
                 <h2 class="bg-secondary p-2 mb-2">dev jobs</h2>
 
-                <div class="d-grid p-2 align-items-center" style="grid-template-columns: 1fr min-content; gap: 0.5rem">
+                <div class="d-grid p-2 align-items-center" style="grid-template-columns: 1fr max-content; gap: 0.5rem">
                     <div>
                         remake all post thumbnails
                     </div>
@@ -20,7 +20,29 @@
                         remake all IQDB entries
                     </div>
 
-                    <button class="btn btn-primary btn-sm py-0" @click="remakeAllIqdbEntries">
+                    <div>
+                        <button class="btn btn-primary btn-sm py-0 d-block" @click="remakeAllIqdbEntries(true)">
+                            run
+                        </button>
+
+                        <button class="btn btn-primary btn-sm py-0 d-block" @click="remakeAllIqdbEntries(false)">
+                            run skip
+                        </button>
+                    </div>
+
+                    <div>
+                        recount all tags
+                    </div>
+
+                    <button class="btn btn-primary btn-sm py-0" @click="recountTags">
+                        run
+                    </button>
+
+                    <div>
+                        update all file types
+                    </div>
+
+                    <button class="btn btn-primary btn-sm py-0" @click="updateFileType">
                         run
                     </button>
                 </div>
@@ -53,6 +75,10 @@
             }
         },
 
+        created: function(): void {
+            document.title = "Honooru / Admin";
+        },
+
         methods: {
             remakeAllThumbnails: async function(): Promise<void> {
                 const l: Loading<void> = await AdminApi.remakeAllThumbnails();
@@ -63,14 +89,32 @@
                 }
             },
 
-            remakeAllIqdbEntries: async function(): Promise<void> {
-                const l: Loading<void> = await AdminApi.remakeAllIqdbEntries();
+            remakeAllIqdbEntries: async function(force: boolean): Promise<void> {
+                const l: Loading<void> = await AdminApi.remakeAllIqdbEntries(force);
                 if (l.state == "loaded") {
                     Toaster.add("success", "submitted all posts for IQDB re-hash", "success");
                 } else if (l.state == "error") {
                     Toaster.add("error", `failed to submit IQDB re-hash:<br/><code>${l.problem.title}</code>`, "danger");
                 }
-            }
+            },
+
+            recountTags: async function(): Promise<void> {
+                const l: Loading<void> = await AdminApi.recountTags();
+                if (l.state == "loaded") {
+                    Toaster.add("success", "submitted all tags for recount", "success");
+                } else if (l.state == "error") {
+                    Toaster.add("error", `failed to submit tag recount:<br/><code>${l.problem.title}</code>`, "danger");
+                }
+            },
+
+            updateFileType: async function(): Promise<void> {
+                const l: Loading<void> = await AdminApi.updateFileType();
+                if (l.state == "loaded") {
+                    Toaster.add("success", "updating all file types", "success");
+                } else if (l.state == "error") {
+                    Toaster.add("error", `failed to update file types:<br/><code>${l.problem.title}</code>`, "danger");
+                }
+            },
         },
 
         components: {

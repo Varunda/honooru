@@ -41,6 +41,7 @@ namespace honooru.Services.Db.Readers {
             post.FileExtension = reader.GetString("file_extension");
             post.IqdbHash = reader.GetString("iqdb_hash");
             post.FileSizeBytes = reader.GetInt64("file_size_bytes");
+            post.FileType = reader.GetString("file_type");
             post.DurationSeconds = reader.GetInt64("duration_seconds");
             post.Width = reader.GetInt64("width");
             post.Height = reader.GetInt64("height");

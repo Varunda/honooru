@@ -5,6 +5,7 @@ using honooru.Models.App;
 using honooru.Models.App.MediaUploadStep;
 using honooru.Models.Db;
 using honooru.Services.Repositories;
+using honooru.Services.Util;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,13 +29,15 @@ namespace honooru.Services.UploadStepHandler {
         private readonly MediaAssetRepository _MediaAssetRepository;
         private readonly UploadStepProgressRepository _UploadProgressRepository;
         private readonly PostRepository _PostRepository;
+        private readonly FileExtensionService _FileExtensionUtil;
 
         //private Dictionary<Guid, UploadStepEntry> _Progress = new();
 
         public UploadStepsProcessor(ILogger<UploadStepsProcessor> logger,
             IServiceProvider services, MediaAssetRepository mediaAssetRepository,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> uploadHub,
-            UploadStepProgressRepository uploadProgressRepository, PostRepository postRepository) {
+            UploadStepProgressRepository uploadProgressRepository, PostRepository postRepository,
+            FileExtensionService fileExtensionUtil) {
 
             _Logger = logger;
 
@@ -43,6 +46,7 @@ namespace honooru.Services.UploadStepHandler {
             _UploadHub = uploadHub;
             _UploadProgressRepository = uploadProgressRepository;
             _PostRepository = postRepository;
+            _FileExtensionUtil = fileExtensionUtil;
         }
 
         public async Task Run(UploadSteps steps, CancellationToken cancel) {
@@ -128,6 +132,7 @@ namespace honooru.Services.UploadStepHandler {
 
                 MediaAsset asset = steps.Asset;
 
+                asset.FileType = _FileExtensionUtil.GetFileType(asset.FileExtension) ?? "";
                 asset.Status = MediaAssetStatus.DONE;
                 await _MediaAssetRepository.Upsert(asset);
                 await group.Finish(asset);

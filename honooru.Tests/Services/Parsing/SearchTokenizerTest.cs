@@ -42,6 +42,24 @@ namespace honooru.Tests.Services.Parsing {
             _c(tokens, expected.ToArray());
         }
 
+        [DataTestMethod]
+        [DataRow("ns-44 -hi")]
+        [DataRow(" ns-44 - hi")]
+        public void SearchTokenizerTest_TestDashInWord(string input) {
+            List<Token> tokens = _t(input);
+
+            Assert.AreEqual(4, tokens.Count); // include the END token
+
+            List<Token> expected = new() {
+                new Token(TokenType.WORD, "ns-44"),
+                new Token(TokenType.NOT, ""),
+                new Token(TokenType.WORD, "hi"),
+                new Token(TokenType.END, "")
+            };
+
+            _c(tokens, expected.ToArray());
+        }
+
         /// <summary>
         ///     test that the OR operator is parsed correctly and ignores whitespace as needed
         /// </summary>

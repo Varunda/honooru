@@ -9,6 +9,7 @@ using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.Health;
 using honooru.Services.Queues;
+using honooru.Models.Queues;
 
 namespace honooru.Controllers.Api {
 
@@ -20,14 +21,16 @@ namespace honooru.Controllers.Api {
         private readonly IMemoryCache _Cache;
 
         private readonly DiscordMessageQueue _DiscordQueue;
+        private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailQueue;
 
         public HealthApiController(ILogger<HealthApiController> logger, IMemoryCache cache,
-            DiscordMessageQueue discordQueue) {
+            DiscordMessageQueue discordQueue, BaseQueue<ThumbnailCreationQueueEntry> thumbnailQueue) {
 
             _Logger = logger;
             _Cache = cache;
 
             _DiscordQueue = discordQueue;
+            _ThumbnailQueue = thumbnailQueue;
         }
 
         /// <summary>
@@ -47,9 +50,10 @@ namespace honooru.Controllers.Api {
                 health.Timestamp = DateTime.UtcNow;
 
                 ServiceQueueCount discord = _MakeCount("discord_message_queue", _DiscordQueue);
+                ServiceQueueCount thumbnail = _MakeCount("thumbnail_creation", _ThumbnailQueue);
 
                 health.Queues = new List<ServiceQueueCount>() {
-                    discord
+                    discord, thumbnail
                 };
 
                 _Cache.Set("App.Health", health, new MemoryCacheEntryOptions() {

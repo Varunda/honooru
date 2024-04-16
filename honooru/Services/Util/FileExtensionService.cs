@@ -35,6 +35,7 @@ namespace honooru.Services.Util {
             { "png", "image" },
             { "gif", "image" },
             { "bmp", "image" },
+            { "webp", "image" },
 
             // video
             { "mp4", "video" },
@@ -71,9 +72,14 @@ namespace honooru.Services.Util {
                 return null;
             }
 
-            _Logger.LogDebug($"getting file type [extension={extension}]");
+            //_Logger.LogDebug($"getting file type [extension={extension}]");
 
-            return _FileTypeMappings.GetValueOrDefault(extension);
+            string? ft = _FileTypeMappings.GetValueOrDefault(extension);
+            if (ft == null) {
+                _Logger.LogWarning($"missing filetype mapping! [extension={extension}]");
+            }
+
+            return ft;
         }
 
         public string GetContentType(string extension) {

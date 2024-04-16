@@ -300,6 +300,14 @@ namespace honooru.Services {
                     using MagickImage mImage = new(path);
                     mImage.Strip();
                     mImage.Format = MagickFormat.Jpg;
+                    if (mImage.Height > 65500 || mImage.Width > 66500) { // max size that image magick can handle
+                        // don't change the aspect ratio of the image, so if the height is larger, set width to 0
+                        if (mImage.Height > mImage.Width) {
+                            mImage.Resize(0, 65500);
+                        } else {
+                            mImage.Resize(65500, 0);
+                        }
+                    }
                     await mImage.WriteAsync(jpgStream);
                     bytes = jpgStream.ToArray();
                 }
@@ -308,10 +316,15 @@ namespace honooru.Services {
             } else if (fileType == "video") {
                 IqdbEntry? ret = null;
 
+                if (Path.Exists(path) == false) {
+                    _Logger.LogError($"missing asset to upload! [path={path}]");
+                    return null;
+                }
+
                 Stopwatch timer = Stopwatch.StartNew();
                 IMediaAnalysis videoInfo = FFProbe.Analyse(path);
                 long analyzeMs = timer.ElapsedMilliseconds; timer.Restart();
-                _Logger.LogDebug($"finished analyzing video [timer={analyzeMs}ms] [path={path}]");
+                _Logger.LogDebug($"finished analyzing video [analyze={analyzeMs}ms] [path={path}]");
 
                 if (videoInfo.Duration < TimeSpan.FromSeconds(1)) {
                     _Logger.LogDebug($"generating iqdb frame for video [path={path}]");
@@ -319,10 +332,8 @@ namespace honooru.Services {
                     string output = Path.Combine(_StorageOptions.Value.RootDirectory, "temp", md5 + ".png");
 
                     if (File.Exists(output) == false) {
-                        await FFMpeg.SnapshotAsync(path, output, new System.Drawing.Size() {
-                            Width = 180,
-                            Height = 0 // 0 means calculate it from the aspect ratio, which is what we want!
-                        });
+                        // do not resize, let the IQDB service handle the resizing for consistency
+                        await FFMpeg.SnapshotAsync(path, output, null);
                     }
 
                     // if it's not a jpg, convert it
@@ -340,15 +351,22 @@ namespace honooru.Services {
                     int i = 0;
                     for (TimeSpan frame = TimeSpan.FromSeconds(1); frame < videoInfo.Duration; frame *= 2) {
                         _Logger.LogDebug($"generating iqdb frame for video [i={i}] [frame={frame}] [path={path}]");
-                        long frameMs = timer.ElapsedMilliseconds; timer.Restart();
 
                         string output = Path.Combine(_StorageOptions.Value.RootDirectory, "temp", md5 + $"-frame-{i}.png");
 
+                        timer.Restart();
                         if (File.Exists(output) == false) {
-                            await FFMpeg.SnapshotAsync(path, output, new System.Drawing.Size() {
-                                Width = 180,
-                                Height = 0 // 0 means calculate it from the aspect ratio, which is what we want!
-                            }, frame);
+                            // do not resize, let the IQDB service handle the resizing for consistency
+                            await FFMpeg.SnapshotAsync(path, output, null, frame);
+                        } else {
+                            _Logger.LogDebug($"ouput frame already exists, not generating it [output={output}] [frame={frame}] [i={i}]");
+                        }
+                        long frameMs = timer.ElapsedMilliseconds; timer.Restart();
+
+                        if (File.Exists(output) == false) {
+                            _Logger.LogWarning($"missing frame screenshot, skipping! [output={output}] [i={i}] [frame={frame}]");
+                            ++i;
+                            continue;
                         }
 
                         // if it's not a jpg, convert it
@@ -358,10 +376,11 @@ namespace honooru.Services {
                         mImage.Format = MagickFormat.Jpg;
                         await mImage.WriteAsync(jpgStream);
                         byte[] bytes = jpgStream.ToArray();
-                        ret = await Insert(bytes, md5 + $"-frame-{i}", md5);
                         long convertMs = timer.ElapsedMilliseconds; timer.Restart();
+                        ret = await Insert(bytes, md5 + $"-frame-{i}", md5);
+                        long uploadMs = timer.ElapsedMilliseconds; timer.Restart();
 
-                        _Logger.LogDebug($"generated frame data [frameMs={frameMs}ms] [convertMs={convertMs}]");
+                        _Logger.LogDebug($"generated frame data [frame={frameMs}ms] [convert={convertMs}ms] [upload={uploadMs}ms]");
 
                         ++i;
 
@@ -392,7 +411,7 @@ namespace honooru.Services {
         private async Task<IqdbEntry?> Insert(byte[] bytes, string name, string md5) {
             string url = $"{_Options.Value.Host}/images/{name}/{md5}";
 
-            if (bytes.Length > 250 * 1024) {
+            if (bytes.Length > 1024 * 1024) { // warn on uploads larger than 1MB
                 _Logger.LogWarning($"uploading large file to IQDB [size={bytes.Length}]");
             }
 
@@ -444,6 +463,13 @@ namespace honooru.Services {
             return response.StatusCode == HttpStatusCode.OK;
         }
 
+        /// <summary>
+        ///     delete all <see cref="IqdbEntry"/>s from the service with a matching <see cref="IqdbEntry.MD5"/>
+        /// </summary>
+        /// <param name="md5">MD5 string to remove</param>
+        /// <returns>
+        ///     true if the operation was ran, false if not (such as the IQDB service not being available)
+        /// </returns>
         public async Task<bool> RemoveByMD5(string md5) {
             ServiceHealthEntry healthEntry = _GetServiceHealth();
             if (healthEntry.Enabled == false) {

@@ -41,10 +41,10 @@ FFMpegCore | ffmpeg wrapper for c# | https://github.com/rosenbjerg/FFMpegCore
 1. change `syncronous_commit` to `off` instead of the default `on`.
     - https://www.postgresql.org/docs/current/wal-async-commit.html
     - Find your `postgresql.conf`, then to reload call `SELECT pg_reload_conf();`
-1. install yt-dlp
+1. install yt-dlp to PATH
     - for Ubuntu: https://github.com/yt-dlp/yt-dlp/wiki/Installation#apt
     - for Windows, download and install, update your PATH to include it
-1. install ffmpeg and ffprobe
+1. install ffmpeg and ffprobe to PATH
     - for Ubuntu: use apt
     - for Windows: install and include in PATH
 1. compile the frontend code

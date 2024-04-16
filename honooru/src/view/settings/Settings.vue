@@ -210,7 +210,7 @@
                 }
 
                 if (Number.parseInt(map.get("postings.count")?.value ?? "10") != this.settings.postCount) {
-                    await UserSettingApi.update("postings.count", this.settings.unsafeBehavior);
+                    await UserSettingApi.update("postings.count", this.settings.postCount.toString());
                 }
 
                 this.saving = Loadable.loaded(undefined);

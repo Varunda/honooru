@@ -29,7 +29,7 @@ namespace honooru.Services.Hosted {
 
             _ServiceName = serviceName;
 
-            _Logger = factory.CreateLogger($"watchtower.Services.Hosted.BaseQueueProcessor<{typeof(T).Name}>");
+            _Logger = factory.CreateLogger($"honooru.Services.Hosted.BaseQueueProcessor<{typeof(T).Name}>");
 
             _Queue = queue;
             _ServiceHealthMonitor = serviceHealthMonitor;

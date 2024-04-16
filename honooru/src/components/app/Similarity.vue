@@ -59,6 +59,15 @@
                     <code>{{r.postID}}</code>
                 </div>
             </div>
+
+            <div class="text-muted">
+                hiding {{hiddenCount}} entries
+
+                <button class="btn btn-sm btn-secondary" @click="options.showAll = true">
+                    show all
+                </button>
+            </div>
+
         </div>
 
         <div v-else-if="similarity.state == 'error'">
@@ -76,6 +85,8 @@
     import Vue from "vue";
     import { Loadable, Loading } from "Loading";
 
+    import ApiError from "components/ApiError";
+
     import { IqdbSearchResult, PostApi } from "api/PostApi";
 
     import "filters/LocaleFilter";
@@ -92,6 +103,7 @@
                 similarity: Loadable.idle() as Loading<IqdbSearchResult[]>,
 
                 options: {
+                    showAll: false as boolean,
                     minScore: 50 as number
                 }
             }
@@ -115,13 +127,26 @@
                 }
 
                 return this.similarity.data.filter(iter => {
-                    return iter.score >= this.options.minScore
+                    return this.options.showAll == true
+                        || iter.score >= this.options.minScore
                         && (iter.post == null || iter.post.id != this.ExcludePostId)
                         && (iter.mediaAsset == null || iter.mediaAsset.guid != this.ExcludeMediaAssetId)
                         ;
                 });
+            },
+
+            hiddenCount: function(): number {
+                if (this.similarity.state != "loaded") {
+                    return -1;
+                }
+
+                return this.similarity.data.length - this.shownEntries.length;
             }
 
+        },
+
+        components: {
+            ApiError
         }
 
     });

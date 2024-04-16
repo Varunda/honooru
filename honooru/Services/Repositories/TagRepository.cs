@@ -1,6 +1,7 @@
 ﻿using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Services.Db;
+using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
@@ -28,10 +29,12 @@ namespace honooru.Services.Repositories {
         private readonly TagInfoRepository _TagInfoRepository;
         private readonly TagAliasRepository _TagAliasRepository;
         private readonly TagTypeRepository _TagTypeRepository;
+        private readonly TagValidationService _TagValidation;
 
         public TagRepository(ILogger<TagRepository> logger, IMemoryCache cache,
             TagDb tagDb, TagInfoRepository tagInfoRepository,
-            TagAliasRepository tagAliasRepository, TagTypeRepository tagTypeRepository) {
+            TagAliasRepository tagAliasRepository, TagTypeRepository tagTypeRepository,
+            TagValidationService tagValidation) {
 
             _Logger = logger;
             _Cache = cache;
@@ -40,6 +43,7 @@ namespace honooru.Services.Repositories {
             _TagInfoRepository = tagInfoRepository;
             _TagAliasRepository = tagAliasRepository;
             _TagTypeRepository = tagTypeRepository;
+            _TagValidation = tagValidation;
         }
 
         /// <summary>
@@ -259,47 +263,7 @@ namespace honooru.Services.Repositories {
         /// <param name="tagName"></param>
         /// <returns></returns>
         public TagNameValidationResult ValidateTagName(string tagName) {
-            tagName = tagName.ToLower();
-
-            TagNameValidationResult res = new();
-            res.Input = tagName;
-
-            if (string.IsNullOrWhiteSpace(tagName)) {
-                res.Valid = false;
-                res.Reason = "name cannot be empty or only whitespace";
-                return res;
-            }
-
-            for (int i = 0; i < tagName.Length; ++i) {
-                char c = tagName[i];
-
-                // don't allow empty paren tags such as name_()
-                if (c == '(' && (i + 1 < tagName.Length) && (tagName[i + 1] == ')')) {
-                    res.Valid = false;
-                    res.Reason = $"cannot have an empty string within a pair of parenthesis (at index {i})";
-                    return res;
-                }
-
-                // only valid characters in a tag
-                if (
-                    (c == '(' || c == ')')
-                    || (c >= 'a' && c <= 'z')
-                    || (c >= '0' && c <= '9')
-                    || c == '_'
-                    || c == '\''
-                    || c == '.'
-                    || c == '!'
-                    ) {
-                    continue;
-                }
-
-                res.Valid = false;
-                res.Reason = $"invalid character '{c}'";
-                return res;
-            }
-
-            res.Valid = true;
-            return res;
+            return _TagValidation.ValidateTagName(tagName);
         }
 
         /// <summary>

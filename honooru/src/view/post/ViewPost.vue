@@ -68,7 +68,7 @@
                     <label class="mb-0 d-block">source</label>
 
                     <div v-if="editing == false">
-                        <a v-if="edit.source != ''" :href="edit.source">{{edit.source}}</a>
+                        <a v-if="edit.source != ''" :href="edit.source" class="text-break">{{edit.source}}</a>
                         <span v-else class="text-muted">
                             &lt;missing&gt;
                         </span>
@@ -207,7 +207,7 @@
                 </div>
 
                 <div v-else-if="post.state == 'loaded'">
-                    <file-view :md5="post.data.md5" :file-extension="post.data.fileExtension"></file-view>
+                    <file-view :md5="post.data.md5" :file-type="post.data.fileType" :file-extension="post.data.fileExtension"></file-view>
 
                     <div class="h2 mt-2 pt-2">
                         <span v-if="post.data.title">
@@ -251,6 +251,16 @@
             </div>
 
             <div class="pl-2 ml-2 border-left overflow-y-auto">
+                <div v-if="post.state == 'loaded' && post.data.iqdbHash == ''">
+                    <span class="text-danger">
+                        this post is missing an IQDB hash!
+                    </span>
+
+                    <button class="btn btn-primary" @click="regenerateIqdbHash">
+                        regenerate IQDB
+                    </button>
+                </div>
+
                 <similarity v-if="post.state == 'loaded'" :hash="post.data.iqdbHash" :exclude-post-id="post.data.id"></similarity>
             </div>
 
@@ -282,7 +292,7 @@
     import "filters/MomentFilter";
     import "filters/LocaleFilter";
 
-    import { marked, MarkedExtension, Token, TokenizerAndRendererExtension } from "marked";
+    import { marked, MarkedExtension, Token } from "marked";
     import * as DOMPurify from "dompurify";
 
     class TagBlock {
@@ -454,6 +464,8 @@
         },
 
         created: function(): void {
+            document.title = "Honooru / Post";
+
             const params: URLSearchParams = new URLSearchParams(location.search);
             if (params.has("q")) {
                 this.query = params.get("q")!;
@@ -484,7 +496,6 @@
 
         methods: {
             getPostID: function(): void {
-
                 const parts: string[] = location.pathname.split("/");
                 if (parts.length < 3) {
                     console.error(`missing post ID`);
@@ -492,6 +503,12 @@
                 }
 
                 this.postID = Number.parseInt(parts[2]);
+
+                if (Number.isNaN(this.postID)) {
+                    console.error(`invalid post ID, turns into NaN! ${parts[2]}`);
+                }
+
+                document.title = `Honooru / Post #${this.postID}`;
             },
 
             loadAll: function(): void {
@@ -591,11 +608,23 @@
                 location.href = `/posts?${url.searchParams.toString()}`;
             },
 
+            regenerateIqdbHash: async function(): Promise<void> {
+                const l: Loading<void> = await PostApi.regenerateIqdb(this.postID);
+                if (l.state == "loaded") {
+                    Toaster.add(`IQDB updated`, `successfully regenerated IQDB hash for ${this.postID}`, "success");
+                    await this.loadAll();
+                } else {
+                    console.error(`unchecked state from regenerate iqdb hash: ${l.state}`);
+                }
+            },
+
             deletePost: async function(): Promise<void> {
                 const l: Loading<void> = await PostApi.remove(this.postID);
                 if (l.state == "loaded") {
                     Toaster.add("post deleted", `successfully deleted post ${this.postID}`, "success");
                     await this.loadAll();
+                } else {
+                    console.error(`unchecked state from delete: ${l.state}`);
                 }
             },
 
@@ -604,6 +633,8 @@
                 if (l.state == "loaded") {
                     Toaster.add("post restored", `successfully restored post ${this.postID}`, "success");
                     await this.loadAll();
+                } else {
+                    console.error(`unchecked state from restore: ${l.state}`);
                 }
             },
 
@@ -616,6 +647,8 @@
                 if (l.state == "loaded") {
                     Toaster.add("post erased", `successfully erased post ${this.postID}`, "success");
                     await this.loadAll();
+                } else {
+                    console.error(`unchecked state from erase: ${l.state}`);
                 }
             }
         },

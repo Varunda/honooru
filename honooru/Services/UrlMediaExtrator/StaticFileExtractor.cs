@@ -30,9 +30,9 @@ namespace honooru.Services.UrlMediaExtrator {
         public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
             _Logger.LogInformation($"performing static file extraction [url={url}]");
 
-            progress(0);
+            progress(0m);
             HttpResponseMessage response = await _HttpClient.GetAsync(url);
-            progress(1);
+            progress(100m);
 
             _Logger.LogDebug($"static file request [status={response.StatusCode}] [url={url}]");
 

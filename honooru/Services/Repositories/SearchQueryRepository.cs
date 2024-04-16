@@ -8,6 +8,7 @@ using honooru.Models.Db;
 using honooru.Models.Search;
 using honooru.Services.Db;
 using honooru.Services.Parsing;
+using honooru.Services.Util;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
@@ -23,14 +24,17 @@ namespace honooru.Services.Repositories {
 
         private readonly TagRepository _TagRepository;
         private readonly UserSettingRepository _UserSettingRepository;
+        private readonly FileExtensionService _ExtensionUtil;
 
         public SearchQueryRepository(ILogger<SearchQueryRepository> logger,
-            UserSettingRepository userSettingRepository, TagRepository tagRepository) {
+            UserSettingRepository userSettingRepository, TagRepository tagRepository,
+            FileExtensionService extensionUtil) {
 
             _Logger = logger;
 
             _TagRepository = tagRepository;
             _UserSettingRepository = userSettingRepository;
+            _ExtensionUtil = extensionUtil;
         }
 
         public async Task<NpgsqlCommand> Compile(SearchQuery ast, AppAccount user) {
@@ -200,6 +204,18 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.id IN (SELECT distinct(parent_post_id) FROM post_child WHERE child_post_id = ${query.Parameters.Count + 1})\n";
                     query.Parameters.Add(postID);
+                } else if (field.Token.Value == "type") {
+                    string type;
+                    if (value.Token.Value == "image") {
+                        type = "image";
+                    } else if (value.Token.Value == "video") {
+                        type = "video";
+                    } else {
+                        throw new Exception($"unchecked value '{field.Token.Value}'. valid values are: 'image', 'video'");
+                    }
+
+                    cmd = $" p.file_type = ${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(type);
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {
@@ -225,6 +241,13 @@ namespace honooru.Services.Repositories {
                 "id" => "id",
                 "id_desc" => "id DESC",
                 "size" => "file_size_bytes",
+                "size_desc" => "file_size_bytes DESC",
+                "duration" => "duration_seconds",
+                "duration_desc" => "duration_seconds DESC",
+                "width" => "width",
+                "width_desc" => "width DESC",
+                "height" => "height",
+                "height_desc" => "height DESC",
                 _ => throw new Exception($"invalid sort field: {node.Token.Value}")
             };
         }

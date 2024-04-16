@@ -214,7 +214,7 @@
                 </div>
 
                 <div class="overflow-y-auto">
-                    <file-view :md5="mediaAsset.md5" :file-extension="mediaAsset.fileExtension"></file-view>
+                    <file-view :md5="mediaAsset.md5" :file-type="mediaAsset.fileType" :file-extension="mediaAsset.fileExtension"></file-view>
                 </div>
 
                 <div class="overflow-y-auto pl-2 ml-2 border-left">
@@ -237,7 +237,7 @@
 <script lang="ts">
     import Vue from "vue";
     import * as sR from "signalR";
-
+    import Toaster from "Toaster";
     import { Loading, Loadable } from "Loading";
 
     import { AppMenu } from "components/AppMenu";
@@ -255,7 +255,6 @@
     import "filters/ByteFilter";
     import "filters/MomentFilter";
     import "filters/LocaleFilter";
-import Toaster from "../../Toaster";
 
     class UploadStepEntry {
         public current: UploadStepProgress | null = null;

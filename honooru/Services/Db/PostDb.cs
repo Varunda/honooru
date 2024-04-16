@@ -186,7 +186,9 @@ namespace honooru.Services.Db {
                     rating = @Rating,
                     source = @Source,
                     last_editor_user_id = @LastUserEditorID,
-                    last_edited = @LastEdited
+                    last_edited = @LastEdited,
+                    file_type = @FileType,
+                    iqdb_hash = @IqdbHash
                 WHERE
                     id = @ID;
             ");
@@ -198,6 +200,8 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Source", post.Source);
             cmd.AddParameter("LastUserEditorID", post.LastEditorUserID);
             cmd.AddParameter("LastEdited", post.LastEdited);
+            cmd.AddParameter("FileType", post.FileType);
+            cmd.AddParameter("IqdbHash", post.IqdbHash);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

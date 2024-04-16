@@ -1,5 +1,6 @@
 ﻿using honooru.Models.Db;
 using System;
+using System.IO;
 using System.Text.Json.Serialization;
 
 namespace honooru.Models.App {
@@ -38,6 +39,11 @@ namespace honooru.Models.App {
         public string FileExtension { get; set; } = "";
 
         /// <summary>
+        ///     type of the file. for example: image, video
+        /// </summary>
+        public string FileType { get; set; } = "";
+
+        /// <summary>
         ///     when this asset was uploaded
         /// </summary>
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
@@ -72,6 +78,12 @@ namespace honooru.Models.App {
         ///     hash of the <see cref="IqdbEntry"/> this media asset has. Is null until it is set
         /// </summary>
         public string? IqdbHash { get; set; } = null;
+
+        public string FileLocation {
+            get {
+                return Path.Combine(MD5[..2], MD5 + "." + FileExtension);
+            }
+        }
 
     }
 

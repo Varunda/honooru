@@ -52,7 +52,7 @@ namespace honooru.Controllers {
             }
             string fileExt = extParts[1];
 
-            string path = Path.Combine(_Options.Value.RootDirectory, size, md5);
+            string path = Path.Combine(_Options.Value.RootDirectory, size, md5[..2], md5);
 
             //_Logger.LogDebug($"loading media [file path={path}] [size={size}] [md5={md5}] [Path={string.Join(" ", parts)}]");
 

@@ -168,8 +168,9 @@ namespace honooru.Controllers.Api {
             long dbMs = timer.ElapsedMilliseconds; timer.Restart();
 
             SearchResults results = new(query);
-            results.Results = posts[..(int)limit]; // this is probably fine ????
-            results.PageCount = posts.Count / (int)limit;
+            results.Results = posts[..(int)Math.Min(limit, posts.Count)]; // this is probably fine ????
+            results.PageCount = (int)Math.Ceiling(posts.Count / (decimal)limit);
+            _Logger.LogDebug($"search done [limit={limit}] [posts.Count={posts.Count}] [PageCount={results.PageCount}]");
 
             // if the request wants the tags as well, get those here
             if (includeTags == true) {
@@ -333,13 +334,14 @@ namespace honooru.Controllers.Api {
             post.FileName = asset.FileName;
             post.FileExtension = asset.FileExtension;
             post.FileSizeBytes = asset.FileSizeBytes;
+            post.FileType = asset.FileType;
             post.Status = PostStatus.OK;
             post.IqdbHash = asset.IqdbHash;
 
             // parse additional tags and add metadata such as width//height and duration (if video)
             try {
                 string? fileType = _FileExtensionHelper.GetFileType(post.FileExtension);
-                string p = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.MD5 + "." + post.FileExtension);
+                string p = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.FileLocation);
 
                 string newTags = "";
 
@@ -659,6 +661,41 @@ namespace honooru.Controllers.Api {
             _ThumbnailCreationQueue.Queue(entry);
 
             return ApiOk();
+        }
+
+        /// <summary>
+        ///     
+        /// </summary>
+        /// <param name="postID"></param>
+        /// <returns></returns>
+        [HttpPost("{postID}/regenerate-iqdb")]
+        public async Task<ApiResponse<IqdbEntry>> RegenerateIqdbHash(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound<IqdbEntry>($"{nameof(Post)} {postID}");
+            }
+
+            ServiceHealthEntry health = await _IqdbClient.CheckHealth();
+            if (health.Enabled == false) {
+                return ApiInternalError<IqdbEntry>($"IQDB client cannot handle requests currently: {health.Message}");
+            }
+
+            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.FileLocation);
+            _Logger.LogDebug($"regenerated IQDB hash [postID={postID}] [path={path}]");
+
+            await _IqdbClient.RemoveByMD5(post.MD5);
+            IqdbEntry? entry = await _IqdbClient.Create(path, post.MD5, post.FileExtension);
+
+            if (entry == null) {
+                return ApiInternalError<IqdbEntry>($"failed to generate IQDB hash, please check console logs");
+            }
+
+            _Logger.LogInformation($"regenerated hash for media asset [postID={postID}] [hash={entry.Hash}]");
+
+            post.IqdbHash = entry.Hash;
+            await _PostRepository.Update(post.ID, post);
+
+            return ApiOk(entry);
         }
 
         /// <summary>

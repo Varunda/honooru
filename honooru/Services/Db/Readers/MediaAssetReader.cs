@@ -24,6 +24,7 @@ namespace honooru.Services.Db.Readers {
 
             asset.FileName = reader.GetString("file_name");
             asset.FileExtension = reader.GetString("file_extension");
+            asset.FileType = reader.GetString("file_type");
             asset.Timestamp = reader.GetDateTime("timestamp");
             asset.FileSizeBytes = reader.GetInt64("file_size_bytes");
             asset.Source = reader.GetString("source");

@@ -14,12 +14,18 @@ namespace honooru.Models.App {
         public string Value {
             get { return _Value; }
             set { 
-                if (Type == UserSettingType.BOOLEAN && bool.TryParse(value, out _) == false) {
-                    throw new FormatException($"could not convert {value} to a boolean");
-                } else if (Type == UserSettingType.INTEGER && int.TryParse(value, out _) == false) {
-                    throw new FormatException($"could not convert {value} to a boolean");
-                } else if (Type == UserSettingType.DECIMAL && decimal.TryParse(value, out _) == false) {
-                    throw new FormatException($"could not convert {value} to a decimal");
+                if (Type == UserSettingType.BOOLEAN) {
+                    if (bool.TryParse(value, out _) == false) {
+                        throw new FormatException($"could not convert {value} to a boolean");
+                    }
+                } else if (Type == UserSettingType.INTEGER) {
+                    if (int.TryParse(value, out _) == false) {
+                        throw new FormatException($"could not convert {value} to a boolean");
+                    }
+                } else if (Type == UserSettingType.DECIMAL) {
+                    if (decimal.TryParse(value, out _) == false) {
+                        throw new FormatException($"could not convert {value} to a decimal");
+                    }
                 } else if (Type == UserSettingType.STRING) {
                     // do nothing
                 } else {

@@ -9,12 +9,20 @@ export class AdminApi extends ApiWrapper<void> {
         return AdminApi.get().post(`/api/admin/remake-all-thumbnails`);
     }
 
-    public static remakeAllIqdbEntries(): Promise<Loading<void>> {
-        return AdminApi.get().post(`/api/admin/remake-all-iqdb-entries`);
+    public static remakeAllIqdbEntries(force: boolean = true): Promise<Loading<void>> {
+        return AdminApi.get().post(`/api/admin/remake-all-iqdb-entries?force=${force}`);
     }
 
     public static cacheEvict(key: string): Promise<Loading<void>> {
         return AdminApi.get().post(`/api/admin/cache-evict?key=${key}`);
+    }
+
+    public static recountTags(): Promise<Loading<void>> {
+        return AdminApi.get().post(`/api/admin/recount-tags`);
+    }
+
+    public static updateFileType(): Promise<Loading<void>> {
+        return AdminApi.get().post(`/api/admin/update-file-types`);
     }
 
 }

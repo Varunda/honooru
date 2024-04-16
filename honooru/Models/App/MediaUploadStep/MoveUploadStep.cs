@@ -27,7 +27,8 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
-                string output = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.MD5 + "." + order.Asset.FileExtension);
+                string output = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.FileLocation);
+                Directory.CreateDirectory(Path.GetDirectoryName(output) ?? "");
 
                 _Logger.LogInformation($"copying media asset [input={input}] [output={output}]");
 

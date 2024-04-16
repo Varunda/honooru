@@ -28,7 +28,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
         }
 
         protected override async Task<bool> _ProcessQueueEntry(ThumbnailCreationQueueEntry entry, CancellationToken cancel) {
-            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", entry.MD5 + "." + entry.FileExtension);
+            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", entry.MD5[..2], entry.MD5 + "." + entry.FileExtension);
             _Logger.LogInformation($"processing thumbnail creation [entry.MD5={entry.MD5}] [entry.FileExtension={entry.FileExtension}] [path={path}]");
 
             if (File.Exists(path) == false) {
@@ -37,7 +37,8 @@ namespace honooru.Services.Hosted.QueueProcessor {
             }
 
             string md5 = Path.GetFileNameWithoutExtension(path);
-            string thumbnailPath = Path.Combine(_StorageOptions.Value.RootDirectory, "180x180", md5 + ".png");
+            string thumbnailPath = Path.Combine(_StorageOptions.Value.RootDirectory, "180x180", md5[..2], md5 + ".png");
+            Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath) ?? "");
 
             // recreate the thumbnail only if needed
             _Logger.LogDebug($"checking if thumbnail exists [md5={md5}] [recreateIfNeeded={entry.RecreateIfNeeded}] [thumbnailPath={thumbnailPath}]");
@@ -61,6 +62,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
                 return false;
             }
 
+            Stopwatch timer = Stopwatch.StartNew();
             if (fileType == "image") {
                 await _ProcessImage(path, thumbnailPath, cancel);
             } else if (fileType == "video") {
@@ -69,7 +71,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
                 throw new System.Exception($"unhandled file type: '{fileType}'");
             }
 
-            _Logger.LogInformation($"successfully created thumbnail [path={path}] [thumbnailPath={thumbnailPath}]");
+            _Logger.LogInformation($"successfully created thumbnail [time={timer.ElapsedMilliseconds}ms] [path={path}] [thumbnailPath={thumbnailPath}]");
 
             return true;
         }

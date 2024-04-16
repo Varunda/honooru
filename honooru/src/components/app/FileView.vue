@@ -1,13 +1,17 @@
 ﻿<template>
     <div>
-        <div v-if="fileType == 'video'">
+        <div v-if="FileType == 'video'">
             <video id="video-playback" controls preload="auto" class="video-js" style="max-width: 1920px;">
                 <source :src="'/media/original/' + md5 + '.' + FileExtension" type="video/mp4" />
             </video>
         </div>
 
-        <div v-else-if="fileType == 'image'">
+        <div v-else-if="FileType == 'image'">
             <img :src="'/media/original/' + md5 + '.' + FileExtension" class="mw-100" />
+        </div>
+
+        <div v-else class="text-danger">
+            unchecked FileType: {{FileType}}
         </div>
     </div>
 </template>
@@ -20,6 +24,7 @@
     export const FileView = Vue.extend({
         props: {
             md5: { type: String, required: true },
+            FileType: { type: String, required: true },
             FileExtension: { type: String, required: true }
         },
 
@@ -31,7 +36,7 @@
 
         mounted: function(): void {
             this.$nextTick(() => {
-                if (this.fileType == "video") {
+                if (this.FileType == "video") {
                     this.makeVideo();
                 }
             });
@@ -59,21 +64,6 @@
         },
 
         computed: {
-
-            fileType: function(): string {
-                const f = this.FileExtension;
-                if (f == "webm" || f == "mkv" || f == "mp4" || f == "m4v") {
-                    return "video";
-                }
-
-                if (f == "png" || f == "jpg" || f == "jpeg" || f == "webp" || f == "gif") {
-                    return "image";
-                }
-
-                console.error(`unchecked file extension '${f}'', assuming an 'image' file type! this is likely wrong!`);
-
-                return "image";
-            }
 
         }
     });

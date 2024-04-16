@@ -22,6 +22,7 @@ namespace honooru.Services.Repositories {
         private static Dictionary<string, UserSettingType> _UserSettingNameTypeMapping = new() {
             { "postings.explicit.behavior", UserSettingType.STRING },
             { "postings.unsafe.behavior", UserSettingType.STRING },
+            { "postings.count", UserSettingType.INTEGER }
         };
 
         public UserSettingRepository(ILogger<UserSettingRepository> logger,

@@ -83,7 +83,7 @@ namespace honooru.Code {
                 + $"[url={context.HttpContext.Request.Path.Value}]");
 
             // user is owner
-            if (account.ID == 1) {
+            if (account.ID == 2) {
                 _Logger.LogTrace($"user has permission as they are the owner [account={account.Name}]");
                 return;
             }

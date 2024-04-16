@@ -1,5 +1,6 @@
 ﻿using honooru.Code.Constants;
 using System;
+using System.IO;
 using System.Text.Json.Serialization;
 
 namespace honooru.Models.Db {
@@ -70,6 +71,11 @@ namespace honooru.Models.Db {
         public string FileExtension { get; set; } = "";
 
         /// <summary>
+        ///     type of the file. for example: image, video
+        /// </summary>
+        public string FileType { get; set; } = "";
+
+        /// <summary>
         ///     hash from the IQDB service
         /// </summary>
         public string IqdbHash { get; set; } = "";
@@ -93,6 +99,12 @@ namespace honooru.Models.Db {
         ///     width of the post
         /// </summary>
         public long Width { get; set; }
+
+        public string FileLocation {
+            get {
+                return Path.Combine(MD5[..2], MD5 + "." + FileExtension);
+            }
+        }
 
     }
 

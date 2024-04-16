@@ -417,7 +417,7 @@ namespace honooru.Controllers.Api {
                 return ApiInternalError<IqdbEntry>($"IQDB client cannot handle requests currently: {health.Message}");
             }
 
-            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.MD5 + "." + asset.FileExtension);
+            string path = Path.Combine(_StorageOptions.Value.RootDirectory, "original", asset.FileLocation);
             _Logger.LogDebug($"regenerated IQDB hash [assetID={assetID}] [path={path}]");
 
             await _IqdbClient.RemoveByMD5(asset.MD5);

@@ -34,6 +34,7 @@ export class Post {
     public fileExtension: string = "";
     public fileSizeBytes: number = 0;
     public iqdbHash: string = "";
+    public fileType: string = "";
 }
 
 export class IqdbSearchResult {
@@ -134,6 +135,10 @@ export class PostApi extends ApiWrapper<Post> {
 
     public static async remakeThumbnail(postID: number): Promise<Loading<void>> {
         return PostApi.get().post(`/api/post/${postID}/remake-thumbnail`);
+    }
+
+    public static regenerateIqdb(postID: number): Promise<Loading<void>> {
+        return MediaAssetApi.get().post(`/api/post/${postID}/regenerate-iqdb`);
     }
 
     public static remove(postID: number): Promise<Loading<void>> {

@@ -6,6 +6,11 @@ using System.Text;
 using System.Threading.Tasks;
 using honooru.Models;
 using honooru.Models.App;
+using honooru.Services.Repositories;
+using honooru.Tests.Util;
+using Microsoft.Extensions.Caching.Memory;
+using honooru.Services.Db;
+using honooru.Services.Util;
 
 namespace honooru.Tests {
 
@@ -26,8 +31,19 @@ namespace honooru.Tests {
         [DataRow("hi>yo", false)]
         [DataRow("hi=yo", false)]
         [DataRow("user:alice", false)]
+        [DataRow("ns-44_commisioner", true)]
+        [DataRow("-ns-44_commisioner", false)]
         public void Test_Valid(string tag, bool expected) {
-            Assert.AreEqual(Tag.Validate(tag), expected);
+            TestLogger<TagValidationService> logger = new TestLogger<TagValidationService>();
+            TagValidationService validService = new TagValidationService(logger);
+
+            TagNameValidationResult result = validService.ValidateTagName(tag);
+
+            if (result.Valid == false) {
+                Console.WriteLine($"input '{tag}' is invalid due to: {result.Reason}");
+            }
+
+            Assert.AreEqual(expected, result.Valid);
         }
 
     }

@@ -69,13 +69,13 @@ namespace honooru.Services.Parsing {
                     _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
                 } else if (i == '-') {
                     if (word.Length > 0) {
-                        tokens.Add(new Token(TokenType.WORD, word));
+                        word += i;
+                        //tokens.Add(new Token(TokenType.WORD, word));
+                        //word = "";
+                    } else {
+                        tokens.Add(new Token(TokenType.NOT, ""));
                         _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
-                        word = "";
                     }
-
-                    tokens.Add(new Token(TokenType.NOT, ""));
-                    _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
                 } else if (i == '<' || i == '>' || i == '=' || i == '!') {
                     if (word.Length > 0) {
                         tokens.Add(new Token(TokenType.WORD, word));
