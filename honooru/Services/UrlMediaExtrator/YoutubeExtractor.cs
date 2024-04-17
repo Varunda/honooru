@@ -35,6 +35,7 @@ namespace honooru.Services.UrlMediaExtrator {
         public bool CanHandle(Uri url) {
             return url.Host == "www.youtube.com"
                 || url.Host == "youtu.be"
+                || url.Host == "youtube.com"
                 || url.Host == "www.twitch.tv";
         }
 
