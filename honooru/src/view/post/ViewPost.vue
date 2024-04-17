@@ -34,7 +34,7 @@
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <div v-for="block in sortedTags" class="mb-3 no-underline-links">
+                        <div v-for="block in sortedTags" class="mb-3 no-underline-links font-monospace">
                             <h6 class="mb-1 px-2 py-1 rounded" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }"
                                 data-bs-toggle="collapse" :data-bs-target="'#tag-block-type-' + block.typeID">
                                 <strong>{{block.name}}</strong>
