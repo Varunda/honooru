@@ -29,10 +29,10 @@ export class AppAccountApi extends ApiWrapper<AppAccount> {
         return AppAccountApi.get().readList(`/api/account/`, AppAccountApi.parse);
     }
 
-    public static create(account: AppAccount): Promise<Loading<number>> {
+    public static create(name: string, discordID: string): Promise<Loading<number>> {
         const parms: URLSearchParams = new URLSearchParams();
-        parms.set("name", account.name);
-        parms.set("discordID", account.discordID + "");
+        parms.set("name", name);
+        parms.set("discordID", discordID);
 
         return AppAccountApi.get().postReply(`/api/account/create?${parms.toString()}`, (elem: any) => elem);
     }

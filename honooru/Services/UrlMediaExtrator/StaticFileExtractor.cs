@@ -24,7 +24,9 @@ namespace honooru.Services.UrlMediaExtrator {
         }
 
         public bool CanHandle(Uri url) {
-            return url.AbsolutePath.EndsWith(".png");
+            return url.AbsolutePath.EndsWith(".png")
+                || url.AbsolutePath.EndsWith(".jpg")
+                || url.AbsolutePath.EndsWith(".jpeg");
         }
 
         public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
@@ -41,14 +43,22 @@ namespace honooru.Services.UrlMediaExtrator {
                 return;
             }
 
-            string path = Path.Combine(options.RootDirectory, "upload", asset.Guid + ".png");
-            _Logger.LogInformation($"saving asset to storage [path={path}]");
+            string fileName = url.AbsolutePath.Split("/")[^1];
+            if (fileName.Split(".").Length < 2) {
+                _Logger.LogWarning($"failed to split '{fileName}' into 2 parts (based on '.'), missing file extension!");
+            }
+            string fileExtension = fileName.Split(".")[1];
+
+            _Logger.LogDebug($"saving file to upload directory [fileName={fileName}] [fileExtension={fileExtension}]");
+            string path = Path.Combine(options.RootDirectory, "upload", asset.Guid + "." + fileExtension);
+            _Logger.LogInformation($"saving asset to storage [fileName={fileName}] [fileExtension={fileExtension}] [path={path}]");
 
             using FileStream file = File.OpenWrite(path);
             using Stream contentStream = await response.Content.ReadAsStreamAsync();
             await contentStream.CopyToAsync(file);
 
-            asset.FileExtension = "png";
+            asset.FileExtension = fileExtension;
+            asset.FileName = fileName;
             asset.FileSizeBytes = file.Position;
         }
 

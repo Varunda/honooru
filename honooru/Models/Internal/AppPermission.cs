@@ -59,5 +59,17 @@ namespace honooru.Models.Internal {
         public const string APP_POST_RESTORE = "App.Post.Restore";
         public readonly static AppPermission AppPostRestore = new(APP_POST_RESTORE, "restore a post");
 
+        public const string APP_POOL_CREATE = "App.Pool.Create";
+        public readonly static AppPermission AppPoolCreate = new(APP_POOL_CREATE, "create a post pool");
+
+        public const string APP_POOL_DELETE = "App.Pool.Delete";
+        public readonly static AppPermission AppPoolDelete = new(APP_POOL_DELETE, "delete a post pool");
+
+        public const string APP_POOL_ENTRY_ADD = "App.PoolEntry.Add";
+        public readonly static AppPermission AppPoolEntryAdd = new(APP_POOL_ENTRY_ADD, "add a post to a pool");
+
+        public const string APP_POOL_ENTRY_REMOVE = "App.PoolEntry.Remove";
+        public readonly static AppPermission AppPoolEntryRemove = new(APP_POOL_ENTRY_REMOVE, "remove a post from a pool");
+
     }
 }

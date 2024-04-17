@@ -99,10 +99,6 @@ namespace honooru.Services.Db {
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
         public async Task<ulong> Insert(Tag tag) {
-            if (Tag.Validate(tag.Name) == false) {
-                throw new ArgumentException($"not upserting tag with invalid name '{tag.Name}'");
-            }
-
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO tag (
@@ -131,10 +127,6 @@ namespace honooru.Services.Db {
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
         public async Task<Tag> Update(Tag tag) {
-            if (Tag.Validate(tag.Name) == false) {
-                throw new ArgumentException($"not upserting tag with invalid name '{tag.Name}'");
-            }
-
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 UPDATE tag

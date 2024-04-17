@@ -56,7 +56,6 @@ namespace honooru.Services.Hosted.QueueProcessor {
             _Logger.LogInformation($"checking extension for how to handle it [fileExt={fileExt}]");
 
             string? fileType = _FileExtensionHelper.GetFileType(fileExt);
-
             if (fileType == null) {
                 _Logger.LogError($"failed to create thumbnail: fileType is null! [fileExt={fileExt}] [path={path}]");
                 return false;

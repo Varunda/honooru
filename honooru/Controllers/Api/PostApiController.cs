@@ -296,12 +296,13 @@ namespace honooru.Controllers.Api {
                 return ApiAuthorize<Post>();
             }
 
+            _Logger.LogInformation($"creating post from {nameof(MediaAsset)} [assetID={assetID}]");
+
             Post post = new();
             post.PosterUserID = currentUser.ID;
             post.Timestamp = DateTime.UtcNow;
             post.Title = title;
             post.Description = description;
-            post.Source = source ?? ""; 
 
             if (string.IsNullOrEmpty(source)) {
                 tags += " missing_source";
@@ -330,6 +331,7 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<Post>($"{nameof(MediaAsset)} {assetID} does not have an IQDB hash set!");
             }
 
+            post.Source = source ?? asset.Source ?? ""; 
             post.MD5 = asset.MD5;
             post.FileName = asset.FileName;
             post.FileExtension = asset.FileExtension;
@@ -337,6 +339,7 @@ namespace honooru.Controllers.Api {
             post.FileType = asset.FileType;
             post.Status = PostStatus.OK;
             post.IqdbHash = asset.IqdbHash;
+            _Logger.LogDebug($"data copied from {nameof(MediaAsset)} [MD5={post.MD5}] [FileExtension={post.FileExtension}] [FileType={post.FileType}]");
 
             // parse additional tags and add metadata such as width//height and duration (if video)
             try {
@@ -423,8 +426,9 @@ namespace honooru.Controllers.Api {
                     return ApiBadRequest<Post>($"tag {t} has more than one colon in it");
                 }
 
-                if (Tag.Validate(iter) == false) {
-                    return ApiBadRequest<Post>($"invalid tag '{iter}'");
+                TagNameValidationResult validTag = _TagRepository.ValidateTagName(iter);
+                if (validTag.Valid == false) {
+                    return ApiBadRequest<Post>($"invalid tag '{iter}': {validTag.Reason}");
                 }
 
                 TagType? tagTypeObj = (tagType == null) ? null : await _TagTypeRepository.GetByNameOrAlias(tagType);
@@ -581,8 +585,9 @@ namespace honooru.Controllers.Api {
                         return ApiBadRequest($"tag {tag} has more than one colon in it");
                     }
 
-                    if (Tag.Validate(iter) == false) {
-                        return ApiBadRequest($"invalid tag '{iter}'");
+                    TagNameValidationResult validTag = _TagRepository.ValidateTagName(iter);
+                    if (validTag.Valid == false) {
+                        return ApiBadRequest($"invalid tag '{iter}': {validTag.Reason}");
                     }
 
                     TagType? tagTypeObj = (tagType == null) ? null : await _TagTypeRepository.GetByNameOrAlias(tagType);
@@ -664,11 +669,21 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
-        ///     
+        ///     regenerate the <see cref="Post.IqdbHash"/> of a <see cref="Post"/>
         /// </summary>
-        /// <param name="postID"></param>
-        /// <returns></returns>
+        /// <param name="postID">ID of the <see cref="Post"/> to regenerate</param>
+        /// <response code="200">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     was successfully updated with a new <see cref="Post.IqdbHash"/>
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> exists
+        /// </response>
+        /// <response code="500">
+        ///     the IQDB service is unavailable currently
+        /// </response>
         [HttpPost("{postID}/regenerate-iqdb")]
+        [PermissionNeeded(AppPermission.APP_POST_EDIT)]
         public async Task<ApiResponse<IqdbEntry>> RegenerateIqdbHash(ulong postID) {
             Post? post = await _PostRepository.GetByID(postID);
             if (post == null) {
@@ -696,6 +711,42 @@ namespace honooru.Controllers.Api {
             await _PostRepository.Update(post.ID, post);
 
             return ApiOk(entry);
+        }
+
+        /// <summary>
+        ///     update the <see cref="Post.FileType"/> of a <see cref="Post"/>
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to update the <see cref="Post.FileType"/> of</param>
+        /// <response code="200">
+        ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     successfully had its <see cref="Post.FileType"/> updated based on its <see cref="Post.FileExtension"/>
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> exists
+        /// </response>
+        /// <response code="500">
+        ///     the <see cref="Post.FileExtension"/> of the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/>
+        ///     is not mapped to a file type (see <see cref="FileExtensionService"/>)
+        /// </response>
+        [HttpPost("{postID}/update-file-type")]
+        [PermissionNeeded(AppPermission.APP_POST_EDIT)]
+        public async Task<ApiResponse> UpdateFileType(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound($"{nameof(Post)} {postID}");
+            }
+
+            string? fileType = _FileExtensionHelper.GetFileType(post.FileExtension);
+            _Logger.LogDebug($"updating file type [postID={postID}] [post.FileExtension={post.FileExtension}] [fileType={fileType}]");
+
+            if (fileType == null) {
+                return ApiInternalError($"could not turn file extension '{post.FileExtension}' into a valid file type");
+            }
+
+            post.FileType = fileType;
+            await _PostRepository.Update(post.ID, post);
+
+            return ApiOk();
         }
 
         /// <summary>

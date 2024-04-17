@@ -31,7 +31,7 @@ namespace honooru.Services.Db {
         ///     The <see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="ID"/>,
         ///     or <c>null</c> if it does not exist
         /// </returns>
-        public async Task<AppAccount?> GetByID(long ID, CancellationToken cancel) {
+        public async Task<AppAccount?> GetByID(ulong ID, CancellationToken cancel) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 SELECT *
@@ -59,6 +59,28 @@ namespace honooru.Services.Db {
             ");
 
             return await cmd.ExecuteReadList(_Reader, cancel);
+        }
+
+        /// <summary>
+        ///     Get a <see cref="AppAccount"/> by <see cref="AppAccount.DiscordID"/>
+        /// </summary>
+        /// <param name="discordID">ID of the discord account to get the account of</param>
+        /// <param name="cancel">Cancellation token</param>
+        /// <returns>
+        ///     The <see cref="AppAccount"/> with <see cref="AppAccount.DiscordID"/> of <paramref name="discordID"/>,
+        ///     or <c>null</c> if it does not exist
+        /// </returns>
+        public async Task<AppAccount?> GetByDiscordID(string discordID, CancellationToken cancel) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                SELECT *
+                    FROM app_account
+                    WHERE discord_id = @DiscordID;
+            ");
+
+            cmd.AddParameter("DiscordID", ulong.Parse(discordID));
+
+            return await cmd.ExecuteReadSingle(_Reader, cancel);
         }
 
         /// <summary>
@@ -102,7 +124,7 @@ namespace honooru.Services.Db {
             ");
 
             cmd.AddParameter("Name", param.Name);
-            cmd.AddParameter("DiscordID", param.DiscordID);
+            cmd.AddParameter("DiscordID", ulong.Parse(param.DiscordID));
 
             return await cmd.ExecuteInt64(cancel);
         }

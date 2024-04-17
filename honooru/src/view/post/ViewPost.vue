@@ -180,6 +180,10 @@
                     remake thumbnail
                 </button>
 
+                <button class="btn btn-secondary d-block mb-1" @click="updateFileType">
+                    update file type
+                </button>
+
                 <div v-if="post.state == 'loaded'">
                     <permissioned-button v-if="post.data.status == 1" permission="App.Post.Delete" class="btn btn-danger d-block mb-1" @click="deletePost">
                         delete
@@ -599,6 +603,21 @@
 
                 await PostApi.remakeThumbnail(this.post.data.id);
                 Toaster.add("success", `submitted post ${this.post.data.id} for a new thumbnail`, "success");
+            },
+
+            updateFileType: async function(): Promise<void> {
+                if (this.post.state != "loaded") {
+                    return console.warn(`cannot update file type: post is not loaded`);
+                }
+
+                const l: Loading<void> = await PostApi.updateFileType(this.post.data.id);
+                if (l.state == "loaded") {
+                    Toaster.add("success", `updated the file type of post ${this.post.data.id}`, "success");
+                } else if (l.state == "error") {
+                    Loadable.toastError(l, "failed to update file type");
+                } else {
+                    console.error(`unchecked response state (updateFileType): ${l.state}`);
+                }
             },
 
             performSearch: function(query: string): void {

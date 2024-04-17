@@ -36,5 +36,13 @@ namespace honooru.Services.Repositories {
             return _MembershipDb.GetByGroupID(groupID);
         }
 
+        public Task<ulong> Insert(AppAccountGroupMembership membership) {
+            return _MembershipDb.Insert(membership);
+        }
+
+        public Task Delete(AppAccountGroupMembership membership) {
+            return _MembershipDb.Delete(membership);
+        }
+
     }
 }

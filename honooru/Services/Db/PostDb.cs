@@ -139,10 +139,10 @@ namespace honooru.Services.Db {
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
                     poster_user_id, timestamp, status, title, description, last_editor_user_id, iqdb_hash,
-                    md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height
+                    md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height, file_type
                 ) VALUES (
                     @PosterUserID, @Timestamp, @Status, @Title, @Description, 0, @IqdbHash,
-                    @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height
+                    @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height, @FileType
                 ) RETURNING id;
             ");
 
@@ -161,6 +161,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("DurationSeconds", post.DurationSeconds);
             cmd.AddParameter("Width", post.Width);
             cmd.AddParameter("Height", post.Height);
+            cmd.AddParameter("FileType", post.FileType);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);

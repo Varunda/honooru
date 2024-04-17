@@ -68,3 +68,9 @@ insert into post_tag (post_id, tag_id)
 	select ctc.id, t.id
 	from cdp_tag_copy ctc
 	left join tag t ON ctc.unnest = t.name;
+
+
+SELECT setval(pg_get_serial_sequence('app_account','id'), max(id)) FROM app_account;
+SELECT setval(pg_get_serial_sequence('post','id'), max(id)) FROM post;
+SELECT setval(pg_get_serial_sequence('tag','id'), max(id)) FROM tag;
+

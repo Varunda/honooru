@@ -13,19 +13,6 @@ export default class Toaster {
         document.getElementById(`toast-entry-${instanceID}`)?.remove();
     }
 
-    public static fromLoading<T>(loading: Loading<T>): void {
-
-        if (loading.state == "idle") {
-
-        } else if (loading.state == "loading") {
-
-        } else if (loading.state == "loaded") {
-
-        } else if (loading.state == "error") {
-
-        }
-    }
-
     public static add(headerText: string, bodyText: string, headerColor: TextColor = "body"): void {
         const instId: number = Toaster._nextInstance++;
 

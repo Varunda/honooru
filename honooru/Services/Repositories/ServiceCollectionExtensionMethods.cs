@@ -26,6 +26,8 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<TagAliasRepository>();
             services.AddSingleton<TagImplicationRepository>();
             services.AddSingleton<PostChildRepository>();
+            services.AddSingleton<PostPoolRepository>();
+            services.AddSingleton<PostPoolEntryRepository>();
         }
 
     }

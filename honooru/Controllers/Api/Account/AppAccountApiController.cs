@@ -85,11 +85,12 @@ namespace honooru.Controllers.Api {
         /// </response>
         [HttpPost("create")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
-        public async Task<ApiResponse<long>> CreateAccount([FromQuery] string name, [FromQuery] ulong discordID) {
+        public async Task<ApiResponse<long>> CreateAccount([FromQuery] string name, [FromQuery] string discordID) {
             List<string> errors = new();
 
             if (string.IsNullOrWhiteSpace(name)) { errors.Add($"missing {nameof(name)}"); }
-            if (discordID == 0) { errors.Add($"missing {nameof(discordID)}"); }
+            if (string.IsNullOrWhiteSpace(discordID)) { errors.Add($"missing {nameof(discordID)}"); }
+            if (ulong.TryParse(discordID, out _) == false) { errors.Add($"failed to parse '{discordID}' to a valid uint64"); }
 
             if (errors.Count > 0) {
                 return ApiBadRequest<long>($"validation errors: {string.Join("\n", errors)}");

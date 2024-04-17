@@ -2,7 +2,9 @@
 using honooru.Models.Internal;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Db {
@@ -31,7 +33,6 @@ namespace honooru.Services.Db {
             ");
 
             cmd.AddParameter("ID", memberID);
-
             await cmd.PrepareAsync();
 
             AppAccountGroupMembership? member = await _Reader.ReadSingle(cmd);
@@ -56,7 +57,6 @@ namespace honooru.Services.Db {
             ");
 
             cmd.AddParameter("AccountID", accountID);
-
             await cmd.PrepareAsync();
 
             List<AppAccountGroupMembership> members = await _Reader.ReadList(cmd);
@@ -81,13 +81,59 @@ namespace honooru.Services.Db {
             ");
 
             cmd.AddParameter("GroupID", groupID);
-
             await cmd.PrepareAsync();
 
             List<AppAccountGroupMembership> members = await _Reader.ReadList(cmd);
             await conn.CloseAsync();
 
             return members;
+        }
+
+        public async Task<ulong> Insert(AppAccountGroupMembership membership) {
+            if (membership.AccountID == 0) {
+                throw new ArgumentException($"account id cannot be 0");
+            }
+            if (membership.GroupID == 0) {
+                throw new ArgumentException($"group id cannot be 0");
+            }
+
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                INSERT INTO app_account_group_membership (
+                    account_id, group_id, timestamp, granted_by_account_id
+                ) VALUES (
+                    @AccountID, @GroupID, @Timestamp, @GrantedBy
+                ) RETURNING id;
+            ");
+
+            cmd.AddParameter("AccountID", membership.AccountID);
+            cmd.AddParameter("GroupID", membership.GroupID);
+            cmd.AddParameter("Timestamp", membership.Timestamp);
+            cmd.AddParameter("GrantedBy", membership.GrantedByAccountID);
+            await cmd.PrepareAsync();
+
+            ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
+            await conn.CloseAsync();
+
+            return id;
+        }
+
+        public async Task Delete(AppAccountGroupMembership membership) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE FROM 
+                    app_account_group_membership
+                WHERE
+                    group_id = @GroupID
+                    AND account_id = @AccountID
+            ");
+
+            cmd.AddParameter("AccountID", membership.AccountID);
+            cmd.AddParameter("GroupID", membership.GroupID);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
         }
 
     }

@@ -48,7 +48,7 @@ namespace honooru.Services.UrlMediaExtrator {
             }
 
             string? ffmpegPath = _PathUtil.FindExecutable("ffmpeg");
-            if (ytdlpPath == null) {
+            if (ffmpegPath == null) {
                 _Logger.LogError($"failed to find ffmpeg executable in PATH! this will cause issues");
             }
 

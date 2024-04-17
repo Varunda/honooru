@@ -20,7 +20,7 @@ namespace honooru.Code.Commands {
             _AccountDb = services.GetRequiredService<AppAccountDbStore>();
         }
 
-        public async Task Create(string name, ulong discordID) {
+        public async Task Create(string name, string discordID) {
             AppAccount account = new AppAccount() {
                 Name = name,
                 DiscordID = discordID

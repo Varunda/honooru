@@ -138,7 +138,7 @@ namespace honooru.Services.UploadStepHandler {
                 await group.Finish(asset);
                 _UploadProgressRepository.Remove(entry.MediaAssetID);
 
-                _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}]");
+                _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}] [FileType={asset.FileType}]");
             } catch (Exception ex) {
                 _Logger.LogError(ex, "failed to run upload steps");
             }

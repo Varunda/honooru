@@ -185,7 +185,8 @@ namespace honooru.Controllers.Api {
                 // do nothing with the progress callback here, not needed
                 asset = await _UrlExtractor.HandleUrl(asset, url, (progress) => { });
 
-                string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.Guid + "." + asset.FileExtension);
+                string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
+                _Logger.LogDebug($"opening target file [filePath={filePath}]");
                 using FileStream targetFile = System.IO.File.OpenRead(filePath);
 
                 ApiResponse<MediaAsset> r = await _HandleAsset(asset, targetFile, filePath);
@@ -338,13 +339,8 @@ namespace honooru.Controllers.Api {
 
             // if a media asset with the md5 of the upload already exists, don't make a new one
             MediaAsset? existingAsset = await _MediaAssetRepository.GetByMD5(md5Str);
-            if (existingAsset != null) {
-                _Logger.LogDebug($"media asset already pending, returning that one instead [md5Str={md5Str}] [existingAsset={existingAsset.Guid}]");
-                try {
-                    System.IO.File.Delete(filePath);
-                } catch (Exception ex) {
-                    _Logger.LogError(ex, $"failed to delete existing media asset (post already exists) [filePath={filePath}]");
-                }
+            if (existingAsset != null && existingAsset.Guid != asset.Guid) {
+                _Logger.LogDebug($"media asset already pending, returning that one instead [md5Str={md5Str}] [existingAsset={existingAsset.Guid}] [asset.Guid={asset.Guid}]");
                 return ApiOk(existingAsset);
             }
 
@@ -356,7 +352,11 @@ namespace honooru.Controllers.Api {
             string moveInputPath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", asset.Guid + "." + asset.FileExtension);
             string moveOutputPath = Path.Combine(_StorageOptions.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
             _Logger.LogInformation($"moving uploaded file to work directory [input={moveInputPath}] [output={moveOutputPath}");
-            System.IO.File.Move(moveInputPath, moveOutputPath);
+            if (System.IO.File.Exists(moveOutputPath) == false) {
+                System.IO.File.Move(moveInputPath, moveOutputPath);
+            } else {
+                _Logger.LogDebug($"move already complete [input={moveInputPath}] [output={moveOutputPath}]");
+            }
 
             await _MediaAssetRepository.Upsert(asset);
 

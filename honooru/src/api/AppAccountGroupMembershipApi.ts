@@ -28,4 +28,12 @@ export class AppAccountGroupMembershipApi extends ApiWrapper<AppAccountGroupMemb
         return AppAccountGroupMembershipApi.get().readList(`/api/group-membership/group/${groupID}`, AppAccountGroupMembershipApi.parse);
     }
 
+    public static addUserToGroup(groupID: number, accountID: number): Promise<Loading<void>> {
+        return AppAccountGroupMembershipApi.get().post(`/api/group-membership/${groupID}/${accountID}`);
+    }
+
+    public static removeUserFromGroup(groupID: number, accountID: Number): Promise<Loading<void>> {
+        return AppAccountGroupMembershipApi.get().delete(`/api/group-membership/${groupID}/${accountID}`);
+    }
+
 }

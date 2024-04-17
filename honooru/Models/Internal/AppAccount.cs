@@ -30,7 +30,7 @@ namespace honooru.Models {
         /// <summary>
         ///     Discord ID of the account owner
         /// </summary>
-        public ulong DiscordID { get; set; }
+        public string DiscordID { get; set; } = "";
 
         /// <summary>
         ///     When this account was deleted

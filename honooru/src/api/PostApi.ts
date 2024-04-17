@@ -138,7 +138,11 @@ export class PostApi extends ApiWrapper<Post> {
     }
 
     public static regenerateIqdb(postID: number): Promise<Loading<void>> {
-        return MediaAssetApi.get().post(`/api/post/${postID}/regenerate-iqdb`);
+        return PostApi.get().post(`/api/post/${postID}/regenerate-iqdb`);
+    }
+
+    public static updateFileType(postID: number): Promise<Loading<void>> {
+        return PostApi.get().post(`/api/post/${postID}/update-file-type`);
     }
 
     public static remove(postID: number): Promise<Loading<void>> {

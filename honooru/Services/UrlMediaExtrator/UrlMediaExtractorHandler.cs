@@ -59,7 +59,7 @@ namespace honooru.Services.UrlMediaExtrator {
             Uri uri = new Uri(url);
             Stopwatch timer = Stopwatch.StartNew();
             await extractor.Handle(uri, _Options.Value, asset, progress);
-            _Logger.LogDebug($"download complete [timer={timer.ElapsedMilliseconds}ms]");
+            _Logger.LogDebug($"download complete [timer={timer.ElapsedMilliseconds}ms] [url={url}] [asset.Guid={asset.Guid}]");
             timer.Restart();
 
             if (asset.FileExtension == "") {
@@ -133,6 +133,8 @@ namespace honooru.Services.UrlMediaExtrator {
         private List<Type> _GetExtractors() {
             List<Type> types = new();
 
+            Stopwatch timer = Stopwatch.StartNew();
+
             AppDomain.CurrentDomain.GetAssemblies()
                 .ToList().ForEach(asm => {
                     asm.GetTypes().Where(type => {
@@ -148,7 +150,8 @@ namespace honooru.Services.UrlMediaExtrator {
                     });
                 });
 
-            _Logger.LogInformation($"loaded extractors [count={types.Count}]");
+            _Logger.LogInformation($"loaded extractors [timer={timer.ElapsedMilliseconds}ms] [count={types.Count}]");
+            timer.Stop();
 
             return types;
         }

@@ -268,6 +268,11 @@
         public finished: boolean = false;
     }
 
+    //
+    // TODO:
+    //      this code fucking sucks
+    //
+
     export const Upload = Vue.extend({
         props: {
 
@@ -474,6 +479,7 @@
                 console.log(asset.state);
                 if (asset.state == "loaded") {
                     this.mediaAsset = asset.data;
+                    this.setMediaAsset(asset.data);
 
                     this.setMediaAssetID(asset.data.guid);
                     this.upload.show = false;
