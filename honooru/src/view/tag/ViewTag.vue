@@ -265,6 +265,8 @@
         },
 
         mounted: function(): void {
+            document.title = "Honooru / Tag";
+
             document.addEventListener("keyup", (ev: KeyboardEvent) => {
                 // this means another input is currently in focus
                 if (document.activeElement != document.body) {
@@ -304,6 +306,7 @@
                 this.getTagAliases(this.tagID);
 
                 if (this.tag.state == "loaded") {
+                    document.title = `Honooru / Tag: ${this.tag.data.name}`;
                     this.tagCopy = { ...this.tag.data };
                 }
             },

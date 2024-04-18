@@ -363,6 +363,8 @@
         },
 
         mounted: function(): void {
+            document.title = "Honooru / Upload";
+
             this.$nextTick(() => {
                 document.addEventListener("keyup", (ev: KeyboardEvent) => {
                     // this means another input is currently in focus

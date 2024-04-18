@@ -208,6 +208,8 @@
         },
 
         mounted: function(): void {
+            document.title = "Honooru / Settings";
+
             this.loadSettings();
         },
 
