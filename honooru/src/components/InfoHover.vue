@@ -1,8 +1,8 @@
 ﻿<template>
     <span :id="'info-hover-' + ID"
-            class="d-inline-block" data-toggle="popover" data-trigger="hover"
-            :data-content="text"
-            :data-html="AllowHtml">
+            class="d-inline-block" data-bs-toggle="popover" data-bs-trigger="hover"
+            :data-bs-content="text"
+            :data-bs-html="AllowHtml">
 
         <span v-if="icon != null" :class="'bi-' + icon">
 
@@ -18,6 +18,8 @@
 
 <script lang="ts">
     import Vue from "vue";
+
+    import * as bootstrap from "bootstrap";
 
     export const InfoHover = Vue.extend({
         props: {
@@ -38,7 +40,13 @@
 
         mounted: function () {
             this.$nextTick(() => {
-                //$(`#info-hover-${this.ID}`).popover();
+                console.log(`InfoHover> creating popover at #info-hover-${this.ID}`);
+                const elem: HTMLElement | null = document.getElementById(`info-hover-${this.ID}`);
+                if (elem == null) {
+                    console.error(`InfoHover> failed to find #info-hover-${this.ID}`);
+                } else {
+                    new bootstrap.Popover(elem);
+                }
             });
         },
     });
