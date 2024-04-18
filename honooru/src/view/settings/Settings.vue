@@ -120,6 +120,52 @@
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        view post resizing behavior
+                    </h5>
+
+                    <h6 class="card-subtitle mb-2 text-muted">
+                        <span>
+                            when viewing a post, the post will be
+                        </span>
+                        <strong>
+                            <span v-if="settings.postSizing == 'fit'">
+                                resized to 720p
+                            </span>
+                            <span v-if="settings.postSizing == 'full'">
+                                fullsize
+                            </span>
+                            <span v-if="settings.postSizing == 'full_width'">
+                                fit to the max width
+                            </span>
+                        </strong>
+                    </h6>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" v-model="settings.postSizing" value="fit" />
+                        <label class="form-check-label">
+                            fit
+                        </label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" v-model="settings.postSizing" value="full" />
+                        <label class="form-check-label">
+                            full
+                        </label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" v-model="settings.postSizing" value="full_width" />
+                        <label class="form-check-label">
+                            full width
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <hr class="border" />
 
             <button class="btn btn-success" @click="save" :disabled="saving.state == 'loading'">
@@ -155,7 +201,8 @@
                     explicitBehavior: "" as string,
                     unsafeBehavior: "" as string,
 
-                    postCount: 0 as number
+                    postCount: 0 as number,
+                    postSizing: "fit" as string
                 }
             }
         },
@@ -183,7 +230,9 @@
 
                 this.settings.explicitBehavior = map.get("postings.explicit.behavior")?.value ?? "shown";
                 this.settings.unsafeBehavior = map.get("postings.unsafe.behavior")?.value ?? "shown";
+
                 this.settings.postCount = Number.parseInt(map.get("postings.count")?.value ?? "10");
+                this.settings.postSizing = map.get("postings.sizing")?.value ?? "fit";
             },
 
             save: async function(): Promise<void> {
@@ -193,8 +242,6 @@
                 }
 
                 this.saving = Loadable.loading();
-
-                const needsUpdate: UserSetting[] = [];
 
                 const map: Map<string, UserSetting> = new Map();
                 for (const setting of this.data.data) {
@@ -211,6 +258,10 @@
 
                 if (Number.parseInt(map.get("postings.count")?.value ?? "10") != this.settings.postCount) {
                     await UserSettingApi.update("postings.count", this.settings.postCount.toString());
+                }
+
+                if (map.get("postings.sizing")?.value != this.settings.postSizing) {
+                    await UserSettingApi.update("postings.sizing", this.settings.postSizing);
                 }
 
                 this.saving = Loadable.loaded(undefined);

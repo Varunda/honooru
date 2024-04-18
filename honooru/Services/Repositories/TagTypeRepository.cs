@@ -105,5 +105,60 @@ namespace honooru.Services.Repositories {
             return null;
         }
 
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.Name"/>
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public async Task<TagType?> GetByName(string name) {
+            List<TagType> types = await GetAll();
+
+            foreach (TagType type in types) {
+                if (type.Name.ToLower() == name.ToLower()) {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     get a <see cref="TagType"/> by its <see cref="TagType.Alias"/>
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public async Task<TagType?> GetByAlias(string name) {
+            List<TagType> types = await GetAll();
+
+            foreach (TagType type in types) {
+                if (type.Alias.ToLower() == name.ToLower()) {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     insert a new <see cref="TagType"/>
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public Task<ulong> Insert(TagType type) {
+            _Cache.Remove(CACHE_KEY_MAP);
+            return _TagTypeDb.Insert(type);
+        }
+
+        /// <summary>
+        ///     update an existing <see cref="TagType"/>
+        /// </summary>
+        /// <param name="typeID"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public Task Update(ulong typeID, TagType type) {
+            _Cache.Remove(CACHE_KEY_MAP);
+            return _TagTypeDb.Update(typeID, type);
+        }
+
     }
 }

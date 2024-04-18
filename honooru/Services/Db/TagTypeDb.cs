@@ -122,9 +122,9 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO tag_type (
-                    name, hex_color, alias, sort
+                    name, hex_color, alias, sort, dark_text
                 ) VALUES (
-                    @Name, @HexColor, @Alias, @Order
+                    @Name, @HexColor, @Alias, @Order, @DarkText
                 ) RETURNING id;
             ");
 
@@ -132,6 +132,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("HexColor", type.HexColor);
             cmd.AddParameter("Alias", type.Alias);
             cmd.AddParameter("Order", type.Order);
+            cmd.AddParameter("DarkText", type.DarkText);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
@@ -143,26 +144,29 @@ namespace honooru.Services.Db {
         /// <summary>
         ///     update an existing <see cref="TagType"/> with new info
         /// </summary>
-        /// <param name="type"><see cref="TagType"/> to update. Uses <see cref="TagType.ID"/></param>
+        /// <param name="typeID">ID of hte <see cref="TagType"/> that is being updated</param>
+        /// <param name="type"><see cref="TagType"/> to update</param>
         /// <returns>
         ///     <paramref name="type"/>
         /// </returns>
-        public async Task<TagType> Update(TagType type) {
+        public async Task<TagType> Update(ulong typeID, TagType type) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 UPDATE tag_type
                     SET name = @Name,
                         hex_color = @HexColor,
                         alias = @Alias,
-                        sort = @Order
+                        sort = @Order,
+                        dark_text = @DarkText
                     WHERE id = @ID;
             ");
 
-            cmd.AddParameter("ID", type.ID);
+            cmd.AddParameter("ID", typeID);
             cmd.AddParameter("Name", type.Name);
             cmd.AddParameter("HexColor", type.HexColor);
             cmd.AddParameter("Alias", type.Alias);
             cmd.AddParameter("Order", type.Order);
+            cmd.AddParameter("DarkText", type.DarkText);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

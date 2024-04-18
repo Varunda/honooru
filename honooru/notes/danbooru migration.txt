@@ -73,7 +73,13 @@ insert into post_tag (post_id, tag_id)
 SELECT setval(pg_get_serial_sequence('app_account','id'), max(id)) FROM app_account;
 SELECT setval(pg_get_serial_sequence('post','id'), max(id)) FROM post;
 SELECT setval(pg_get_serial_sequence('tag','id'), max(id)) FROM tag;
+SELECT setval(pg_get_serial_sequence('tag_type','id'), max(id)) FROM tag_type;
 
 copy (
-	select parent_id AS parent_post_id, id AS child_post_id from posts where parent_id is not null
+	select 
+		parent_id AS parent_post_id, id AS child_post_id
+	from 
+		posts 
+	where 
+		parent_id is not null
 ) TO 'E:/cdp_post_child.csv' WITH header csv;

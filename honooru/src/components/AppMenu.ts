@@ -6,7 +6,7 @@ export const AppMenu = Vue.extend({
     template: `
         <nav class="navbar navbar-expand bg-body-tertiary pt-0 mb-2 container-fluid-negative px-3">
             <div class="navbar-collapse">
-                <a class="navbar-brand py-0" href="#">
+                <a class="navbar-brand py-0" href="/">
                     <img src="/img/logo0.png" style="height: 100%; width: 48px;" title="homepage" />
                     PLAP
                 </a>
@@ -19,7 +19,7 @@ export const AppMenu = Vue.extend({
                             <li><a class="dropdown-item" href="/">Homepage</a></li>
                             <li><a class="dropdown-item" href="/posts">Posts</a></li>
                             <li><a class="dropdown-item" href="/upload">Upload</a></li>
-                            <li><a class="dropdown-item" href="/">Homepage</a></li>
+                            <li><a class="dropdown-item" href="/tagtype">Tag types</a></li>
                         </ul>
                     </li>
 

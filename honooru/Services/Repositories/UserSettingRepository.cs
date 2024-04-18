@@ -22,7 +22,8 @@ namespace honooru.Services.Repositories {
         private static Dictionary<string, UserSettingType> _UserSettingNameTypeMapping = new() {
             { "postings.explicit.behavior", UserSettingType.STRING },
             { "postings.unsafe.behavior", UserSettingType.STRING },
-            { "postings.count", UserSettingType.INTEGER }
+            { "postings.count", UserSettingType.INTEGER },
+            { "postings.sizing", UserSettingType.STRING }
         };
 
         public UserSettingRepository(ILogger<UserSettingRepository> logger,
@@ -33,6 +34,11 @@ namespace honooru.Services.Repositories {
             _Cache = cache;
         }
 
+        /// <summary>
+        ///     get all <see cref="UserSetting"/>s for a specific account
+        /// </summary>
+        /// <param name="accountID">ID of the account to get the settings of</param>
+        /// <returns></returns>
         public async Task<List<UserSetting>> GetByAccountID(ulong accountID) {
             string cacheKey = string.Format(CACHE_KEY, accountID);
 

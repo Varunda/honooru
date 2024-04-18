@@ -55,7 +55,7 @@
             },
 
             nextPageEnabled: function(): boolean {
-                console.log(`${this.currentPage} ${this.PageCount} ${Math.floor(this.offset / this.limit)}`);
+                console.log(`currentPage=${this.currentPage}, PageCount=${this.PageCount}, Math.floor=${Math.floor(this.offset / this.limit)}`);
                 return this.currentPage > this.PageCount + Math.floor(this.offset / this.limit) - 2;
             }
 

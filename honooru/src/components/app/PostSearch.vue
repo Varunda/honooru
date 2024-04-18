@@ -2,8 +2,7 @@
 <template>
     <div id="post-search-parent">
         <div v-if="type == 'input'" class="input-group">
-            <input class="form-control pr-0" placeholder="search..." v-model="search" :id="'search-input-' + ID"
-            />
+            <input class="form-control pr-0" placeholder="search..." v-model="search" :id="'search-input-' + ID" @keyup.enter="enterPress" />
 
             <span class="input-group-append">
                 <button class="btn btn-primary" type="button" @click="performSearch">
@@ -36,6 +35,8 @@
         data: function() {
             return {
                 ID: Math.floor(Math.random() * 100000) as number,
+
+                enterLockout: 0 as number,
 
                 tribute: null as Tribute<ExtendedTag> | null,
                 search: "" as string,
@@ -102,7 +103,8 @@
 
                 // i don't think these actually matter
                 this.searchInput.addEventListener("tribute-replaced", (ev: any) => {
-                    console.log(`replaced event ${ev.detail}`);
+                    this.enterLockout = Date.now() + 200;
+                    console.log(`replaced event ${ev.detail}, lockout set to ${this.enterLockout}`);
                 });
 
                 this.searchInput.addEventListener("tribute-no-match", (ev: any) => {
@@ -122,7 +124,33 @@
         },
 
         methods: {
+            enterPress: function(): void {
+                const lockoutDiff: number = this.enterLockout - Date.now();
+                console.log(`PostSearch> lockoutDiff is ${lockoutDiff}`);
+                if (lockoutDiff >= 0) {
+                    console.log(`enter lockout hit (diff is ${lockoutDiff})`);
+                    this.enterLockout = Date.now(); // if the lockout is hit once, let the next enter key do the search
+                    return;
+                }
+
+                const container: HTMLElement | null = document.querySelector(".tribute-container");
+                if (container == null) {
+                    console.warn(`query .tribute-container nothing returned`);
+                    this.performSearch();
+                    return;
+                }
+
+                if (container.style.display != "none") {
+                    console.log(`not sending @do-search, auto-complete tab is opened`);
+                    return;
+                }
+
+                this.performSearch();
+                return;
+            },
+
             performSearch: function(): void {
+                console.log(`emiting do search: '${this.search.trim()}'`);
                 this.$emit("do-search", this.search.trim());
             },
 

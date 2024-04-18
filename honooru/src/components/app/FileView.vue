@@ -1,14 +1,10 @@
 ﻿<template>
     <div>
-        <div v-if="FileType == 'video'">
-            <video id="video-playback" controls preload="auto" class="video-js" style="max-width: 1920px;">
-                <source :src="'/media/original/' + md5 + '.' + FileExtension" type="video/mp4" />
-            </video>
-        </div>
+        <video v-if="FileType == 'video'" id="video-playback" controls preload="auto" class="video-js" style="max-width: 1920px;">
+            <source :src="'/media/original/' + md5 + '.' + FileExtension" type="video/mp4" />
+        </video>
 
-        <div v-else-if="FileType == 'image'">
-            <img :src="'/media/original/' + md5 + '.' + FileExtension" class="mw-100" />
-        </div>
+        <img v-else-if="FileType == 'image'" :width="widthSize" :height="heightSize" :class="[ classWidth, classHeight ]" :src="'/media/original/' + md5 + '.' + FileExtension" />
 
         <div v-else class="text-danger">
             unchecked FileType: {{FileType}}
@@ -25,12 +21,19 @@
         props: {
             md5: { type: String, required: true },
             FileType: { type: String, required: true },
-            FileExtension: { type: String, required: true }
+            FileExtension: { type: String, required: true },
+
+            sizing: { type: String, required: true },
+            height: { type: Number, required: true },
+            width: { type: Number, required: true }
         },
 
         data: function() {
             return {
-                player: null as VideoJsPlayer | null
+                player: null as VideoJsPlayer | null,
+
+                staticClass: "" as string,
+                staticStyle: "" as string
             }
         },
 
@@ -64,6 +67,59 @@
         },
 
         computed: {
+            classWidth: function(): string | null {
+                if (this.sizing == "fit") {
+                    return null;
+                }
+                if (this.sizing == "full_width") {
+                    return "mw-100";
+                }
+
+                return null;
+            },
+
+            widthSize: function(): string | null {
+                if (this.sizing == "fit") {
+                    if (this.width < this.height) {
+                        return null;
+                    } else {
+                        return "720";
+                    }
+                }
+
+                if (this.sizing == "full") {
+                    return `${this.width}`;
+                }
+
+                return null;
+            },
+
+            classHeight: function(): string | null {
+                if (this.sizing == "fit") {
+                    return null;
+                }
+                if (this.sizing == "full_width") {
+                    return "mw-100";
+                }
+
+                return null;
+            },
+
+            heightSize: function(): string | null {
+                if (this.sizing == "fit") {
+                    if (this.width > this.height) {
+                        return null;
+                    } else {
+                        return "720";
+                    }
+                }
+
+                if (this.sizing == "full") {
+                    return `${this.height}`;
+                }
+
+                return null;
+            }
 
         }
     });

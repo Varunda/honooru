@@ -3,38 +3,40 @@
 
         <app-menu></app-menu>
 
-        <div style="display: grid; grid-template-columns: 400px 1fr 180px; gap: 0.5rem; overflow: hidden">
+        <div style="display: grid; grid-template-columns: 400px 1fr 200px; gap: 0.5rem; overflow: hidden">
             <div class="overflow-y-auto">
-                <div class="mb-2">
+                <div class="mb-3">
                     <post-search v-model="query" @keyup.enter="performSearch" @do-search="performSearch"></post-search>
                 </div>
 
-                <div class="mb-2">
-                    <label class="mb-0">rating</label>
+                <div class="mb-3 border">
+                    <div class="text-center rounded-top bg-secondary text-light">
+                        rating
+                    </div>
                     <div class="btn-group w-100">
-                        <button class="btn" :disabled="!editing"
+                        <button class="btn rounded-0" :disabled="!editing"
                                 :class="[ edit.rating == 'explicit' ? 'btn-danger' : 'btn-secondary' ]" @click="edit.rating = 'explicit'">
                             explict
                         </button>
-                        <button class="btn" :disabled="!editing" 
+                        <button class="btn rounded-0" :disabled="!editing" 
                                 :class="[ edit.rating == 'unsafe' ? 'btn-warning' : 'btn-secondary' ]" @click="edit.rating = 'unsafe'">
                             unsafe
                         </button>
-                        <button class="btn" :disabled="!editing"
+                        <button class="btn rounded-0" :disabled="!editing"
                                 :class="[ edit.rating == 'general' ? 'btn-primary' : 'btn-secondary' ]" @click="edit.rating = 'general'">
                             general
                         </button>
                     </div>
                 </div>
 
-                <div class="honooru-tags" style="line-height: 1.3; font-family: 'Monospace'">
+                <div class="honooru-tags" style="line-height: 1.3;">
                     <div v-if="tags.state == 'idle'"></div>
                     <div v-else-if="tags.state == 'loading'">
                         loading tags...
                     </div>
 
                     <div v-else-if="tags.state == 'loaded'">
-                        <div v-for="block in sortedTags" class="mb-3 no-underline-links font-monospace">
+                        <div v-for="block in sortedTags" class="mb-3 no-underline-links font-monospace" style="color: #212529">
                             <h6 class="mb-1 px-2 py-1 rounded" style="font-size: 1rem;" :style="{ 'background-color': '#' + block.hexColor }"
                                 data-bs-toggle="collapse" :data-bs-target="'#tag-block-type-' + block.typeID">
                                 <strong>{{block.name}}</strong>
@@ -65,10 +67,15 @@
                 </div>
 
                 <div class="mb-2">
-                    <label class="mb-0 d-block">source</label>
+                    <h5 class="wt-header">
+                        source
+                    </h5>
 
                     <div v-if="editing == false">
-                        <a v-if="edit.source != ''" :href="edit.source" class="text-break">{{edit.source}}</a>
+                        <code v-if="edit.source != '' && edit.source.startsWith('file://')" class="text-break">
+                            {{edit.source}}
+                        </code>
+                        <a v-else-if="edit.source != ''" :href="edit.source" class="text-break">{{edit.source}}</a>
                         <span v-else class="text-muted">
                             &lt;missing&gt;
                         </span>
@@ -87,7 +94,7 @@
                     <textarea v-model="edit.description" class="form-control"></textarea>
                 </div>
 
-                <div>
+                <div class="mb-3">
                     <permissioned-button v-if="editing == false" permission="App.Post.Edit" class="btn btn-primary" @click="startEdit">
                         edit
                     </permissioned-button>
@@ -101,105 +108,50 @@
                     </button>
                 </div>
 
-                <hr class="border border-secondary" />
+                <h5 class="wt-header">
+                    information
+                </h5>
+                <div>
+                    <div v-if="post.state == 'idle'"></div>
 
-                <h5>information</h5>
+                    <div v-else-if="post.state == 'loading'">
+                        loading...
+                    </div>
 
-                <div v-if="post.state == 'idle'"></div>
+                    <post-info v-else-if="post.state == 'loaded'" :post="post.data" class="mb-2"></post-info>
 
-                <div v-else-if="post.state == 'loading'">
-                    loading...
+                    <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
                 </div>
 
-                <table v-else-if="post.state == 'loaded'" class="table table-sm">
-                    <tbody>
-                        <tr>
-                            <td>ID</td>
-                            <td>{{post.data.id}}</td>
-                        </tr>
+                <h5 class="wt-header">
+                    misc controls
+                </h5>
+                <div>
+                    <button class="btn btn-secondary d-block mb-1" @click="remakeThumbnail">
+                        remake thumbnail
+                    </button>
 
-                        <tr>
-                            <td>status</td>
-                            <td>
-                                <span v-if="post.data.status == 1">
-                                    ok
-                                </span>
-                                <span v-else-if="post.data.status == 2" class="text-danger">
-                                    deleted
-                                </span>
-                                <span v-else class="text-warning">
-                                    unchecked status: {{post.data.status}}
-                                </span>
-                            </td>
-                        </tr>
+                    <button class="btn btn-secondary d-block mb-1" @click="updateFileType">
+                        update file type
+                    </button>
 
-                        <tr>
-                            <td>timestamp</td>
-                            <td>{{post.data.timestamp | moment}}</td>
-                        </tr>
+                    <div v-if="post.state == 'loaded'">
+                        <permissioned-button v-if="post.data.status == 1" permission="App.Post.Delete" class="btn btn-danger d-block mb-1" @click="deletePost">
+                            delete
+                        </permissioned-button>
 
-                        <tr>
-                            <td>file name</td>
-                            <td class="font-monospace">{{post.data.fileName}}</td>
-                        </tr>
+                        <permissioned-button v-else-if="post.data.status == 2" permission="App.Post.Restore" class="btn btn-success d-block mb-1" @click="restorePost">
+                            restore
+                        </permissioned-button>
+                    </div>
 
-                        <tr>
-                            <td>md5</td>
-                            <td class="font-monospace">{{post.data.md5}}</td>
-                        </tr>
-
-                        <tr>
-                            <td>file size</td>
-                            <td class="font-monospace">{{post.data.fileSizeBytes | bytes}}</td>
-                        </tr>
-
-                        <tr>
-                            <td>file extension</td>
-                            <td>{{post.data.fileExtension}}</td>
-                        </tr>
-
-                        <tr>
-                            <td>dimensions</td>
-                            <td class="font-monospace">{{post.data.width}}x{{post.data.height}}</td>
-                        </tr>
-
-                        <tr v-if="post.data.durationSeconds > 0">
-                            <td>duration</td>
-                            <td>{{post.data.durationSeconds | mduration}}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
-
-                <hr class="border border-secondary" />
-
-                <h5>misc controls</h5>
-
-                <button class="btn btn-secondary d-block mb-1" @click="remakeThumbnail">
-                    remake thumbnail
-                </button>
-
-                <button class="btn btn-secondary d-block mb-1" @click="updateFileType">
-                    update file type
-                </button>
-
-                <div v-if="post.state == 'loaded'">
-                    <permissioned-button v-if="post.data.status == 1" permission="App.Post.Delete" class="btn btn-danger d-block mb-1" @click="deletePost">
-                        delete
-                    </permissioned-button>
-
-                    <permissioned-button v-else-if="post.data.status == 2" permission="App.Post.Restore" class="btn btn-success d-block mb-1" @click="restorePost">
-                        restore
+                    <permissioned-button permission="App.Post.Erase" class="btn btn-danger d-block mb-1" @click="erasePost">
+                        erase
                     </permissioned-button>
                 </div>
-
-                <permissioned-button permission="App.Post.Erase" class="btn btn-danger d-block mb-1" @click="erasePost">
-                    erase
-                </permissioned-button>
             </div>
 
-            <div class="overflow-y-auto">
+            <div class="overflow-y-auto" id="post-container">
                 <div v-if="post.state == 'idle'"></div>
 
                 <div v-else-if="post.state == 'loading'">
@@ -211,7 +163,28 @@
                 </div>
 
                 <div v-else-if="post.state == 'loaded'">
-                    <file-view :md5="post.data.md5" :file-type="post.data.fileType" :file-extension="post.data.fileExtension"></file-view>
+                    <div v-if="post.data.height > containerWidth || (sizing == 'fit' && post.data.width > 720)" class="alert alert-primary">
+                        view:
+                        <span @click="sizing = 'fit'" :class="[ sizing == 'fit' ? 'fw-bold': 'text-muted' ]" class="text-decoration-underline">fit</span>
+                        /
+                        <span @click="sizing = 'full'" :class="[ sizing == 'full' ? 'fw-bold':'text-muted' ]" class="text-decoration-underline">fullsized</span>
+                        /
+                        <span @click="sizing = 'full_width'" :class="[ sizing == 'full_width' ? 'fw-bold':'text-muted' ]" class="text-decoration-underline">full width</span>
+
+                        <span v-if="sizing == 'fit'">
+                            (resized to {{(720 / (post.data.width > post.data.height ? post.data.width : post.data.height) * 100) | locale(0)}}%)
+                        </span>
+                        <span v-if="sizing == 'full'">
+                            (not resized)
+                        </span>
+                        <span v-if="sizing == 'full_width'">
+                            (resized to {{(containerWidth / (post.data.width > post.data.height ? post.data.width : post.data.height) * 100) | locale(0)}}%)
+                        </span>
+                    </div>
+
+                    <file-view :md5="post.data.md5" :file-type="post.data.fileType" :file-extension="post.data.fileExtension"
+                               :sizing="sizing" :width="post.data.width" :height="post.data.height">
+                    </file-view>
 
                     <div class="h2 mt-2 pt-2">
                         <span v-if="post.data.title">
@@ -277,16 +250,18 @@
     import { Loadable, Loading } from "Loading";
     import Toaster from "Toaster";
     import AccountUtil from "util/AccountUtil";
+    import MarkdownUtil from "util/Markdown";
 
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import PermissionedButton from "components/PermissionedButton.vue";
-
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
     import Similarity from "components/app/Similarity.vue";
     import PostChildView from "components/app/PostChildView.vue";
+
+    import PostInfo from "./components/PostInfo.vue";
 
     import { Post, PostApi } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
@@ -295,9 +270,6 @@
     import "filters/ByteFilter";
     import "filters/MomentFilter";
     import "filters/LocaleFilter";
-
-    import { marked, MarkedExtension, Token } from "marked";
-    import * as DOMPurify from "dompurify";
 
     class TagBlock {
         public typeID: number = 0;
@@ -312,132 +284,6 @@
         [2, "unsafe"],
         [3, "explicit"]
     ]);
-
-    const DEBUG: boolean = false;
-
-    const _debug = (str: string): void => {
-        if (DEBUG) {
-            console.log(str);
-        }
-    }
-
-    const rule = /^post #(\d+)/;
-    const tagRule = /^\[\[(.+)\]\]/;
-
-    const honooruMarkdownExtension: MarkedExtension = {
-        // walks the tokens and turns a honooru-tag-link into an <a> with the correct ID
-        walkTokens: async (token) => {
-            _debug(`${token.type} :: ${token.raw}`);
-
-            if (token.type != "honooru-tag-link") {
-                return;
-            }
-
-            const tagName: string = token.tagName;
-            _debug(`getting tag [tagName='${tagName}']`);
-
-            const tag: Loading<ExtendedTag> = await TagApi.getByName(tagName);
-
-            _debug(`loaded tag [state=${tag.state}]`);
-            if (tag.state == "loaded") {
-                token.tagData = tag.data;
-            } else if (tag.state == "nocontent") {
-                token.tagData = {
-                    id: -1,
-                    name: `NOT_FOUND:${tagName}`,
-                    typeID: -1,
-                    typeName: "invalid",
-                    hexColor: "ff0000",
-                    uses: -1,
-                    description: ""
-                };
-            }
-        },
-
-        // async lets walkTokens above be async, which lets us get the tag data when we find a honooru-tag-link
-        async: true,
-
-        extensions: [
-            // extension to turn post numbers into links
-            // example:
-            //          post #4
-            //      would turn into
-            //          <a href="/post/4">post 4</a>
-            //
-            {
-                name: "honooru-post-link",
-                start: (src: string) => src.indexOf("post #"),
-                level: "inline",
-                tokenizer: function(src: string, tokens: Token[]) {
-                    _debug(`SRC "${src}"`);
-
-                    const match = rule.exec(src);
-                    if (match) {
-                        const token = {
-                            type: "link",
-                            raw: match[0],
-                            text: match[0].trim(),
-                            href: `/post/${match[1]}`,
-                            tokens: [{
-                                type: "text",
-                                raw: match[0],
-                                text: match[0]
-                            }]
-                        }
-
-                        return token;
-                    }
-
-                    return undefined;
-                },
-            },
-
-            // extension to turn tags into links
-            // example:
-            //          [[tag]]
-            //      would turn into
-            //          <a href="/post/1">tag</a>
-            // with the correct coloring to match the tag type, and the correct tag ID that matches the name
-            {
-                name: "honooru-tag-link",
-                start: (src: string) => src.indexOf("[["),
-                level: "inline",
-                tokenizer: function(src: string, tokens: Token[]) {
-                    const match = tagRule.exec(src);
-
-                    if (!match) {
-                        return undefined;
-                    }
-
-                    const token = {
-                        type: "honooru-tag-link",
-                        raw: match[0],
-                        text: match[1].trim(),
-                        tagName: match[1].trim(), // used in walkTokens
-                        tokens: [{
-                            type: "text",
-                            raw: match[0],
-                            text: match[1]
-                        }]
-                    };
-
-                    return token;
-                },
-
-                // called after walkTokens has populated the data we want
-                renderer: (token) => {
-                    _debug(`renderer for tag link: ${token.tagData}`);
-                    return `<a href="/tag/${token.tagData.id}" style="color: #${token.tagData.hexColor}">${token.tagData.name}</a>`;
-                }
-            }
-        ],
-
-        tokenizer: null,
-    };
-
-    ///////////////////////////////////////////////////
-    // start vue component
-    ///////////////////////////////////////////////////
 
     export const ViewPost = Vue.extend({
         props: {
@@ -463,7 +309,12 @@
 
                 editing: false as boolean,
 
+                sizing: "fit" as string,
+
                 htmlDesc: Loadable.idle() as Loading<string>,
+
+                containerElement: null as HTMLElement | null,
+                containerWidth: 0 as number
             }
         },
 
@@ -481,6 +332,20 @@
         mounted: function(): void {
             this.getPostID();
             this.loadAll();
+
+            this.sizing = AccountUtil.getSetting("posting.sizing")?.value ?? "fit";
+
+            this.containerElement = document.getElementById("post-container");
+            if (this.containerElement != null) {
+                const obs = new ResizeObserver((mutations: ResizeObserverEntry[], observer: ResizeObserver) => {
+                    for (const mut of mutations) {
+                        this.containerWidth = mut.contentRect.width;
+                        console.log(`ViewPost> post container width changed to: ${this.containerWidth}`);
+                    }
+                });
+
+                obs.observe(this.containerElement);
+            }
 
             document.addEventListener("keyup", (ev: KeyboardEvent) => {
                 // this means another input is currently in focus
@@ -531,22 +396,12 @@
                     this.edit.description = this.post.data.description ?? "";
                     this.edit.source = this.post.data.source;
 
-                    marked.use(honooruMarkdownExtension);
-
                     this.htmlDesc = Loadable.loading();
-                    const html: string | Promise<string> = marked.parse(this.post.data.description ?? "");
-
-                    try {
-                        if (typeof html == "string") {
-                            this.htmlDesc = Loadable.loaded(DOMPurify.sanitize(html));
-                        } else {
-                            html.then((result: string) => {
-                                this.htmlDesc = Loadable.loaded(DOMPurify.sanitize(result));
-                            });
-                        }
-                    } catch (err) {
+                    MarkdownUtil.markdown(this.post.data.description ?? "").then((markdown: string) => {
+                        this.htmlDesc = Loadable.loaded(markdown);
+                    }).catch((err: any) => {
                         this.htmlDesc = Loadable.error(err);
-                    }
+                    });
                 }
             },
 
@@ -725,7 +580,8 @@
         components: {
             InfoHover, ApiError, PermissionedButton,
             AppMenu,
-            FileView, PostSearch, Similarity, PostChildView
+            FileView, PostSearch, Similarity, PostChildView,
+            PostInfo
         }
 
     });

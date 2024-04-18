@@ -21,11 +21,11 @@
 
                             <a :href="'/posts?q=' + tag.name">
                                 <span :style="{ 'color': '#' + tag.hexColor }">
-                                    {{tag.name}}
+                                    {{tag.name.split("_").join(" ")}}
                                 </span>
                             </a>
-                            <span class="text-muted">
-                                ({{tag.uses}})
+                            <span class="" style="color: var(--bs-gray-600)">
+                                {{tag.uses}}
                             </span>
                         </div>
                     </div>

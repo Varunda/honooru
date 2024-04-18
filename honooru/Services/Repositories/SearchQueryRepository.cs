@@ -147,6 +147,36 @@ namespace honooru.Services.Repositories {
                 Node field = node.Children[0];
                 Node op = node.Children[1];
                 Node value = node.Children[2];
+                
+                //
+                // the following meta operations can be performed:
+                //      user:{NAME}
+                //          search for posts uploaded by this user
+                //      
+                //      rating:"general"|"unsafe"|"explicit"
+                //          search for posts with this rating
+                //
+                //      status:"ok"|"deleted"
+                //          search for posts with this status
+                //      
+                //      md5:{string}
+                //          search for posts with this md5
+                //
+                //      parent:{ID}
+                //          search for posts with a parent of this post ID
+                //  
+                //      child:{ID}
+                //          search for posts that are a child of this post ID
+                //
+                //      type:"image" | "video
+                //          search for image or video posts
+                //
+                //      extension:{string}
+                //          search for posts with this extension type
+                //
+                //      sort
+                //          sort returned posts by this value
+                //
 
                 if (field.Token.Value == "user") {
                     if (ulong.TryParse(value.Token.Value, out ulong userID) == false) {
@@ -156,7 +186,6 @@ namespace honooru.Services.Repositories {
                     cmd = $" p.poster_user_id " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(userID);
                 } else if (field.Token.Value == "rating") {
-
                     PostRating rating;
                     if (value.Token.Value == "general") {
                         rating = PostRating.GENERAL;
@@ -216,6 +245,9 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.file_type = ${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(type);
+                } else if (field.Token.Value == "extension") {
+                    cmd = $" p.file_extension " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(value.Token.Value);
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {

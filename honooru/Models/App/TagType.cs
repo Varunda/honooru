@@ -18,6 +18,11 @@
         public string HexColor { get; set; } = "";
 
         /// <summary>
+        ///     will the frontend use dark or light text when showing this tag type name?
+        /// </summary>
+        public bool DarkText { get; set; }
+
+        /// <summary>
         ///     alias of the tag type. for example, if the name is general, the alias of gen: could be used
         /// </summary>
         public string Alias { get; set; } = "";
