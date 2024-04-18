@@ -24,8 +24,8 @@
             FileExtension: { type: String, required: true },
 
             sizing: { type: String, required: true },
-            height: { type: Number, required: true },
-            width: { type: Number, required: true }
+            height: { type: Number, required: false },
+            width: { type: Number, required: false }
         },
 
         data: function() {

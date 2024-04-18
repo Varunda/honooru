@@ -215,7 +215,7 @@
 
                 <div class="overflow-y-auto">
                     <file-view :md5="mediaAsset.md5" :file-type="mediaAsset.fileType" :file-extension="mediaAsset.fileExtension"
-                               sizing="full" :width="0" :height="0">
+                               sizing="full" :width="null" :height="null">
                     </file-view>
                 </div>
 
