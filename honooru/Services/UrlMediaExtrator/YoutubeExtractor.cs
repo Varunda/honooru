@@ -43,6 +43,8 @@ namespace honooru.Services.UrlMediaExtrator {
             string path = Path.Combine(options.RootDirectory, "upload", asset.Guid.ToString());
             _Logger.LogInformation($"downloading url using yt-dlp extractor [url={url.OriginalString}] [path={path}]");
 
+            Stopwatch timer = Stopwatch.StartNew();
+
             string? ytdlpPath = _PathUtil.FindExecutable("yt-dlp");
             if (ytdlpPath == null) {
                 _Logger.LogError($"failed to find yt-dlp executable in PATH! this will cause issues");
@@ -58,6 +60,9 @@ namespace honooru.Services.UrlMediaExtrator {
             ytdl.YoutubeDLPath = ytdlpPath;
             ytdl.FFmpegPath = ffmpegPath;
             ytdl.OutputFolder = path;
+
+            _Logger.LogDebug($"yt-dlp instanced created [timer={timer.ElapsedMilliseconds}ms] [assetID={asset.Guid}]");
+            timer.Restart();
 
             float previousProgress = 0f;
             RunResult<string> data = await ytdl.RunVideoDownload(url.ToString(),
@@ -81,6 +86,9 @@ namespace honooru.Services.UrlMediaExtrator {
                 string s = string.Join("\n", data.ErrorOutput);
                 _Logger.LogError(s);
             }
+
+            _Logger.LogDebug($"yt-dlp download complete [timer={timer.ElapsedMilliseconds}ms] [url={url}] [assetID={asset.Guid}]");
+            timer.Restart();
 
             if (Path.Exists(path) == false) {
                 _Logger.LogError($"failed to find output path, expect errors! [path={path}]");
@@ -113,6 +121,9 @@ namespace honooru.Services.UrlMediaExtrator {
             _Logger.LogDebug($"deleting old path [path={path}]");
             Directory.Delete(path);
 
+            _Logger.LogDebug($"yt-dlp download moved to upload folder [timer={timer.ElapsedMilliseconds}ms] [url={url}] [assetID={asset.Guid}]");
+            timer.Restart();
+
             RunResult<YoutubeDLSharp.Metadata.VideoData> videoData = await ytdl.RunVideoDataFetch(url.ToString());
             if (videoData.Success) {
                 videoData.Data.AutomaticCaptions = new Dictionary<string, YoutubeDLSharp.Metadata.SubtitleData[]>();
@@ -137,7 +148,11 @@ namespace honooru.Services.UrlMediaExtrator {
                 _Logger.LogError($"failed to get video metadata: {string.Join("\n", videoData.ErrorOutput)}");
             }
 
+            _Logger.LogDebug($"yt-dlp data download complete [timer={timer.ElapsedMilliseconds}ms] [url={url}] [assetID={asset.Guid}]");
+            timer.Restart();
+
             FileInfo info = new FileInfo(target);
+            _Logger.LogDebug($"yt-dlp download {nameof(FileInfo)} loaded [timer={timer.ElapsedMilliseconds}ms] [assetID={asset.Guid}] [target={target}]");
             asset.FileSizeBytes = info.Length;
         }
 
