@@ -9,13 +9,17 @@ namespace honooru.Models.Api {
             QueryAst = ast;
         }
 
-        public string Input { get; set; } = "";
-
         public Ast QueryAst { get; set; }
 
         public uint Offset { get; set; }
 
         public uint Limit { get; set; }
+
+        public string HashKey {
+            get {
+                return $"ast_{QueryAst.GetHashCode()}";
+            }
+        }
 
     }
 

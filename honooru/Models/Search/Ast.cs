@@ -54,9 +54,15 @@ namespace honooru.Models.Search {
                 sb.Append("(");
                 sb.Append(string.Join(", ", node.Children.Select(iter => _PrintNode(iter))));
                 sb.Append(")");
+            } else {
+                sb.Append(node.Token.Value);
             }
 
             return sb.ToString();
+        }
+
+        public override int GetHashCode() {
+            return Root.GetHashCode();
         }
 
     }

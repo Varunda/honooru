@@ -39,6 +39,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using honooru.Services.UrlMediaExtrator;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace honooru {
 
@@ -144,7 +145,8 @@ namespace honooru {
             });
 
             services.AddRazorPages();
-            services.AddMemoryCache();
+            services.AddSingleton<IMemoryCache, AppCache>();
+            //services.AddMemoryCache();
             services.AddHttpContextAccessor();
 
             services.AddCors(o => {

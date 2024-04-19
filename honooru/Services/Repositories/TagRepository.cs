@@ -21,9 +21,8 @@ namespace honooru.Services.Repositories {
         private readonly ILogger<TagRepository> _Logger;
         private readonly IMemoryCache _Cache;
 
-        private const string CACHE_KEY_SEARCH = "tag.search.{0}"; // {0} => name
-        private const string CACHE_KEY_ALL_LIST = "tag.all.list";
-        private const string CACHE_KEY_ALL_DICT = "tag.all.dict";
+        private const string CACHE_KEY_SEARCH = "Tag.Search.{0}"; // {0} => name
+        private const string CACHE_KEY_ALL_DICT = "Tag.All.Dict";
 
         private readonly TagDb _TagDb;
         private readonly TagInfoRepository _TagInfoRepository;
@@ -52,17 +51,7 @@ namespace honooru.Services.Repositories {
         /// <param name="cancel">cancellation token</param>
         /// <returns></returns>
         public async Task<List<Tag>> GetAll(CancellationToken cancel) {
-            if (_Cache.TryGetValue(CACHE_KEY_ALL_LIST, out List<Tag>? tags) == false || tags == null) {
-                _Cache.Remove(CACHE_KEY_ALL_DICT); // invalidate this cache as well
-
-                tags = await _TagDb.GetAll(cancel);
-
-                _Cache.Set(CACHE_KEY_ALL_LIST, tags, new MemoryCacheEntryOptions() {
-                    SlidingExpiration = TimeSpan.FromMinutes(30)
-                });
-            }
-
-            return tags;
+            return (await _GetDictionary()).Values.ToList();
         }
 
         /// <summary>
@@ -80,7 +69,7 @@ namespace honooru.Services.Repositories {
         /// <exception cref="Exception"></exception>
         private async Task<Dictionary<ulong, Tag>> _GetDictionary() {
             if (_Cache.TryGetValue(CACHE_KEY_ALL_DICT, out Dictionary<ulong, Tag>? dict) == false || dict == null) {
-                List<Tag> tags = await GetAll();
+                List<Tag> tags = await _TagDb.GetAll();
 
                 dict = tags.ToDictionary(iter => iter.ID);
                 _Cache.Set(CACHE_KEY_ALL_DICT, dict, new MemoryCacheEntryOptions() {
@@ -334,7 +323,6 @@ namespace honooru.Services.Repositories {
         }
 
         private void _ClearCache() {
-            _Cache.Remove(CACHE_KEY_ALL_LIST);
             _Cache.Remove(CACHE_KEY_ALL_DICT);
         }
 

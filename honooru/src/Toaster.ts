@@ -9,7 +9,7 @@ export default class Toaster {
     private static _nextInstance: number = 1;
 
     public static remove(instanceID: number): void {
-        //console.log(`Removing toast instance ${instanceID}`);
+        console.log(`Removing toast instance ${instanceID}`);
         document.getElementById(`toast-entry-${instanceID}`)?.remove();
     }
 
@@ -38,7 +38,7 @@ export default class Toaster {
         const inner = document.createElement("div");
         inner.classList.add("toast", "m-3", "show");
         inner.dataset["bsDelay"] = "8000";
-        inner.id = `toast-enter-${instId}`;
+        inner.id = `toast-entry-${instId}`;
         inner.addEventListener("click", (_) => {
             Toaster.remove(instId);
         });

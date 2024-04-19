@@ -64,6 +64,10 @@ namespace honooru.Services.UrlMediaExtrator {
             _Logger.LogDebug($"yt-dlp instanced created [timer={timer.ElapsedMilliseconds}ms] [assetID={asset.Guid}]");
             timer.Restart();
 
+            OptionSet opts = new();
+            opts.FfmpegLocation = Path.GetDirectoryName(ffmpegPath);
+            _Logger.LogDebug($"yt-dlp ffmpeg location set [FfmpegLocation={opts.FfmpegLocation}] [based on={ffmpegPath}]");
+
             float previousProgress = 0f;
             RunResult<string> data = await ytdl.RunVideoDownload(url.ToString(),
                 progress: new Progress<DownloadProgress>(p => {
@@ -76,8 +80,14 @@ namespace honooru.Services.UrlMediaExtrator {
                     }
                 }),
                 output: new Progress<string>(o => {
-                    //_Logger.LogDebug($"ytdlp output> {o}");
-                })
+                    if (string.IsNullOrWhiteSpace(o) || o.StartsWith("[download]")) {
+                        return;
+                    }
+
+                    _Logger.LogDebug($"ytdlp output([assetID={asset.Guid}])> {o} ");
+                }),
+
+                overrideOptions: opts
             );
 
             if (data.ErrorOutput.Length > 0) {

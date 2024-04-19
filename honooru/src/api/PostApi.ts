@@ -37,6 +37,13 @@ export class Post {
     public fileType: string = "";
 }
 
+export class PostOrdering {
+    public query: string = "";
+    public postID: number = 0;
+    public previous: Post | null = null;
+    public next: Post | null = null;
+}
+
 export class IqdbSearchResult {
     public postId: string = "";
     public score: number = 0;
@@ -82,12 +89,25 @@ export class PostApi extends ApiWrapper<Post> {
         };
     }
 
+    public static parsePostOrdering(elem: any): PostOrdering {
+        return {
+            query: elem.query,
+            postID: elem.postID,
+            previous: (elem.previous == null) ? null : PostApi.parse(elem.previous),
+            next: (elem.next == null) ? null : PostApi.parse(elem.next)
+        }
+    }
+
     public static async getByID(postID: number): Promise<Loading<Post>> {
         return PostApi.get().readSingle(`/api/post/${postID}`, PostApi.parse);
     }
 
     public static async search(q: string, limit: number = 100, offset: number = 0): Promise<Loading<SearchResults>> {
         return PostApi.get().readSingle(`/api/post/search?q=${encodeURI(q)}&limit=${limit}&offset=${offset}`, PostApi.parseSearchResults);
+    }
+
+    public static getOrdering(q: string, postID: number): Promise<Loading<PostOrdering>> {
+        return PostApi.get().readSingle(`/api/post/post-order/${postID}?q=${q}`, PostApi.parsePostOrdering);
     }
 
     public static async upload(mediaAssetID: string, tags: string, rating: string,

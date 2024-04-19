@@ -9,6 +9,7 @@ using honooru.Models.Search;
 using honooru.Services.Db;
 using honooru.Services.Parsing;
 using honooru.Services.Util;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
@@ -26,21 +27,38 @@ namespace honooru.Services.Repositories {
         private readonly UserSettingRepository _UserSettingRepository;
         private readonly FileExtensionService _ExtensionUtil;
 
+        private readonly IMemoryCache _Cache;
+
+        private const string CACHE_KEY_SEARCH = "SearchQuery.{0}.{1}"; // {0} => user ID, {1} => hash key
+
         public SearchQueryRepository(ILogger<SearchQueryRepository> logger,
             UserSettingRepository userSettingRepository, TagRepository tagRepository,
-            FileExtensionService extensionUtil) {
+            FileExtensionService extensionUtil, IMemoryCache cache) {
 
             _Logger = logger;
 
             _TagRepository = tagRepository;
             _UserSettingRepository = userSettingRepository;
             _ExtensionUtil = extensionUtil;
+            _Cache = cache;
         }
 
+        /// <summary>
+        ///     compile a search query into an SQL statement
+        /// </summary>
+        /// <param name="ast"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
         public async Task<NpgsqlCommand> Compile(SearchQuery ast, AppAccount user) {
+            string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, ast.HashKey);
+            _Logger.LogTrace($"checking if query was already compiled [cacheKey={cacheKey}]");
+            if (_Cache.TryGetValue(cacheKey, out NpgsqlCommand? sqlCmd) == true && sqlCmd != null) {
+                return sqlCmd;
+            }
+
             List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
 
-            NpgsqlCommand sqlCmd = new();
+            sqlCmd = new NpgsqlCommand();
             sqlCmd.CommandType = System.Data.CommandType.Text;
 
             string cmd = @$"
@@ -78,8 +96,8 @@ namespace honooru.Services.Repositories {
             }
 
             cmd += $" ORDER BY {(query.OrderBy ?? "id desc")}\n";
-            cmd += $" OFFSET {ast.Offset}\n";
-            cmd += $" LIMIT {ast.Limit}\n";
+            //cmd += $" OFFSET {ast.Offset}\n";
+            //cmd += $" LIMIT {ast.Limit}\n";
             sqlCmd.CommandText = cmd;
 
             foreach (object? param in query.Parameters) {

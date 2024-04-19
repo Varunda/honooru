@@ -163,7 +163,7 @@
                 </div>
 
                 <div v-else-if="post.state == 'loaded'">
-                    <div v-if="post.data.height > containerWidth || (sizing == 'fit' && post.data.width > 720)" class="alert alert-primary">
+                    <div v-if="post.data.height > 720" class="alert alert-primary">
                         view:
                         <span @click="sizing = 'fit'" :class="[ sizing == 'fit' ? 'fw-bold': 'text-muted' ]" class="text-decoration-underline">fit</span>
                         /
@@ -217,7 +217,35 @@
 
                     <div class="border mb-2"></div>
 
-                    <post-child-view :post-id="postID"></post-child-view>
+                    <post-child-view :post-id="postID" class="mb-3"></post-child-view>
+
+                    <div class="alert alert-secondary d-flex">
+                        <div v-if="ordering.state == 'loaded'" class="flex-grow-1">
+                            <a v-if="ordering.data.previous != null" id="post-ordering-previous" :href="'/post/' + ordering.data.previous.id + '?q=' + query">
+                                previous
+                            </a>
+                            <span v-else class="text-muted">
+                                no previous post!
+                            </span>
+                        </div>
+
+                        <div class="flex-grow-0">
+                            search: 
+                            <a :href="'/posts?q=' + query">
+                                {{query.split("_").join(" ")}}
+                            </a>
+                        </div>
+
+                        <div v-if="ordering.state == 'loaded'" class="flex-grow-1 text-end">
+                            <a v-if="ordering.data.next != null" id="post-ordering-next" :href="'/post/' + ordering.data.next.id + '?q=' + query">
+                                next
+                            </a>
+                            <span v-else class="text-muted">
+                                no next post!
+                            </span>
+                        </div>
+                    </div>
+
                 </div>
 
                 <api-error v-else-if="post.state == 'error'" :error="post.problem"></api-error>
@@ -263,7 +291,7 @@
 
     import PostInfo from "./components/PostInfo.vue";
 
-    import { Post, PostApi } from "api/PostApi";
+    import { Post, PostApi, PostOrdering } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
 
@@ -294,6 +322,7 @@
             return {
                 postID: 0 as number,
                 post: Loadable.idle() as Loading<Post>,
+                ordering: Loadable.idle() as Loading<PostOrdering>,
 
                 tags: Loadable.idle() as Loading<ExtendedTag[]>,
 
@@ -357,6 +386,14 @@
                     this.startEdit();
                 }
 
+                if (ev.key == "a") {
+                    document.getElementById("post-ordering-previous")?.click();
+                } 
+
+                if (ev.key == "d") {
+                    document.getElementById("post-ordering-next")?.click();
+                }
+
                 if (ev.key == "Enter" && ev.ctrlKey) {
                     this.saveEdit();
                 }
@@ -403,6 +440,11 @@
                         this.htmlDesc = Loadable.error(err);
                     });
                 }
+
+                this.ordering = Loadable.loading();
+                PostApi.getOrdering(this.query, this.postID).then((l: Loading<PostOrdering>) => {
+                    this.ordering = l;
+                });
             },
 
             loadTags: async function(): Promise<void> {
@@ -494,6 +536,7 @@
 
             deletePost: async function(): Promise<void> {
                 const l: Loading<void> = await PostApi.remove(this.postID);
+                console.log(`delete post response: ${l.state}`);
                 if (l.state == "loaded") {
                     Toaster.add("post deleted", `successfully deleted post ${this.postID}`, "success");
                     await this.loadAll();

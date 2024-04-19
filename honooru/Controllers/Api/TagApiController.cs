@@ -148,10 +148,21 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<TagSearchResults>($"limit cannot go above 500");
             }
 
-            List<Tag> tags = await _TagRepository.SearchByName(name.Trim(), CancellationToken.None);
+            List<Tag> tags = await _TagRepository.SearchByName(name, CancellationToken.None);
 
             List<ExtendedTag> ex = await _TagRepository.CreateExtended(tags);
             ex.Sort((a, b) => {
+                // make sure that words that match exactly are above words that are just similar
+                // for example if searching for "test", you wouldn't want "best", even if "best" has more uses
+                if (a.Name == name) { return -1; }
+                if (b.Name == name) { return 1; }
+
+                // next, if the tag contains the input, that one is probably more interesting
+                // so if the input is "test", and the results are "vest", "test", "test_video",
+                // return them in the order of "test", "test_video", "vest"
+                if (a.Name.Contains(name)) { return -1; }
+                if (b.Name.Contains(name)) { return 1; }
+
                 if (sortBy == "uses") {
                     if (sortAscending == true) {
                         return (int)(a.Uses - b.Uses);
@@ -165,7 +176,7 @@ namespace honooru.Controllers.Api {
                         return b.Name.CompareTo(a.Name);
                     }
                 } else {
-                    throw new System.Exception($"invalid sortBy");
+                    throw new System.Exception($"invalid sortBy '{sortBy}'");
                 }
             });
 

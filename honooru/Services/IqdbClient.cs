@@ -230,7 +230,7 @@ namespace honooru.Services {
             HttpResponseMessage response = await _HttpClient.PostAsync(url, null);
             string res = await response.Content.ReadAsStringAsync();
 
-            _Logger.LogDebug($"IQDB get similar response [response={response.Content}] [res={res}]");
+            //_Logger.LogDebug($"IQDB get similar response [response={response.Content}] [res={res}]");
             JsonNode? elem;
             try {
                 elem = JsonSerializer.Deserialize<JsonNode>(res, _SerializingOptions)

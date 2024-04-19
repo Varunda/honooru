@@ -8,8 +8,10 @@ using honooru.Services.Hosted.Startup;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -17,11 +19,16 @@ namespace honooru.Services.Repositories {
     public class PostRepository {
 
         private readonly ILogger<PostRepository> _Logger;
-        private readonly IMemoryCache _Cache;
         private readonly PostTagRepository _PostTagRepository;
-
         private readonly PostDb _PostDb;
+
         private readonly IOptions<StorageOptions> _StorageOptions;
+
+        private readonly IMemoryCache _Cache;
+
+        private const string CACHE_KEY_SEARCH = "Post.Search.{0}.{1}"; // {0} => user ID, {1} => hash key
+
+        private readonly HashSet<string> _CachedKeys = new();
 
         public PostRepository(ILogger<PostRepository> logger,
             IMemoryCache cache, PostDb postDb,
@@ -47,24 +54,44 @@ namespace honooru.Services.Repositories {
             return _PostDb.GetByMD5(md5);
         }
 
-        public Task<List<Post>> Search(SearchQuery query, AppAccount user) {
-            return _PostDb.Search(query, user);
+        public async Task<List<Post>> Search(SearchQuery query, AppAccount user) {
+            string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, query.HashKey);
+            if (_Cache.TryGetValue(cacheKey, out List<Post>? posts) == false || posts == null) {
+                _Logger.LogDebug($"performing DB search as results are not cached [cacheKey={cacheKey}] [user={user.ID}/{user.Name}]");
+                posts = await _PostDb.Search(query, user);
+
+                _CachedKeys.Add(cacheKey);
+                _Cache.Set(cacheKey, posts, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(5)
+                });
+            } else {
+                _Logger.LogDebug($"post search was cached [cacheKey={cacheKey}] [user={user.ID}/{user.Name}]");
+            }
+
+            posts = posts.Skip((int)query.Offset)
+                .Take((int)query.Limit).ToList();
+
+            return posts;
         }
 
         public Task<ulong> Insert(Post post) {
+            RemovedCachedSearches();
             return _PostDb.Insert(post);
         }
 
         public Task Update(ulong postID, Post post) {
+            RemovedCachedSearches();
             return _PostDb.Update(postID, post);
         }
 
         public async Task Delete(ulong postID) {
             await _PostDb.UpdateStatus(postID, PostStatus.DELETED);
+            RemovedCachedSearches();
         }
 
         public async Task Restore(ulong postID) {
             await _PostDb.UpdateStatus(postID, PostStatus.OK);
+            RemovedCachedSearches();
         }
 
         public async Task Erase(ulong postID) {
@@ -72,6 +99,8 @@ namespace honooru.Services.Repositories {
             if (post == null) {
                 return;
             }
+
+            RemovedCachedSearches();
 
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.FileLocation));
 
@@ -90,6 +119,30 @@ namespace honooru.Services.Repositories {
                 _Logger.LogDebug($"deleting file for media asset [path={path}]");
                 File.Delete(path);
             }
+        }
+
+        public void RemovedCachedSearches() {
+            _Logger.LogDebug($"removing old search queries due to post update [_CachedKeys.Count={_CachedKeys.Count}]");
+
+            int count = 0;
+            int had = 0;
+            int missing = 0;
+
+            foreach (string key in _CachedKeys) {
+                ++count;
+
+                bool has = _Cache.TryGetValue(key, out _);
+                if (has == true) {
+                    ++had;
+                } else {
+                    ++missing;
+                }
+
+                _Cache.Remove(key);
+            }
+
+            _Logger.LogInformation($"removed old cached search query results [count={count}] [had={had}] [missing={missing}]");
+
         }
 
     }

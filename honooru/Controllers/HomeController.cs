@@ -71,5 +71,10 @@ namespace honooru.Controllers {
             return View();
         }
 
+        [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
+        public IActionResult Cache() {
+            return View();
+        }
+
     }
 }

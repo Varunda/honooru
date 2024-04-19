@@ -1,4 +1,6 @@
-﻿namespace honooru.Models.Search {
+﻿using System;
+
+namespace honooru.Models.Search {
 
     public class Token {
 
@@ -13,6 +15,10 @@
 
         public override string ToString() {
             return $"<{nameof(Token)} [{nameof(Type)}={Type}] [{nameof(Value)}='{Value}']>";
+        }
+
+        public override int GetHashCode() {
+            return HashCode.Combine((int)Type, Value);
         }
 
     }

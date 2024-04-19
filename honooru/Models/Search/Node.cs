@@ -55,6 +55,16 @@ namespace honooru.Models.Search {
             return $"<{nameof(Node)} [{nameof(Type)}={Type}] [Token={Token}] [Children.count={Children.Count}] [has parent={Parent != null}]>";
         }
 
+        public override int GetHashCode() {
+            int hash = HashCode.Combine((int)Type, Token);
+
+            foreach (Node node in Children) {
+                hash ^= node.GetHashCode();
+            }
+
+            return hash;
+        }
+
     }
 
     public enum NodeType {

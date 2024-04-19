@@ -225,6 +225,59 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
+        ///     get the next post in the query
+        /// </summary>
+        /// <param name="q"></param>
+        /// <param name="postID"></param>
+        /// <returns></returns>
+        [HttpGet("post-order/{postID}")]
+        public async Task<ApiResponse<PostOrdering>> GetOrdering([FromQuery] string q, ulong postID) {
+            AppAccount? currentUser = await _CurrentAccount.Get();
+            if (currentUser == null) {
+                return ApiAuthorize<PostOrdering>();
+            }
+
+            _Logger.LogInformation($"getting post order [postID={postID}] [query={q}]");
+
+            // set a default search of the most recent posts if one is not given
+            if (string.IsNullOrWhiteSpace(q)) {
+                q = "sort:id_desc";
+            }
+
+            // parse the query into an AST that can be compiled into an SQL query
+            Ast searchAst = _SearchQueryParser.Parse(q);
+
+            SearchQuery query = new(searchAst);
+            query.Offset = 0;
+            query.Limit = int.MaxValue; // get all values
+
+            List<Post> posts = await _PostRepository.Search(query, currentUser);
+            _Logger.LogDebug($"loaded posts for post order [posts.Count={posts.Count}] [q={q}] [postID={postID}]");
+
+            PostOrdering order = new();
+            order.Query = q;
+            order.PostID = postID;
+
+            for (int i = 0; i < posts.Count; ++i) {
+                Post iter = posts[i];
+
+                if (iter.ID == postID) {
+                    _Logger.LogDebug($"found current post [i={i}] [q={q}] [postID={postID}]");
+                    if (i < posts.Count - 1) {
+                        order.Next = posts[i + 1];
+                    }
+                    if (i > 0) {
+                        order.Previous = posts[i - 1];
+                    }
+
+                    break;
+                }
+            }
+
+            return ApiOk(order);
+        }
+
+        /// <summary>
         ///     create a new <see cref="Post"/> from a <see cref="MediaAsset"/> that is ready to be used
         /// </summary>
         /// <remarks>
@@ -633,6 +686,11 @@ namespace honooru.Controllers.Api {
                         TagID = tagID
                     });
                 }
+
+                if (tagsToAdd.Count > 0 || tagsToRemove.Count > 0) {
+                    _PostRepository.RemovedCachedSearches();
+                }
+
             }
 
             return ApiOk();
