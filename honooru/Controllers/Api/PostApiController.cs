@@ -231,7 +231,7 @@ namespace honooru.Controllers.Api {
         /// <param name="postID"></param>
         /// <returns></returns>
         [HttpGet("post-order/{postID}")]
-        public async Task<ApiResponse<PostOrdering>> GetOrdering([FromQuery] string q, ulong postID) {
+        public async Task<ApiResponse<PostOrdering>> GetOrdering(ulong postID, [FromQuery] string q = "") {
             AppAccount? currentUser = await _CurrentAccount.Get();
             if (currentUser == null) {
                 return ApiAuthorize<PostOrdering>();
