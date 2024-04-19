@@ -119,6 +119,8 @@ import Toaster from "../../Toaster";
         },
 
         mounted: function(): void {
+            document.title = "Honooru / Cache";
+
             this.loadKeys();
 
             EventBus.$on("view-key", (key: string) => {

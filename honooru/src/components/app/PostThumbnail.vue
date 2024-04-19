@@ -1,5 +1,5 @@
 ﻿<template>
-    <div style="max-width: 180px;" :class="containerClasses">
+    <div style="max-width: 180px;" :class="containerClasses" class="d-inline-block">
         <span v-if="post.durationSeconds > 0" class="position-absolute font-monospace bg-dark ms-2" style="font-size: 0.8rem;">
             {{post.durationSeconds | mduration}}
         </span>
@@ -25,6 +25,7 @@
         },
 
         methods: {
+
         },
 
         computed: {

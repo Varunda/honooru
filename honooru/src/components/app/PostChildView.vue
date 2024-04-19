@@ -18,7 +18,7 @@
             </div>
 
             <div v-else-if="parents.state == 'loaded'">
-                <post-thumbnail v-for="post in parentPosts" :key="post.id" :post="post"></post-thumbnail>
+                <post-thumbnail v-for="post in parentPosts" :key="post.id" :post="post" class="me-1"></post-thumbnail>
             </div>
 
             <div v-else-if="parent.state == 'error'">
@@ -32,7 +32,7 @@
 
         <div>
             <h4 class="mb-0">
-                <button class="btn btn-sm btn-primary" @click="addParent">
+                <button class="btn btn-sm btn-primary" @click="addChild">
                     add
                 </button>
 
@@ -122,6 +122,7 @@
                 const l: Loading<PostChild> = await PostChildApi.insert(num, this.PostId);
                 if (l.state == "loaded") {
                     Toaster.add("parent added", `successfully added #${num} as a parent to this post (#${this.PostId})`, "success");
+                    this.bindAll();
                 } else if (l.state == "error") {
                     Loadable.toastError(l, "error adding parent");
                 } else {
@@ -130,7 +131,7 @@
             },
 
             addChild: async function(): Promise<void> {
-                const input: string | null = prompt("enter ID of post to add as a parent (leave blank to cancel)");
+                const input: string | null = prompt("enter ID of post to add as a child (leave blank to cancel)");
                 if (input == null) {
                     return;
                 }
@@ -144,6 +145,7 @@
                 const l: Loading<PostChild> = await PostChildApi.insert(this.PostId, num);
                 if (l.state == "loaded") {
                     Toaster.add("child added", `successfully added #${num} as a child to this post (#${this.PostId})`, "success");
+                    this.bindAll();
                 } else if (l.state == "error") {
                     Loadable.toastError(l, "error adding child");
                 } else {
