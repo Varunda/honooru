@@ -160,8 +160,8 @@ namespace honooru.Controllers.Api {
                 // next, if the tag contains the input, that one is probably more interesting
                 // so if the input is "test", and the results are "vest", "test", "test_video",
                 // return them in the order of "test", "test_video", "vest"
-                if (a.Name.Contains(name)) { return -1; }
-                if (b.Name.Contains(name)) { return 1; }
+                if (a.Name.Contains(name) && b.Name.Contains(name) == false) { return -1; }
+                if (b.Name.Contains(name) && a.Name.Contains(name) == false) { return 1; }
 
                 if (sortBy == "uses") {
                     if (sortAscending == true) {
