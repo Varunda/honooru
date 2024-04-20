@@ -24,6 +24,7 @@ namespace honooru.Services {
             = new ConcurrentDictionary<string, CacheEntryMetadata>();
 
         public AppCache(ILogger<AppCache> logger, IOptions<MemoryCacheOptions> options) {
+            options.Value.TrackStatistics = true;
             _BackingCache = new MemoryCache(options);
             _Logger = logger;
         }
@@ -42,6 +43,8 @@ namespace honooru.Services {
         };
 
         public int Count => _BackingCache.Count;
+
+        public MemoryCacheStatistics? GetCurrentStatistics() => _BackingCache.GetCurrentStatistics();
 
         public ICacheEntry CreateEntry(object objKey) {
             string? key = objKey.ToString();

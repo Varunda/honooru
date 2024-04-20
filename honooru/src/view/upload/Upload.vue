@@ -97,11 +97,33 @@
         </div>
 
         <div v-else-if="state == 'processing'">
-            <h2 class="pl-2">processing file</h2>
+            <h2 class="ps-2">
+                processing file 
+                <span v-if="mediaAsset != null" class="fs-5">
+                    (<code>{{mediaAsset.source}}</code>)
+                </span>
+            </h2>
 
-            <div v-for="e in progress.progress" class="pb-2 mb-2 border-bottom">
+            <div v-if="progress.error != null" class="alert alert-danger mb-3">
+                an error of
+                <strong>{{progress.error.type}}</strong>
+                occured in
+                <strong>{{progress.error.source}}</strong>
+                while uploading:
+                <strong>{{progress.error.message}}</strong>
+
+                <code><pre>{{progress.error.stackTrace}}</pre></code>
+            </div>
+
+            <div v-for="e in progress.progress" class="pb-3 mb-3 border-bottom">
                 <h3>
                     step {{e.order + 1}} - {{e.name}}
+                    <span v-if="e.finished == true" class="text-success">
+                        (done)
+                    </span>
+                    <span v-if="e.finished == false && e.percent > 0" class="text-info">
+                        (in progress, estimated {{computeCurrentStepTimeLeft | mduration}} left)
+                    </span>
                 </h3>
 
                 <div class="progress" style="height: 2rem">
@@ -121,18 +143,24 @@
         </div>
 
         <template v-else-if="state == 'view'">
-            <div v-if="mediaAsset.postID != null" class="d-flex">
-                <span class="flex-grow-1"></span>
+            <div v-if="mediaAsset.postID != null">
+                <div class="d-flex">
+                    <span class="flex-grow-1"></span>
 
-                <span class="h1 text-center flex-grow-0 mt-5">
-                    this file was already uploaded in
+                    <span class="h1 text-center flex-grow-0 mt-5">
+                        this file was already uploaded in
 
-                    <a :href="'/post/' + mediaAsset.postID">
-                        post #{{mediaAsset.postID}}
-                    </a>
-                </span>
+                        <a :href="'/post/' + mediaAsset.postID">
+                            post #{{mediaAsset.postID}}
+                        </a>
+                    </span>
 
-                <span class="flex-grow-1"></span>
+                    <span class="flex-grow-1"></span>
+                </div>
+
+                <button class="btn btn-danger" @click="deleteUpload">
+                    delete
+                </button>
             </div>
 
             <div v-else style="display: grid; grid-template-columns: 400px 1fr 200px; gap: 0.5rem; overflow: hidden">
@@ -258,9 +286,15 @@
     import "filters/MomentFilter";
     import "filters/LocaleFilter";
 
+    class ExceptionInfo {
+
+
+    }
+
     class UploadStepEntry {
         public current: UploadStepProgress | null = null;
         public progress: UploadStepProgress[] = [];
+        public error: ExceptionInfo | null = null;
     }
 
     class UploadStepProgress {
@@ -268,6 +302,14 @@
         public order: number = 0;
         public percent: number = 0;
         public finished: boolean = false;
+        public startedAt: Date = new Date();
+
+        public static read(elem: any): UploadStepProgress {
+            return {
+                ...elem,
+                startedAt: new Date(elem.startedAt)
+            }
+        }
     }
 
     //
@@ -313,13 +355,6 @@
                     description: "" as string,
                     additionalTags: "" as string
                 },
-
-                /*
-                error: {
-                    rating: false as boolean,
-                    tags: false as boolean
-                }
-                */
             }
         },
 
@@ -345,20 +380,7 @@
 
             if (this.mediaAssetID != null) {
                 console.log(`checking if the media asset ${this.mediaAssetID} is done processing or not`);
-                MediaAssetApi.getByID(this.mediaAssetID).then((data: Loading<MediaAsset>) => {
-                    if (data.state == "loaded") {
-                        if (data.data.status == 2) { // 2 = processing
-                            this.state = "processing";
-                        } else if (data.data.status == 3) { // 3 = done
-                            this.mediaAsset = data.data;
-                            this.state = "view";
-
-                            this.setMediaAsset(data.data);
-                        } else {
-                            console.log(`unchecked status: ${data.data.status}`);
-                        }
-                    }
-                });
+                this.bindMediaAsset(this.mediaAssetID);
             }
         },
 
@@ -395,10 +417,11 @@
             bindMediaAsset: async function(assetID: string): Promise<void> {
                 const data: Loading<MediaAsset> = await MediaAssetApi.getByID(assetID);
                 if (data.state == "loaded") {
-                    if (data.data.status == 2) { // 2 = processing
+                    this.mediaAsset = data.data;
+
+                    if (data.data.status == 2 || data.data.status == 5) { // 2 = processing, 5 = errored
                         this.state = "processing";
                     } else if (data.data.status == 3) { // 3 = done
-                        this.mediaAsset = data.data;
                         this.state = "view";
 
                         this.setMediaAsset(data.data);
@@ -537,7 +560,8 @@
             onUpdateProgress: function(ev: any): void {
                 try {
                     let entry: UploadStepEntry = new UploadStepEntry();
-                    entry.current = ev.current;
+                    entry.current = ev.current == null ? null : UploadStepProgress.read(ev.current);
+                    entry.error = ev.error == null ? null : ev.error;
 
                     for (const key in ev.progress) {
                         const s: UploadStepProgress = new UploadStepProgress();
@@ -547,6 +571,7 @@
                         s.order = iter.order;
                         s.percent = iter.percent;
                         s.finished = iter.finished;
+                        s.startedAt = new Date(iter.startedAt);
 
                         entry.progress.push(s);
                     }
@@ -571,11 +596,12 @@
 
             computeProgressClasses: function(e: UploadStepProgress) {
                 return {
-                    "bg-secondary": e.finished == false && e.percent == 0,
+                    "bg-secondary": e.finished == false && e.percent == 0 && this.progress.error == null,
                     "bg-info": e.finished == false && e.percent > 0,
-                    "bg-success": e.finished == true,
-                    "progress-bar-striped": e.finished == true,
-                    "progress-bar-animated": e.finished == true
+                    "bg-success": e.finished == true && this.progress.error == null,
+                    "bg-danger": this.progress.error != null,
+                    "progress-bar-striped": e.finished == false && e.percent > 0,
+                    "progress-bar-animated": e.finished == false && e.percent > 0
                 }
             },
 
@@ -615,6 +641,18 @@
         computed: {
             uploadWidth: function(): string {
                 return `${this.upload.progress / Math.max(this.upload.total) * 100}%`;
+            },
+
+            computeCurrentStepTimeLeft: function(): number {
+                if (this.progress.current == null) {
+                    return -1;
+                }
+
+                const start: number = this.progress.current.startedAt.getTime();
+                const left: number = 100 - this.progress.current.percent;
+                const timeDiff: number = Date.now() - start;
+                console.log(`start=${start}, left=${left}, timeDiff=${timeDiff}`);
+                return left / (this.progress.current.percent / Math.max(1, timeDiff)) / 1000;
             },
 
             error: function() {

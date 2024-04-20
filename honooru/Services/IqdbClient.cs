@@ -152,6 +152,7 @@ namespace honooru.Services {
                 return health;
             }
 
+            health.Message = "health check success";
             health.Enabled = true;
 
             return health;
@@ -225,12 +226,12 @@ namespace honooru.Services {
 
             string url = $"{_Options.Value.Host}/query?hash={iqdb}";
 
-            _Logger.LogInformation($"searching for IQDB similar values [url={url}]");
+            _Logger.LogInformation($"searching for IQDB similar values [iqdb={iqdb}] [url={url}]");
 
             HttpResponseMessage response = await _HttpClient.PostAsync(url, null);
             string res = await response.Content.ReadAsStringAsync();
 
-            //_Logger.LogDebug($"IQDB get similar response [response={response.Content}] [res={res}]");
+            _Logger.LogTrace($"IQDB get similar response [response={response.Content}] [res={res}]");
             JsonNode? elem;
             try {
                 elem = JsonSerializer.Deserialize<JsonNode>(res, _SerializingOptions)
@@ -264,8 +265,6 @@ namespace honooru.Services {
 
             results = finds.Values.OrderByDescending(iter => iter.Score).ToList();
 
-            //_Logger.LogDebug($"got iqdb similar query results [res={res}]");
-
             return results;
         }
 
@@ -285,7 +284,7 @@ namespace honooru.Services {
                 return null;
             }
 
-            _Logger.LogDebug($"opening file for upload [md5={md5}] [path={path}]");
+            _Logger.LogInformation($"creating IQDB hash based on path [path={path}] [md5={md5}] [fileExt={fileExt}]");
 
             string? fileType = _FileExtensionUtility.GetFileType(fileExt);
             if (fileType == "image") {
@@ -437,7 +436,7 @@ namespace honooru.Services {
             ret.Hash = elem["hash"]?.GetValue<string>() ?? throw new Exception($"missing 'hash' from {elem}");
             ret.MD5 = elem["md5"]?.GetValue<string>() ?? throw new Exception($"missing 'md5' from {elem}");
 
-            _Logger.LogInformation($"generated image hash from IQDB service [name={name}] [hash={ret.Hash}]");
+            _Logger.LogDebug($"generated image hash from IQDB service [name={name}] [hash={ret.Hash}]");
 
             return ret;
         }

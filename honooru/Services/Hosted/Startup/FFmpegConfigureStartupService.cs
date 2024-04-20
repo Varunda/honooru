@@ -27,6 +27,7 @@ namespace honooru.Services.Hosted.Startup {
         }
 
         public async Task StartAsync(CancellationToken cancellationToken) {
+
             string? ffmpegPath = _PathUtil.FindExecutable("ffmpeg");
             string? ffprobePath = _PathUtil.FindExecutable("ffprobe");
 

@@ -114,6 +114,11 @@ namespace honooru.Models.App {
         /// </summary>
         EXTRACTING = 4,
 
+        /// <summary>
+        ///     this media asset occured an error while uploading
+        /// </summary>
+        ERRORED = 5,
+
     }
 
 }

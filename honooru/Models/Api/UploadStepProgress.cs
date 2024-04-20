@@ -29,6 +29,11 @@ namespace honooru.Models.Api {
         /// </summary>
         public bool Finished { get; set; } = false;
 
+        /// <summary>
+        ///     when this step was started
+        /// </summary>
+        public DateTime StartedAt { get; set; }
+
     }
 
     /// <summary>
@@ -36,6 +41,9 @@ namespace honooru.Models.Api {
     /// </summary>
     public class UploadStepEntry {
 
+        /// <summary>
+        ///     ID of the asset this progress is for
+        /// </summary>
         public Guid MediaAssetID { get; set; } = Guid.Empty;
 
         /// <summary>
@@ -47,6 +55,11 @@ namespace honooru.Models.Api {
         ///     the progress on each step
         /// </summary>
         public Dictionary<string, UploadStepProgress> Progress { get; set; } = new();
+
+        /// <summary>
+        ///     error that occured while uploading
+        /// </summary>
+        public ExceptionInfo? Error { get; set; }
 
     }
 

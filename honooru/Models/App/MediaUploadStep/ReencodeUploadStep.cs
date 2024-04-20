@@ -2,6 +2,7 @@
 using FFMpegCore.Enums;
 using honooru.Models.Config;
 using Microsoft.Extensions.Logging;
+using MoreLinq.Extensions;
 using System;
 using System.IO;
 using System.Threading;
@@ -41,6 +42,10 @@ namespace honooru.Models.App.MediaUploadStep {
                     return true;
                 }
 
+                cancel.Register(() => {
+                    _Logger.LogWarning($"cancellation token called! [order.Asset={order.Asset.Guid}]");
+                });
+
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
                 string output = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + ".mp4");
 
@@ -55,21 +60,42 @@ namespace honooru.Models.App.MediaUploadStep {
                     throw new Exception($"input file '{input}' does not exist");
                 }
 
-                IMediaAnalysis analysis = await FFProbe.AnalyseAsync(input, null, cancel);
+                FFOptions options = GlobalFFOptions.Current.Clone();
+
+                // we are we passing no CancellationToken to FFProbe when we are given on in the method args?
+                // for reasons i don't understand, if the cancellation is called while the probing is going on,
+                //      OR (and this is the weird part) after this method completes,
+                // then an exception: "No process is associated with this object" is thrown, which we cannot catch
+                cancel.ThrowIfCancellationRequested();
+                IMediaAnalysis analysis = await FFProbe.AnalyseAsync(input, null, CancellationToken.None);
+                cancel.ThrowIfCancellationRequested();
                 TimeSpan videoDuration = analysis.Duration;
                 _Logger.LogDebug($"input file length: {videoDuration.TotalSeconds} seconds [input={input}]");
 
+                cancel.ThrowIfCancellationRequested();
                 await FFMpegArguments.FromFileInput(input)
                     .OutputToFile(output, false, (options) => {
                         options
                             .WithVideoCodec(VideoCodec.LibX264)
                             .WithAudioCodec(AudioCodec.Aac)
                             .ForceFormat("mp4")
-                            .WithFastStart();
+                            .WithFastStart(); // https://sanjeev-pandey.medium.com/understanding-the-mpeg-4-moov-atom-pseudo-streaming-in-mp4-93935e1b9e9a
                     })
                     .NotifyOnProgress((double arg0) => {
                         progressCallback((decimal) arg0);
                     }, videoDuration)
+                    .NotifyOnOutput((string output) => {
+                        _Logger.LogDebug($"ffmpeg output> {output}");
+                    })
+                    .NotifyOnError((string err) => {
+                        // don't print out progress updates
+                        // frame= 7092 fps=203 q=31.0 size=   69376kB time=00:01:58.40 bitrate=4799.8kbits/s speed=3.39x
+                        if (err.StartsWith("frame=")) {
+                            return;
+                        }
+                        _Logger.LogWarning($"ffmpeg error> {err}");
+                    })
+                    .CancellableThrough(cancel)
                     .ProcessAsynchronously();
 
                 if (File.Exists(output) == false) {

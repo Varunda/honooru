@@ -30,6 +30,8 @@ using honooru.Code.Tracking;
 using honooru.Models;
 using honooru.Services;
 using FFMpegCore;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace honooru {
 
@@ -44,7 +46,8 @@ namespace honooru {
             Console.WriteLine($"starting at {DateTime.UtcNow:u}");
 
             GlobalFFOptions.Configure(new FFOptions() {
-                TemporaryFilesFolder = "./ffmpeg/temp"
+                TemporaryFilesFolder = "./ffmpeg/temp",
+                //LogLevel = FFMpegCore.Enums.FFMpegLogLevel.Debug
             });
 
             bool hostBuilt = false;

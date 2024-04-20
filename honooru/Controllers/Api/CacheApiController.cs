@@ -117,9 +117,27 @@ namespace honooru.Controllers.Api {
         [HttpDelete("{key}")]
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         public ApiResponse Evict(string key) {
+            _Logger.LogInformation($"evicing key from cache [key={key}]");
             _Cache.Remove(key);
 
             return ApiOk();
+        }
+
+        [HttpGet("stats")]
+        [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
+        public ApiResponse<MemoryCacheStatistics> GetStats() {
+            AppCache? cache = _Get();
+            if (_HasAppCache == false || cache == null) {
+                return ApiInternalError<MemoryCacheStatistics>($"cache is not a {nameof(AppCache)}, cannot perform any operation");
+
+            }
+
+            MemoryCacheStatistics? stats = cache.GetCurrentStatistics();
+            if (stats == null) {
+                return ApiNoContent<MemoryCacheStatistics>();
+            }
+
+            return ApiOk(stats);
         }
 
     }

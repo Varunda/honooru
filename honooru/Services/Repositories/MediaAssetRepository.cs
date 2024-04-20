@@ -42,6 +42,7 @@ namespace honooru.Services.Repositories {
         }
 
         public Task Upsert(MediaAsset asset) {
+            _Logger.LogTrace($"performing upsert [asset.ID={asset.Guid}] [asset.Status={asset.Status}]");
             return _MediaAssetDb.Upsert(asset);
         }
 

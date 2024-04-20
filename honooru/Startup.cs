@@ -146,7 +146,7 @@ namespace honooru {
 
             services.AddRazorPages();
             services.AddSingleton<IMemoryCache, AppCache>();
-            //services.AddMemoryCache();
+            //services.AddMemoryCache(); // we don't use the built in cache!
             services.AddHttpContextAccessor();
 
             services.AddCors(o => {

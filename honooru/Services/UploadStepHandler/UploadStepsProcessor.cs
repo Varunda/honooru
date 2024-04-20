@@ -61,6 +61,7 @@ namespace honooru.Services.UploadStepHandler {
             steps.Asset.Status = MediaAssetStatus.PROCESSING;
             await _MediaAssetRepository.Upsert(steps.Asset);
 
+            // add each step 
             IMediaAssetUploadHub group = _UploadHub.Clients.Group($"MediaAsset.Upload.{steps.Asset.Guid}");
             int order = 0;
             foreach (IUploadStep step in steps.Steps) {
@@ -71,10 +72,16 @@ namespace honooru.Services.UploadStepHandler {
             }
             await group.UpdateProgress(entry);
 
+            // perform each step
             try {
                 for (int i = 0; i < steps.Steps.Count; ++i) {
+                    cancel.ThrowIfCancellationRequested();
+
                     IUploadStep step = steps.Steps[i];
                     entry.Current = entry.Progress.GetValueOrDefault(step.Name);
+                    if (entry.Current != null) {
+                        entry.Current.StartedAt = DateTime.UtcNow;
+                    }
 
                     _Logger.LogInformation($"performing step {i + 1}/{stepCount} [step.Name={step.Name}]");
 
@@ -110,11 +117,16 @@ namespace honooru.Services.UploadStepHandler {
                     ])!;
 
                     bool result = await task;
+                    // not needed! read for more:
+                    // https://devblogs.microsoft.com/pfxteam/do-i-need-to-dispose-of-tasks/
+                    //task.Dispose();
 
                     _Logger.LogInformation($"took {timer.ElapsedMilliseconds}ms to process {workerType.FullName}");
                     if (entry.Current != null) {
                         entry.Current.Finished = true;
                     }
+
+                    await group.UpdateProgress(entry);
 
                     Post? existingPost = await _PostRepository.GetByMD5(steps.Asset.MD5);
                     _Logger.LogDebug($"checking if existing post by MD5 exists [md5={steps.Asset.MD5}]");
@@ -128,10 +140,13 @@ namespace honooru.Services.UploadStepHandler {
                         _Logger.LogInformation($"upload step said to stop processing now, stopping [name={step.Name}]");
                         break;
                     }
+
+                    cancel.ThrowIfCancellationRequested();
                 }
 
                 MediaAsset asset = steps.Asset;
 
+                _Logger.LogDebug($"updating asset [asset.ID={asset.Guid}]");
                 asset.FileType = _FileExtensionUtil.GetFileType(asset.FileExtension) ?? "";
                 asset.Status = MediaAssetStatus.DONE;
                 await _MediaAssetRepository.Upsert(asset);
@@ -140,8 +155,18 @@ namespace honooru.Services.UploadStepHandler {
 
                 _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}] [FileType={asset.FileType}]");
             } catch (Exception ex) {
-                _Logger.LogError(ex, "failed to run upload steps");
+                entry.Error = new ExceptionInfo(ex);
+                steps.Asset.Status = MediaAssetStatus.ERRORED;
+                await _MediaAssetRepository.Upsert(steps.Asset);
+
+                if (cancel.IsCancellationRequested == true) {
+                    _Logger.LogWarning($"timeout occured when uploading {steps.Asset.Guid}: {ex.Message}");
+                } else {
+                    _Logger.LogError(ex, "failed to run upload steps");
+                    throw;
+                }
             }
+
         }
 
     }

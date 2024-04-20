@@ -90,8 +90,6 @@ namespace honooru.Services.UrlMediaExtrator {
                 return existingAsset;
             }
 
-            asset.Status = MediaAssetStatus.DONE;
-
             string targetFile = Path.Combine(_Options.Value.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
             _Logger.LogInformation($"moving extracted file to work dir [path={path}] [targetFile={targetFile}]");
             File.Move(path, targetFile); // this is why |file| must be .Close()ed above
