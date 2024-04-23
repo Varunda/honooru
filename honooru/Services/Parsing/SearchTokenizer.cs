@@ -18,11 +18,19 @@ namespace honooru.Services.Parsing {
 
             List<Token> tokens = new();
 
+            bool inQuote = false;
             string word = "";
 
             foreach (char i in q) {
 
                 _Logger.LogTrace($"tokenize iteration [iter={i}] [word={word}]");
+
+                if (inQuote == true) {
+                    if (i != '"') {
+                        word += i;
+                        continue;
+                    }
+                }
 
                 if (i == ' ') {
                     _Logger.LogTrace($"got space character");
@@ -70,8 +78,6 @@ namespace honooru.Services.Parsing {
                 } else if (i == '-') {
                     if (word.Length > 0) {
                         word += i;
-                        //tokens.Add(new Token(TokenType.WORD, word));
-                        //word = "";
                     } else {
                         tokens.Add(new Token(TokenType.NOT, ""));
                         _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
@@ -85,6 +91,21 @@ namespace honooru.Services.Parsing {
 
                     tokens.Add(new Token(TokenType.OPERATOR, "" + i));
                     _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
+                } else if (i == '"') {
+                    if (inQuote == true) {
+                        _Logger.LogTrace($"ending quoted strong");
+                        inQuote = false;
+                    } else {
+                        _Logger.LogTrace($"starting quoted string");
+                        inQuote = true;
+                    }
+
+                    if (word.Length > 0) {
+                        tokens.Add(new Token(TokenType.WORD, word));
+                        _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
+                        word = "";
+                    }
+
                 } else {
                     word += i;
                 }
@@ -95,6 +116,10 @@ namespace honooru.Services.Parsing {
             }
 
             tokens.Add(new Token(TokenType.END, ""));
+
+            if (inQuote == true) {
+                throw new System.Exception($"missing end quote");
+            }
 
             return tokens;
         }

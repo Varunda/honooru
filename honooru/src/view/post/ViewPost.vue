@@ -94,6 +94,14 @@
                     <textarea v-model="edit.description" class="form-control"></textarea>
                 </div>
 
+                <div v-if="editing == true" class="mb-2">
+                    <label class="mb-0">
+                        context
+                        <info-hover text="additional information about the post that is not self-evident from the post itself"></info-hover>
+                    </label>
+                    <textarea v-model="edit.context" class="form-control"></textarea>
+                </div>
+
                 <div class="mb-3">
                     <permissioned-button v-if="editing == false" permission="App.Post.Edit" class="btn btn-primary" @click="startEdit">
                         edit
@@ -127,6 +135,10 @@
                     misc controls
                 </h5>
                 <div>
+                    <button class="btn btn-primary d-block mb-1" id="pool-trigger" data-bs-toggle="offcanvas" data-bs-target="#pool-offcanvas" title="hotkey is P">
+                        pools
+                    </button>
+
                     <button class="btn btn-secondary d-block mb-1" @click="remakeThumbnail">
                         remake thumbnail
                     </button>
@@ -186,63 +198,102 @@
                                :sizing="sizing" :width="post.data.width" :height="post.data.height">
                     </file-view>
 
-                    <div class="h2 mt-2 pt-2">
-                        <span v-if="post.data.title">
-                            {{post.data.title}}
-                        </span>
+                    <div class="mx-3">
+                        <div class="h2 mt-2 pt-2">
+                            <span v-if="post.data.title">
+                                {{post.data.title}}
+                            </span>
 
-                        <span v-else class="text-muted">
-                            &lt;no title set&gt;
-                        </span>
-                    </div>
-
-                    <div v-if="post.data.description" class="border-top mt-2 pt-2">
-                        <div v-if="htmlDesc.state == 'idle'"></div>
-
-                        <div v-else-if="htmlDesc.state == 'loading'">
-                            loading...
-                        </div>
-
-                        <div v-else-if="htmlDesc.state == 'loaded'" v-html="htmlDesc.data"></div>
-
-                        <div v-else-if="htmlDesc.state == 'error'">
-                            error loading description:
-                            <api-error :error="htmlDesc.problem"></api-error>
-                        </div>
-
-                        <div v-else>
-                            unchecked state of htmlDesc: {{htmlDesc.state}}
-                        </div>
-                    </div>
-
-                    <div class="border mb-2"></div>
-
-                    <post-child-view :post-id="postID" class="mb-3"></post-child-view>
-
-                    <div class="alert alert-secondary d-flex">
-                        <div v-if="ordering.state == 'loaded'" class="flex-grow-1">
-                            <a v-if="ordering.data.previous != null" id="post-ordering-previous" :href="'/post/' + ordering.data.previous.id + '?q=' + query">
-                                previous
-                            </a>
                             <span v-else class="text-muted">
-                                no previous post!
+                                no title set
                             </span>
                         </div>
 
-                        <div class="flex-grow-0">
-                            search: 
-                            <a :href="'/posts?q=' + query">
-                                {{query.split("_").join(" ")}}
-                            </a>
-                        </div>
+                        <alert-collapse v-if="post.data.description">
+                            <template v-slot:header>
+                                description
+                            </template>
 
-                        <div v-if="ordering.state == 'loaded'" class="flex-grow-1 text-end">
-                            <a v-if="ordering.data.next != null" id="post-ordering-next" :href="'/post/' + ordering.data.next.id + '?q=' + query">
-                                next
-                            </a>
-                            <span v-else class="text-muted">
-                                no next post!
-                            </span>
+                            <template v-slot:body>
+                                <div v-if="htmlDesc.state == 'idle'"></div>
+
+                                <div v-else-if="htmlDesc.state == 'loading'">
+                                    loading...
+                                </div>
+
+                                <div v-else-if="htmlDesc.state == 'loaded'" v-html="htmlDesc.data"></div>
+
+                                <div v-else-if="htmlDesc.state == 'error'">
+                                    error loading description:
+                                    <api-error :error="htmlDesc.problem"></api-error>
+                                </div>
+
+                                <div v-else>
+                                    unchecked state of htmlDesc: {{htmlDesc.state}}
+                                </div>
+                            </template>
+                        </alert-collapse>
+
+                        <alert-collapse v-if="post.data.context">
+                            <template v-slot:header>
+                                context
+                            </template>
+
+                            <template v-slot:body>
+                                <div v-if="htmlContext.state == 'idle'"></div>
+
+                                <div v-else-if="htmlContext.state == 'loading'">
+                                    loading...
+                                </div>
+
+                                <div v-else-if="htmlContext.state == 'loaded'" v-html="htmlContext.data"></div>
+
+                                <div v-else-if="htmlContext.state == 'error'">
+                                    error loading description:
+                                    <api-error :error="htmlContext.problem"></api-error>
+                                </div>
+
+                                <div v-else>
+                                    unchecked state of htmlContext: {{htmlContext.state}}
+                                </div>
+                            </template>
+                        </alert-collapse>
+
+                        <alert-collapse>
+                            <template v-slot:header>
+                                post relations
+                            </template>
+
+                            <template v-slot:body>
+                                <post-child-view :post-id="postID"></post-child-view>
+                            </template>
+                        </alert-collapse>
+
+                        <div class="alert alert-secondary d-flex">
+                            <div v-if="ordering.state == 'loaded'" class="flex-grow-1">
+                                <a v-if="ordering.data.previous != null" id="post-ordering-previous" :href="'/post/' + ordering.data.previous.id + '?q=' + query" title="hotkey is A">
+                                    previous
+                                </a>
+                                <span v-else class="text-muted">
+                                    no previous post!
+                                </span>
+                            </div>
+
+                            <div class="flex-grow-0">
+                                search: 
+                                <a :href="'/posts?q=' + query">
+                                    {{query.split("_").join(" ")}}
+                                </a>
+                            </div>
+
+                            <div v-if="ordering.state == 'loaded'" class="flex-grow-1 text-end">
+                                <a v-if="ordering.data.next != null" id="post-ordering-next" :href="'/post/' + ordering.data.next.id + '?q=' + query" title="hotkey is D">
+                                    next
+                                </a>
+                                <span v-else class="text-muted">
+                                    no next post!
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -270,6 +321,20 @@
             </div>
 
         </div>
+
+        <div id="pool-offcanvas" class="offcanvas offcanvas-end" tabindex="-1">
+            <div class="offcanvas-header">
+                <h5>
+                    pools
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+
+            <div class="offcanvas-body">
+                <post-pool-view v-if="postID != 0" :post-id="postID"></post-pool-view>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -284,16 +349,20 @@
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import PermissionedButton from "components/PermissionedButton.vue";
+    import AlertCollapse from "components/AlertCollapse.vue";
+
     import FileView from "components/app/FileView.vue";
     import PostSearch from "components/app/PostSearch.vue";
     import Similarity from "components/app/Similarity.vue";
     import PostChildView from "components/app/PostChildView.vue";
+    import PostPoolView from "components/app/PostPoolView.vue";
 
     import PostInfo from "./components/PostInfo.vue";
 
     import { Post, PostApi, PostOrdering } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
     import { PostTagApi } from "api/PostTagApi";
+    import { PostPool, PostPoolApi } from "api/PostPoolApi";
 
     import "filters/ByteFilter";
     import "filters/MomentFilter";
@@ -330,8 +399,14 @@
                     tags: "" as string,
                     title: "" as string,
                     description: "" as string,
+                    context: "" as string,
                     source: "" as string,
                     rating: "" as string
+                },
+
+                pools: {
+                    data: Loadable.idle() as Loading<PostPool[]>,
+                    create: "" as string
                 },
 
                 query: "" as string,
@@ -341,6 +416,7 @@
                 sizing: "fit" as string,
 
                 htmlDesc: Loadable.idle() as Loading<string>,
+                htmlContext: Loadable.idle() as Loading<string>,
 
                 containerElement: null as HTMLElement | null,
                 containerWidth: 0 as number
@@ -364,6 +440,7 @@
 
             this.sizing = AccountUtil.getSetting("posting.sizing")?.value ?? "fit";
 
+            // add observer to the post-container resizing for showing the post resize controls
             this.containerElement = document.getElementById("post-container");
             if (this.containerElement != null) {
                 const obs = new ResizeObserver((mutations: ResizeObserverEntry[], observer: ResizeObserver) => {
@@ -392,6 +469,10 @@
 
                 if (ev.key == "d") {
                     document.getElementById("post-ordering-next")?.click();
+                }
+
+                if (ev.key == "p") {
+                    document.getElementById("pool-trigger")?.click();
                 }
 
                 if (ev.key == "Enter" && ev.ctrlKey) {
@@ -432,12 +513,20 @@
                     this.edit.title = this.post.data.title ?? "";
                     this.edit.description = this.post.data.description ?? "";
                     this.edit.source = this.post.data.source;
+                    this.edit.context = this.post.data.context;
 
                     this.htmlDesc = Loadable.loading();
                     MarkdownUtil.markdown(this.post.data.description ?? "").then((markdown: string) => {
                         this.htmlDesc = Loadable.loaded(markdown);
                     }).catch((err: any) => {
                         this.htmlDesc = Loadable.error(err);
+                    });
+
+                    this.htmlContext = Loadable.loading();
+                    MarkdownUtil.markdown(this.post.data.context).then((markdown: string) => {
+                        this.htmlContext = Loadable.loaded(markdown);
+                    }).catch((err: any) => {
+                        this.htmlContext = Loadable.error(err);
                     });
                 }
 
@@ -452,6 +541,7 @@
                 this.tags = Loadable.loading();
                 this.tags = await PostTagApi.getByPostID(this.postID);
 
+                // put each tag category on a different line
                 if (this.tags.state == "loaded") {
                     this.edit.tags = "";
                     for (const b of this.sortedTags) {
@@ -471,7 +561,7 @@
             },
 
             saveEdit: async function(): Promise<void> {
-                await PostApi.update(this.postID, this.edit.tags, this.edit.rating, this.edit.source, this.edit.title, this.edit.description);
+                await PostApi.update(this.postID, this.edit.tags, this.edit.rating, this.edit.source, this.edit.title, this.edit.description, this.edit.context);
 
                 this.loadAll();
 
@@ -621,9 +711,9 @@
         },
 
         components: {
-            InfoHover, ApiError, PermissionedButton,
+            InfoHover, ApiError, PermissionedButton, AlertCollapse,
             AppMenu,
-            FileView, PostSearch, Similarity, PostChildView,
+            FileView, PostSearch, Similarity, PostChildView, PostPoolView,
             PostInfo
         }
 

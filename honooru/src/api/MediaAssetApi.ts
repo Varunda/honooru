@@ -15,6 +15,7 @@ export class MediaAsset {
     public additionalTags: string = "";
     public title: string = "";
     public description: string = "";
+    public context: string = "";
     public iqdbHash: string | null = null;
 }
 

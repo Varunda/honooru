@@ -24,7 +24,8 @@
 
     import { ExtendedTag, TagApi, TagSearchResults } from "api/TagApi";
 
-    import Tribute, { TributeCollection, TributeItem } from "node_modules/tributejs";
+    //import Tribute, { TributeCollection, TributeItem } from "node_modules/tributejs";
+    import Tribute, { TributeCollection, TributeItem } from "lib/tribute";
 
     export const PostSearch = Vue.extend({
         props: {
@@ -104,7 +105,7 @@
                 // i don't think these actually matter
                 this.searchInput.addEventListener("tribute-replaced", (ev: any) => {
                     this.enterLockout = Date.now() + 200;
-                    console.log(`replaced event ${ev.detail}, lockout set to ${this.enterLockout}`);
+                    console.log(`replaced event ${JSON.stringify(ev)}, lockout set to ${this.enterLockout}`);
                 });
 
                 this.searchInput.addEventListener("tribute-no-match", (ev: any) => {

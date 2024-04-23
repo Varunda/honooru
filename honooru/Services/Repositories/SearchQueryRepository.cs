@@ -165,7 +165,7 @@ namespace honooru.Services.Repositories {
                 Node field = node.Children[0];
                 Node op = node.Children[1];
                 Node value = node.Children[2];
-                
+
                 //
                 // the following meta operations can be performed:
                 //      user:{NAME}
@@ -191,6 +191,9 @@ namespace honooru.Services.Repositories {
                 //
                 //      extension:{string}
                 //          search for posts with this extension type
+                //
+                //      pool:{ID}
+                //          search for posts that are in a pool
                 //
                 //      sort
                 //          sort returned posts by this value
@@ -266,6 +269,30 @@ namespace honooru.Services.Repositories {
                 } else if (field.Token.Value == "extension") {
                     cmd = $" p.file_extension " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(value.Token.Value);
+                } else if (field.Token.Value == "title") {
+                    cmd = $"LOWER(p.title) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                } else if (field.Token.Value == "description") {
+                    cmd = $"LOWER(p.description) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                } else if (field.Token.Value == "context") {
+                    cmd = $"LOWER(p.context) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                } else if (field.Token.Value == "contains") {
+                    cmd = $" (" +
+                        $"LOWER(p.title) LIKE '%' || ${query.Parameters.Count + 1} || '%' " +
+                        $"OR LOWER(p.description) LIKE '%' || ${query.Parameters.Count + 2} || '%'" +
+                        $"OR LOWER(p.context) LIKE '%' || ${query.Parameters.Count + 3} || '%')\n";
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                    query.Parameters.Add(value.Token.Value.ToLower());
+                } else if (field.Token.Value == "pool") {
+                    if (ulong.TryParse(value.Token.Value, out ulong poolID) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.id IN (select distinct(post_id) FROM post_pool_entry WHERE pool_id = ${query.Parameters.Count + 1})\n";
+                    query.Parameters.Add(poolID);
                 } else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
                 } else {

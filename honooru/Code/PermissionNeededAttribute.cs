@@ -13,6 +13,7 @@ using honooru.Models;
 using honooru.Services.Db;
 using honooru.Services.Repositories;
 using honooru.Services;
+using System.Diagnostics;
 
 namespace honooru.Code {
 
@@ -90,10 +91,12 @@ namespace honooru.Code {
 
             HashSet<string> accountPerms = new();
 
+            Stopwatch timer = Stopwatch.StartNew();
             List<AppGroupPermission> perms = await _PermissionRepository.GetByAccountID(account.ID);
             foreach (AppGroupPermission perm in perms) {
                 accountPerms.Add(perm.Permission.ToLower());
             }
+            _Logger.LogTrace($"loaded user permissions [perms.Count={perms.Count}] [timer={timer.ElapsedMilliseconds}ms] [account={account.ID}/{account.Name}]");
 
             bool hasPerm = false;
             foreach (string perm in Permissions) {

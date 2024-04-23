@@ -269,6 +269,12 @@ namespace honooru {
                 );
 
                 endpoints.MapControllerRoute(
+                    name: "pool",
+                    pattern: "/pool/{*.}",
+                    defaults: new { controller = "Home", action = "Pool" }
+                );
+
+                endpoints.MapControllerRoute(
                     name: "api",
                     pattern: "/api/{controller}/{action}"
                 );

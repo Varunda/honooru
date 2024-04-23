@@ -66,6 +66,14 @@ namespace honooru.Controllers {
             return View();
         }
 
+        public IActionResult Pools() {
+            return View();
+        }
+
+        public IActionResult Pool() {
+            return View();
+        }
+
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         public IActionResult Admin() {
             return View();

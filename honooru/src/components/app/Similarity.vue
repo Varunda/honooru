@@ -60,12 +60,18 @@
                 </div>
             </div>
 
-            <div class="text-muted">
+            <div class="text-muted text-center">
                 hiding {{hiddenCount}} entries
 
-                <button class="btn btn-sm btn-secondary" @click="options.showAll = true">
-                    show all
-                </button>
+                <div>
+                    <button v-if="options.showAll == true" class="btn btn-sm btn-link" @click="options.showAll = false">
+                        hide
+                    </button>
+
+                    <button v-else class="btn btn-sm btn-link" @click="options.showAll = true">
+                        show all
+                    </button>
+                </div>
             </div>
 
         </div>

@@ -1,6 +1,6 @@
 ﻿import Vue from "vue";
 
-import ViewPost from "./ViewPost.vue";
+import PoolList from "./PoolList.vue";
 
 const vm = new Vue({
 	el: "#app",
@@ -18,7 +18,7 @@ const vm = new Vue({
 	},
 
 	components: {
-		ViewPost
+		PoolList
 	}
 });
 (window as any).vm = vm;

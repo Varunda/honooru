@@ -204,6 +204,11 @@
                     </div>
 
                     <div class="mb-2">
+                        <label class="mb-0">context</label>
+                        <textarea v-model="posting.context" class="form-control"></textarea>
+                    </div>
+
+                    <div class="mb-2">
                         <label class="mb-0">source</label>
                         <input type="text" class="form-control" v-model="posting.source" />
                     </div>
@@ -353,6 +358,7 @@
                     source: "" as string,
                     title: "" as string,
                     description: "" as string,
+                    context: "" as string,
                     additionalTags: "" as string
                 },
             }

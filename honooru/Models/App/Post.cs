@@ -22,6 +22,9 @@ namespace honooru.Models.Db {
         /// </summary>
         public DateTime Timestamp { get; set; }
 
+        /// <summary>
+        ///     status of the post, such as deleted or ok
+        /// </summary>
         public PostStatus Status { get; set; }
 
         /// <summary>
@@ -33,6 +36,11 @@ namespace honooru.Models.Db {
         ///     an optional description
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        ///     context about the post itself
+        /// </summary>
+        public string Context { get; set; } = "";
 
         /// <summary>
         ///     the ID of the last <see cref="AppAccount"/> to edit this post

@@ -138,15 +138,21 @@ export default class MarkdownUtil {
      * @returns output HTML that has been sanitized
      */
     public static async markdown(input: string): Promise<string> {
+        const randID: number = Math.trunc(Math.random() * 100000);
+        console.time(`markdown-${randID}`);
         marked.use(honooruMarkdownExtension);
 
         const html: string | Promise<string> = marked.parse(input);
 
         try {
             if (typeof html == "string") {
-                return DOMPurify.sanitize(html);
+                const r = DOMPurify.sanitize(html);
+                console.timeEnd(`markdown-${randID}`);
+                return r;
             } else {
-                return DOMPurify.sanitize(await html);
+                const r = DOMPurify.sanitize(await html);
+                console.timeEnd(`markdown-${randID}`);
+                return r;
             }
         } catch (err) {
             console.error(`error when creating markdown`);

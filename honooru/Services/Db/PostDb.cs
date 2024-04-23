@@ -138,10 +138,10 @@ namespace honooru.Services.Db {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
-                    poster_user_id, timestamp, status, title, description, last_editor_user_id, iqdb_hash,
+                    poster_user_id, timestamp, status, title, description, context, last_editor_user_id, iqdb_hash,
                     md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height, file_type
                 ) VALUES (
-                    @PosterUserID, @Timestamp, @Status, @Title, @Description, 0, @IqdbHash,
+                    @PosterUserID, @Timestamp, @Status, @Title, @Description, @Context, 0, @IqdbHash,
                     @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height, @FileType
                 ) RETURNING id;
             ");
@@ -151,6 +151,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Status", (short) post.Status);
             cmd.AddParameter("Title", post.Title);
             cmd.AddParameter("Description", post.Description);
+            cmd.AddParameter("Context", post.Context);
             cmd.AddParameter("IqdbHash", post.IqdbHash);
             cmd.AddParameter("MD5", post.MD5);
             cmd.AddParameter("Rating", (short) post.Rating);
@@ -184,6 +185,7 @@ namespace honooru.Services.Db {
                     post
                 SET title = @Title,
                     description = @Description,
+                    context = @Context,
                     rating = @Rating,
                     source = @Source,
                     last_editor_user_id = @LastUserEditorID,
@@ -197,6 +199,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("ID", postID);
             cmd.AddParameter("Title", post.Title);
             cmd.AddParameter("Description", post.Description);
+            cmd.AddParameter("Context", post.Context);
             cmd.AddParameter("Rating", (short) post.Rating);
             cmd.AddParameter("Source", post.Source);
             cmd.AddParameter("LastUserEditorID", post.LastEditorUserID);

@@ -74,8 +74,28 @@
                     </div>
 
                     <div class="mb-2">
-                        <label class="mb-0">description</label>
-                        <textarea :disabled="!editing" :readonly="!editing" class="form-control" v-model="tagCopy.description"></textarea>
+                        <label class="mb-0 h5">description</label>
+
+                        <textarea v-if="editing == true" :readonly="!editing" class="form-control" v-model="tagCopy.description"></textarea>
+
+                        <div v-else>
+                            <div v-if="htmlDesc.state == 'idle'"></div>
+
+                            <div v-else-if="htmlDesc.state == 'loading'">
+                                loading...
+                            </div>
+
+                            <div v-else-if="htmlDesc.state == 'loaded'" v-html="htmlDesc.data"></div>
+
+                            <div v-else-if="htmlDesc.state == 'error'">
+                                error loading description:
+                                <api-error :error="htmlDesc.problem"></api-error>
+                            </div>
+
+                            <div v-else>
+                                unchecked state of htmlDesc: {{htmlDesc.state}}
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-2">
@@ -99,74 +119,77 @@
 
                     <hr class="border" />
 
-                    <div>
-                        <div class="mb-3">
-                            <h4 class="mb-0">
-                                aliases
-                                <span v-if="aliases.state == 'loaded'" class="text-muted">
-                                    ({{aliases.data.length}})
-                                </span>
-                            </h4>
+                    <!--
+                        aliases
+                    -->
+                    <alert-collapse>
+                        <template v-slot:header>
+                            aliases
+                            <span v-if="aliases.state == 'loaded'" class="text-muted">
+                                ({{aliases.data.length}})
+                            </span>
                             <h6 class="text-muted">
                                 aliases are words that are equivalent to this tag. when creating tags, any tag with these words will instead use this tag
                             </h6>
-                        </div>
+                        </template>
 
-                        <div class="mb-3">
-                            <div v-if="aliases.state == 'idle'"></div>
-                            <div v-else-if="aliases.state == 'loading'">
-                                loading...
-                            </div>
+                        <template v-slot:body>
+                            <div>
+                                <div v-if="aliases.state == 'idle'"></div>
 
-                            <div v-else-if="aliases.state == 'loaded'">
-                                <div v-for="a in aliases.data" class="d-inline mr-1">
-                                    <div class="btn-group">
-                                        <button v-if="del.alias == a.alias" class="btn btn-danger" @click="deleteAlias(a.alias)">
-                                            <span class="bi-trash"></span>
-                                        </button>
+                                <div v-else-if="aliases.state == 'loading'">
+                                    loading...
+                                </div>
 
-                                        <button class="btn btn-info">
-                                            {{a.alias}}
-                                        </button>
+                                <div v-else-if="aliases.state == 'loaded'">
+                                    <div v-for="a in aliases.data" class="d-inline mr-1">
+                                        <div class="btn-group">
+                                            <button v-if="del.alias == a.alias" class="btn btn-danger" @click="deleteAlias(a.alias)">
+                                                <span class="bi-trash"></span>
+                                            </button>
 
-                                        <button v-if="del.alias != a.alias" class="btn btn-info" @click="del.alias = a.alias">
-                                            &times;
-                                        </button>
+                                            <button class="btn btn-info">
+                                                {{a.alias}}
+                                            </button>
 
-                                        <button v-else class="btn btn-secondary" @click="del.alias = ''">
-                                            &times;
-                                        </button>
+                                            <button v-if="del.alias != a.alias" class="btn btn-info" @click="del.alias = a.alias">
+                                                &times;
+                                            </button>
+
+                                            <button v-else class="btn btn-secondary" @click="del.alias = ''">
+                                                &times;
+                                            </button>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div v-else-if="aliases.state == 'error'">
+                                    <api-error :error="aliases.problem"></api-error>
                                 </div>
                             </div>
 
-                            <div v-else-if="aliases.state == 'error'">
-                                <api-error :error="aliases.problem"></api-error>
+                            <div>
+                                <label class="mb-0">create new</label>
+                                <div class="input-group">
+                                    <input class="form-control" v-model="input.alias" @keyup.enter="createAlias" />
+                                    <span class="input-group-append">
+                                        <button class="btn btn-primary" @click="createAlias">
+                                            insert
+                                        </button>
+                                    </span>
+                                </div>
+
+                                <api-error v-if="pending.alias.state == 'error'" :error="pending.alias.problem"></api-error>
                             </div>
-                        </div>
+                        </template>
+                    </alert-collapse>
 
-                        <div>
-                            <label class="mb-0">create new</label>
-                            <div class="input-group">
-                                <input class="form-control" v-model="input.alias" @keyup.enter="createAlias" />
-                                <span class="input-group-append">
-                                    <button class="btn btn-primary" @click="createAlias">
-                                        insert
-                                    </button>
-                                </span>
-                            </div>
-
-                            <api-error v-if="pending.alias.state == 'error'" :error="pending.alias.problem"></api-error>
-                        </div>
-                    </div>
-
-                    <hr class="border" />
-
-                    <div>
-                        <div class="mb-3">
-                            <h4 class="mb-0">
-                                implications
-                            </h4>
+                    <!--
+                        implications
+                    -->
+                    <alert-collapse>
+                        <template v-slot:header>
+                            implications
                             <h6 class="text-muted">
                                 implications are tags that when added to a post, will add another tag as well.
                                 implications only go one level deep.
@@ -174,16 +197,16 @@
                                 for example, if there is an implication A -> B -> C, if tag A is added to a post,
                                 only tag B will be added as well, NOT tag C, despite an implication from tag B to tag C
                             </h6>
-                        </div>
+                        </template>
 
-                        <div class="mb-3">
+                        <template v-slot:body>
                             <view-tag-implications :tag-id="tagID"></view-tag-implications>
-                        </div>
+                        </template>
+                    </alert-collapse>
 
-                    </div>
-
-                    <hr class="border" />
-
+                    <!--
+                        recent posts     
+                    -->
                     <h2>
                         <a :href="'/posts?q=' + tag.data.name">
                             recent posts
@@ -209,22 +232,23 @@
     import { Loadable, Loading } from "Loading";
     import Toaster from "Toaster";
 
+    import MarkdownUtil from "util/Markdown";
+
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import ToggleButton from "components/ToggleButton";
+    import AlertCollapse from "components/AlertCollapse.vue";
+
     import PostList from "components/app/PostList.vue";
 
     import ViewTagImplications from "./components/ViewTagImplications.vue";
 
     import "filters/LocaleFilter";
 
-    import { Post, PostApi } from "api/PostApi";
     import { Tag, ExtendedTag, TagApi } from "api/TagApi";
-    import { PostTagApi } from "api/PostTagApi";
     import { TagTypeApi, TagType } from "api/TagTypeApi";
     import { TagAlias, TagAliasApi } from "api/TagAliasApi";
-    import { TagImplicationBlock, TagImplicationApi } from "api/TagImplicationApi";
 
     export const ViewTag = Vue.extend({
         props: {
@@ -236,6 +260,8 @@
                 tagID: 0 as number,
                 tag: Loadable.idle() as Loading<ExtendedTag>,
                 tagCopy: new ExtendedTag() as ExtendedTag,
+
+                htmlDesc: Loadable.idle() as Loading<string>,
 
                 editing: false as boolean,
 
@@ -302,12 +328,23 @@
             getTag: async function(): Promise<void> {
                 this.tag = Loadable.loading();
                 this.tag = await TagApi.getExtendedByID(this.tagID);
+                this.htmlDesc = Loadable.loading();
 
                 this.getTagAliases(this.tagID);
 
                 if (this.tag.state == "loaded") {
                     document.title = `Honooru / Tag: ${this.tag.data.name}`;
                     this.tagCopy = { ...this.tag.data };
+
+                    if (this.tag.data.description != null) {
+                        MarkdownUtil.markdown(this.tag.data.description).then((md: string) => {
+                            this.htmlDesc = Loadable.loaded(md);
+                        }).catch((err: any) => {
+                            this.htmlDesc = Loadable.error(err);
+                        });
+                    } else {
+                        this.htmlDesc = Loadable.loaded("");
+                    }
                 }
             },
 
@@ -387,7 +424,7 @@
         },
 
         components: {
-            InfoHover, ApiError,
+            InfoHover, ApiError, AlertCollapse,
             AppMenu,
             ToggleButton, PostList,
             ViewTagImplications

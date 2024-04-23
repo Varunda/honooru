@@ -44,7 +44,7 @@ namespace honooru.Services.Db {
                     name, created_by_id, timestamp
                 ) VALUES (
                     @Name, @CreatedByID, @Timestamp
-                );
+                ) RETURNING id;
             ");
 
             cmd.AddParameter("Name", pool.Name);

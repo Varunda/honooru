@@ -50,6 +50,22 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
+        ///     get a specific <see cref="PostPool"/> by it's <see cref="PostPool.ID"/>
+        /// </summary>
+        /// <param name="poolID"></param>
+        /// <returns></returns>
+        [HttpGet("{poolID}")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
+        public async Task<ApiResponse<PostPool>> GetByID(ulong poolID) {
+            PostPool? pool = await _PoolRepository.GetByID(poolID);
+            if (pool == null) {
+                return ApiNoContent<PostPool>();
+            }
+
+            return ApiOk(pool);
+        }
+
+        /// <summary>
         ///     create a new <see cref="PostPool"/> with a given <see cref="PostPool.Name"/>
         /// </summary>
         /// <param name="name">name of the pool to be created</param>

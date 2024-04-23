@@ -25,6 +25,7 @@ export class Post {
     public timestamp: Date = new Date();
     public title: string | null = null;
     public description: string | null = null;
+    public context: string = "";
     public lastEditorUserId: number = 0;
     public lastEdited: Date | null = null;
     public md5: string = "";
@@ -111,7 +112,7 @@ export class PostApi extends ApiWrapper<Post> {
     }
 
     public static async upload(mediaAssetID: string, tags: string, rating: string,
-        title: string | null, description: string | null, source: string): Promise<Loading<Post>> {
+        title: string | null, description: string | null, source: string, context: string): Promise<Loading<Post>> {
 
         let url: string = `/api/post/${mediaAssetID}`;
         url += `?tags=${encodeURI(tags)}`;
@@ -123,27 +124,31 @@ export class PostApi extends ApiWrapper<Post> {
         if (description != null) {
             url += `&description=${encodeURI(description)}`;
         }
+        url += `&context=${encodeURI(context)}`;
 
         return PostApi.get().postReply(url, PostApi.parse);
     }
 
-    public static async update(postID: number, tags?: string, rating?: string, source?: string, title?: string, description?: string): Promise<Loading<void>> {
+    public static async update(postID: number, tags?: string, rating?: string, source?: string, title?: string, description?: string, context?: string): Promise<Loading<void>> {
         const parms: URLSearchParams = new URLSearchParams();
 
-        if (tags) {
+        if (tags != undefined) {
             parms.set("tags", tags);
         }
-        if (rating) {
+        if (rating != undefined) {
             parms.set("rating", rating);
         }
-        if (source) {
+        if (source != undefined) {
             parms.set("source", source);
         }
-        if (title) {
+        if (title != undefined) {
             parms.set("title", title);
         }
-        if (description) {
+        if (description != undefined) {
             parms.set("description", description);
+        }
+        if (context != undefined) {
+            parms.set("context", context);
         }
 
         return PostApi.get().post(`/api/post/${postID}?${parms.toString()}`);

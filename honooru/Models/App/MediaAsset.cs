@@ -75,6 +75,11 @@ namespace honooru.Models.App {
         public string Description { get; set; } = "";
 
         /// <summary>
+        ///     context about the post itself
+        /// </summary>
+        public string Context { get; set; } = "";
+
+        /// <summary>
         ///     hash of the <see cref="IqdbEntry"/> this media asset has. Is null until it is set
         /// </summary>
         public string? IqdbHash { get; set; } = null;

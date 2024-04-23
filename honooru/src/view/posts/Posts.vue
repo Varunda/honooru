@@ -49,6 +49,7 @@
     import { AppMenu } from "components/AppMenu";
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
+    import AlertCollapse from "components/AlertCollapse.vue";
     import PostSearch from "components/app/PostSearch.vue";
     import PostList from "components/app/PostList.vue";
 
@@ -183,7 +184,7 @@
         },
 
         components: {
-            InfoHover, ApiError,
+            InfoHover, ApiError, AlertCollapse,
             AppMenu,
             PostList,
             PostSearch,

@@ -32,6 +32,7 @@ namespace honooru.Services.Db.Readers {
             asset.AdditionalTags = reader.GetString("additional_tags");
             asset.Title = reader.GetString("title");
             asset.Description = reader.GetString("description");
+            asset.Context = reader.GetString("context");
 
             return asset;
         }

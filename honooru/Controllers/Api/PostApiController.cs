@@ -129,6 +129,9 @@ namespace honooru.Controllers.Api {
         /// <response code="200">
         ///     the response will contain a <see cref="SearchResults"/> for the search performed
         /// </response>
+        /// <response code="400">
+        ///     <paramref name="limit"/> cannot be larger than 500
+        /// </response>
         [HttpGet("search")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<SearchResults>> Search(
@@ -198,6 +201,9 @@ namespace honooru.Controllers.Api {
         /// <param name="iqdb">IQDB hash</param>
         /// <response code="200">
         ///     the response will contain a list of <see cref="IqdbQueryResult"/>s
+        /// </response>
+        /// <response code="400">
+        ///     <paramref name="iqdb"/> was empty
         /// </response>
         [HttpGet("similar/{iqdb}")]
         public async Task<ApiResponse<List<IqdbQueryResult>>> SearchByIqdbHash(string iqdb) {
@@ -301,6 +307,7 @@ namespace honooru.Controllers.Api {
         /// <param name="title">optional <see cref="Post.Title"/></param>
         /// <param name="description">optional <see cref="Post.Description"/></param>
         /// <param name="source">where the <see cref="Post"/> comes from</param>
+        /// <param name="context">additional context about the post that is not self-evident from the post itself</param>
         /// 
         /// <response code="200">
         ///     the response will contain the newly created <see cref="Post"/> using
@@ -341,7 +348,8 @@ namespace honooru.Controllers.Api {
             [FromQuery] string rating,
             [FromQuery] string? title = null,
             [FromQuery] string? description = null,
-            [FromQuery] string? source = ""
+            [FromQuery] string? source = "",
+            [FromQuery] string? context = null
             ) {
 
             AppAccount? currentUser = await _CurrentAccount.Get();
@@ -392,6 +400,7 @@ namespace honooru.Controllers.Api {
             post.FileType = asset.FileType;
             post.Status = PostStatus.OK;
             post.IqdbHash = asset.IqdbHash;
+            post.Context = context ?? "";
             _Logger.LogDebug($"data copied from {nameof(MediaAsset)} [MD5={post.MD5}] [FileExtension={post.FileExtension}] [FileType={post.FileType}]");
 
             // parse additional tags and add metadata such as width//height and duration (if video)
@@ -438,6 +447,10 @@ namespace honooru.Controllers.Api {
                     }
                 } else {
                     _Logger.LogWarning($"unchecked filetype when automatically adding tags [FileExtension={post.FileExtension}] [fileType={fileType}]");
+                }
+
+                if (string.IsNullOrWhiteSpace(title) == false || string.IsNullOrWhiteSpace(description) == false || string.IsNullOrWhiteSpace(context) == false) {
+                    newTags += " commentary";
                 }
 
                 if (newTags.Length > 0) {
@@ -533,6 +546,7 @@ namespace honooru.Controllers.Api {
         /// <param name="title">optional, leave null to not change. what title to update the post with</param>
         /// <param name="description">optional, leave null to not change. what description to update the post with</param>
         /// <param name="source">optional, leave null to not change. what source to update the post with</param>
+        /// <param name="context">optiona, leave null to not change. additional context about the post</param>
         /// <exception cref="Exception"></exception>
         /// <response code="200">
         ///     the <see cref="Post"/> with <see cref="Post.ID"/> of <paramref name="postID"/> was successfully
@@ -552,7 +566,8 @@ namespace honooru.Controllers.Api {
             [FromQuery] string? rating = null,
             [FromQuery] string? title = null,
             [FromQuery] string? description = null,
-            [FromQuery] string? source = null
+            [FromQuery] string? source = null,
+            [FromQuery] string? context = null
             ) {
 
             Post? post = await _PostRepository.GetByID(postID);
@@ -595,6 +610,11 @@ namespace honooru.Controllers.Api {
             if (source != null) {
                 doSave = doSave || post.Source != source;
                 post.Source = source;
+            }
+
+            if (context != null) {
+                doSave = doSave || post.Context != context;
+                post.Context = context;
             }
 
             if (doSave == true) {

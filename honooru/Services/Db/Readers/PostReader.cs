@@ -25,6 +25,7 @@ namespace honooru.Services.Db.Readers {
 
             post.Title = reader.GetNullableString("title");
             post.Description = reader.GetNullableString("description");
+            post.Context = reader.GetString("context");
             post.LastEditorUserID = reader.GetUInt64("last_editor_user_id");
             post.LastEdited = reader.GetNullableDateTime("last_edited");
             post.MD5 = reader.GetString("md5");
