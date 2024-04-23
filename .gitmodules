@@ -1,0 +1,3 @@
+[submodule "honooru/src/lib/tribute"]
+	path = honooru/src/lib/tribute
+	url = https://github.com/zurb/tribute
