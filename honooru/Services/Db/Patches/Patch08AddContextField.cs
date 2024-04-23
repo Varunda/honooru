@@ -15,7 +15,7 @@ namespace honooru.Services.Db.Patches {
 
                 ALTER TABLE post ADD COLUMN IF NOT EXISTS context varchar NOT NULL DEFAULT '';
 
-                ALTER TABLE pool_post ADD COLUMN IF NOT EXISTS description varchar NOT NULL DEFAULT '';
+                ALTER TABLE post_pool ADD COLUMN IF NOT EXISTS description varchar NOT NULL DEFAULT '';
             ");
 
             await cmd.ExecuteNonQueryAsync();
