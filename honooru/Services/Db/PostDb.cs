@@ -212,6 +212,12 @@ namespace honooru.Services.Db {
             await conn.CloseAsync();
         }
 
+        /// <summary>
+        ///     update the <see cref="Post.Status"/> of a <see cref="Post"/> based on ID
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to update</param>
+        /// <param name="status">the new <see cref="PostStatus"/> to set <see cref="Post.Status"/> to</param>
+        /// <returns>a Task for the async operation</returns>
         public async Task UpdateStatus(ulong postID, PostStatus status) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
@@ -231,6 +237,12 @@ namespace honooru.Services.Db {
             await conn.CloseAsync();
         }
 
+        /// <summary>
+        ///     delete a <see cref="Post"/> from the DB. if you want to mark a post as deleted,
+        ///     instead call <see cref="UpdateStatus(ulong, PostStatus)"/> with <see cref="PostStatus.DELETED"/>
+        /// </summary>
+        /// <param name="postID">ID of the <see cref="Post"/> to delete</param>
+        /// <returns></returns>
         public async Task Delete(ulong postID) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"

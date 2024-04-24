@@ -35,6 +35,10 @@ namespace honooru.Models.Search {
             }
         }
 
+        /// <summary>
+        ///     get the current token and advance to the next one
+        /// </summary>
+        /// <returns></returns>
         public Token? GetNext() {
             if (MoveNext()) {
                 return Current;
@@ -42,6 +46,10 @@ namespace honooru.Models.Search {
             return null;
         }
 
+        /// <summary>
+        ///     peek at the next token without removing it from the stream
+        /// </summary>
+        /// <returns></returns>
         public Token? PeekNext() {
             if (_Index + 1 >= _Tokens.Count) {
                 return null;
@@ -49,6 +57,10 @@ namespace honooru.Models.Search {
             return _Tokens.ElementAt(_Index + 1);
         }
 
+        /// <summary>
+        ///     move back if possible in the token stream
+        /// </summary>
+        /// <returns></returns>
         public bool MoveBack() {
             if (--_Index >= 0) {
                 _Current = _Tokens.ElementAt(_Index);
@@ -59,6 +71,10 @@ namespace honooru.Models.Search {
             }
         }
 
+        /// <summary>
+        ///     move back and get the previous token
+        /// </summary>
+        /// <returns></returns>
         public Token? GetPrevious() {
             if (MoveBack()) {
                 return Current;

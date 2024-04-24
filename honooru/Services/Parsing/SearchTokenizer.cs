@@ -25,6 +25,8 @@ namespace honooru.Services.Parsing {
 
                 _Logger.LogTrace($"tokenize iteration [iter={i}] [word={word}]");
 
+                // if in a quote, only stop for another quote
+                // TODO: support escaped quotes?
                 if (inQuote == true) {
                     if (i != '"') {
                         word += i;
@@ -76,9 +78,11 @@ namespace honooru.Services.Parsing {
                     tokens.Add(new Token(TokenType.META, ""));
                     _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
                 } else if (i == '-') {
+                    // if a word has already started, assume the dash is part of the WORD, not the start of a NOT token
                     if (word.Length > 0) {
                         word += i;
                     } else {
+                        // otherwise start a NOT token
                         tokens.Add(new Token(TokenType.NOT, ""));
                         _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
                     }

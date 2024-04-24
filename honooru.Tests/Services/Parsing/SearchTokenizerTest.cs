@@ -181,6 +181,10 @@ namespace honooru.Tests.Services.Parsing {
             _c(tokens, expected.ToArray());
         }
 
+        /// <summary>
+        ///     test spaces don't matter for meta operators
+        /// </summary>
+        /// <param name="input"></param>
         [DataTestMethod]
         [DataRow("user:>apple")]
         [DataRow("user: >apple")]
@@ -218,6 +222,28 @@ namespace honooru.Tests.Services.Parsing {
                 new Token(TokenType.WORD, "apple"),
                 new Token(TokenType.END, "")
             };
+
+            _c(tokens, expected.ToArray());
+        }
+
+        /// <summary>
+        ///     test quoted strings
+        /// </summary>
+        /// <param name="input"></param>
+        [DataTestMethod]
+        [DataRow("\"well hello there\"")]
+        [DataRow("        \"well hello there\"")]
+        [DataRow("\"well hello there\"              ")]
+        [DataRow("             \"well hello there\"             ")]
+        public void SearchTokenizerTest_QuotedString(string input) {
+            List<Token> tokens = _t(input);
+
+            List<Token> expected = new List<Token>() {
+                new Token(TokenType.WORD, "well hello there"),
+                new Token(TokenType.END, "")
+            };
+
+            Assert.AreEqual(expected.Count, tokens.Count);
 
             _c(tokens, expected.ToArray());
         }

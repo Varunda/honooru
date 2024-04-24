@@ -42,7 +42,7 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         /// <summary>
-        ///     test
+        ///     test basic AND parsing
         /// </summary>
         [TestMethod]
         [Timeout(5_000)]
@@ -75,7 +75,7 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         /// <summary>
-        ///     test
+        ///     test a basic OR node
         /// </summary>
         [TestMethod]
         [Timeout(5_000)]
@@ -112,20 +112,20 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         /// <summary>
-        ///     test
+        ///     test AND and an OR node
         /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_ToEnumerable_AndWithOr_Simple() {
             // 1 {2 ~ 3}
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.WORD, "1"),
                 new Token(TokenType.OR_START, ""),
                     new Token(TokenType.WORD, "2"),
                     new Token(TokenType.OR_CONTINUE, ""),
                     new Token(TokenType.WORD, "3"),
                 new Token(TokenType.OR_END, "")
-            };
+            ];
 
             Ast ast = _a(tokens);
 
@@ -142,13 +142,13 @@ namespace honooru.Tests.Services.Parsing {
         }
 
         /// <summary>
-        ///     test
+        ///     test having both AND and OR nodes in a query
         /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_ToEnumerable_AndWithOr() {
             // 1 2 {3 ~ 4} 5 {6 ~ 7} 8
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.WORD, "1"),
                 new Token(TokenType.WORD, "2"),
                 new Token(TokenType.OR_START, ""),
@@ -166,7 +166,7 @@ namespace honooru.Tests.Services.Parsing {
                 new Token(TokenType.OR_END, ""),
 
                 new Token(TokenType.WORD, "8")
-            };
+            ];
 
             Ast ast = _a(tokens);
 
@@ -196,11 +196,11 @@ namespace honooru.Tests.Services.Parsing {
         [Timeout(5_000)]
         public void AstBuilderTest_Build_And() {
             // hi howdy hellow
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.WORD, "hi"),
                 new Token(TokenType.WORD, "howdy"),
                 new Token(TokenType.WORD, "hello")
-            };
+            ];
 
             Ast ast = _a(tokens);
             Assert.IsNull(ast.Root.Parent);
@@ -215,20 +215,22 @@ namespace honooru.Tests.Services.Parsing {
             _CheckNodeOrder(ast, expected);
         }
 
+        /// <summary>
+        ///     test OR parsing
+        /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_Or() {
             // { hi ~ howdy }
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.OR_START, ""),
-                new Token(TokenType.WORD, "hi"),
-                new Token(TokenType.OR_CONTINUE, ""),
-                new Token(TokenType.WORD, "howdy"),
+                    new Token(TokenType.WORD, "hi"),
+                    new Token(TokenType.OR_CONTINUE, ""),
+                    new Token(TokenType.WORD, "howdy"),
                 new Token(TokenType.OR_END, "")
-            };
+            ];
 
             Ast ast = _a(tokens);
-            Console.WriteLine($"parsed AST: {ast.Print()}");
 
             List<NodeIter> expected = new() {
                 new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
@@ -240,14 +242,17 @@ namespace honooru.Tests.Services.Parsing {
             _CheckNodeOrder(ast, expected);
         }
 
+        /// <summary>
+        ///     test NOT parsing
+        /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_Not() {
             // -hi
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.NOT, ""),
                 new Token(TokenType.WORD, "hi"),
-            };
+            ];
 
             Ast ast = _a(tokens);
 
@@ -259,16 +264,19 @@ namespace honooru.Tests.Services.Parsing {
             _CheckNodeOrder(ast, expected);
         }
 
+        /// <summary>
+        ///     test a NOT tag within an AND
+        /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_NotWithAnd() {
             // hi howdy -hello
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.WORD, "hi"),
                 new Token(TokenType.WORD, "howdy"),
                 new Token(TokenType.NOT, ""),
                 new Token(TokenType.WORD, "hello"),
-            };
+            ];
 
             Ast ast = _a(tokens);
 
@@ -289,34 +297,37 @@ namespace honooru.Tests.Services.Parsing {
         [Timeout(5_000)]
         public void AstBuilderTest_Build_NotWithOr() {
             // { hi ~ hello } -howdy
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.OR_START, ""),
-                new Token(TokenType.WORD, "hi"),
-                new Token(TokenType.OR_CONTINUE, ""),
-                new Token(TokenType.WORD, "hello"),
+                    new Token(TokenType.WORD, "hi"),
+                    new Token(TokenType.OR_CONTINUE, ""),
+                    new Token(TokenType.WORD, "hello"),
                 new Token(TokenType.OR_END, ""),
                 new Token(TokenType.NOT, ""),
                 new Token(TokenType.WORD, "howdy"),
-            };
+            ];
 
             Ast ast = _a(tokens);
 
-            List<NodeIter> expected = new() {
+            List<NodeIter> expected = [
                 new NodeIter(NodeType.AND, new Token(TokenType.DEFAULT, "")),
                 new NodeIter(NodeType.OR, new Token(TokenType.OR_START, "")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hi")),
                 new NodeIter(NodeType.TAG, new Token(TokenType.WORD, "hello")),
                 new NodeIter(NodeType.NOT, new Token(TokenType.WORD, "howdy")),
-            };
+            ];
 
             _CheckNodeOrder(ast, expected);
         }
 
+        /// <summary>
+        ///     parse meta tokens are fine
+        /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_Meta() {
             // 1 2 user:alice
-            List<Token> tokens = new List<Token>() {
+            List<Token> tokens = [
                 new Token(TokenType.WORD, "1"),
                 new Token(TokenType.WORD, "2"),
                 new Token(TokenType.WORD, "user"),
@@ -330,7 +341,7 @@ namespace honooru.Tests.Services.Parsing {
                 new Token(TokenType.META, ""),
                 new Token(TokenType.OPERATOR, "="),
                 new Token(TokenType.WORD, "63")
-            };
+            ];
 
             Ast ast = _a(tokens);
 
@@ -358,36 +369,139 @@ namespace honooru.Tests.Services.Parsing {
             );
         }
 
+        /// <summary>
+        ///     parse that having meta operator tags within an OR node parse correctly
+        /// </summary>
+        [TestMethod]
+        [Timeout(5_000)]
+        public void AstBuilderTest_Build_MetaOperatorInOr() {
+            // { user:1 ~ width:>1000 }
+            List<Token> tokens = new() {
+                new Token(TokenType.OR_START, "{"),
+                new Token(TokenType.WORD, "user"),
+                new Token(TokenType.META, ":"),
+                new Token(TokenType.WORD, "1"),
+                new Token(TokenType.OR_CONTINUE, "~"),
+                new Token(TokenType.WORD, "width"),
+                new Token(TokenType.META, ":"),
+                new Token(TokenType.OPERATOR, ">"),
+                new Token(TokenType.WORD, "1000"),
+                new Token(TokenType.OR_END, "}"),
+                new Token(TokenType.END, "")
+            };
+
+            Ast ast = _a(tokens);
+
+            _CheckNodeTree(ast.Root,
+                NodeType.AND,
+                new List<Action<Node>>() {
+                    (node) => _CheckNodeTree(node, NodeType.OR, new List<Action<Node>>() {
+                        (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
+                            (node) => _CheckNode(node, NodeType.META_FIELD, "user"),
+                            (node) => _CheckNode(node, NodeType.META_OPERATOR, "="),
+                            (node) => _CheckNode(node, NodeType.META_VALUE, "1")
+                        }),
+                        (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
+                            (node) => _CheckNode(node, NodeType.META_FIELD, "width"),
+                            (node) => _CheckNode(node, NodeType.META_OPERATOR, ">"),
+                            (node) => _CheckNode(node, NodeType.META_VALUE, "1000")
+                        }),
+                    }),
+                }
+            );
+        }
+
+        /// <summary>
+        ///     test that an OR node with both meta operators and tags parse correctly
+        /// </summary>
+        [TestMethod]
+        [Timeout(5_000)]
+        public void AstBuilderTest_Build_MetaOperatorInOrWithTags() {
+            // { user:1 ~ width:>1000 }
+            List<Token> tokens = new() {
+                new Token(TokenType.OR_START, "{"),
+                    new Token(TokenType.WORD, "howdy"),
+                    new Token(TokenType.OR_CONTINUE, "~"),
+
+                    new Token(TokenType.WORD, "user"),
+                    new Token(TokenType.META, ":"),
+                    new Token(TokenType.WORD, "1"),
+                    new Token(TokenType.OR_CONTINUE, "~"),
+
+                    new Token(TokenType.WORD, "width"),
+                    new Token(TokenType.META, ":"),
+                    new Token(TokenType.OPERATOR, ">"),
+                    new Token(TokenType.WORD, "1000"),
+                    new Token(TokenType.OR_END, "}"),
+                new Token(TokenType.END, "")
+            };
+
+            Ast ast = _a(tokens);
+
+            _CheckNodeTree(ast.Root,
+                NodeType.AND,
+                new List<Action<Node>>() {
+                    (node) => _CheckNodeTree(node, NodeType.OR, new List<Action<Node>>() {
+                        (node) => _CheckNode(node, NodeType.TAG, "howdy"),
+                        (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
+                            (node) => _CheckNode(node, NodeType.META_FIELD, "user"),
+                            (node) => _CheckNode(node, NodeType.META_OPERATOR, "="),
+                            (node) => _CheckNode(node, NodeType.META_VALUE, "1")
+                        }),
+                        (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
+                            (node) => _CheckNode(node, NodeType.META_FIELD, "width"),
+                            (node) => _CheckNode(node, NodeType.META_OPERATOR, ">"),
+                            (node) => _CheckNode(node, NodeType.META_VALUE, "1000")
+                        }),
+                    }),
+                }
+            );
+        }
+
+        /// <summary>
+        ///     test a big complex query
+        /// </summary>
         [TestMethod]
         [Timeout(5_000)]
         public void AstBuilderTest_Build_BigQuery() {
-            // 1 2 user:alice width:>1160 height:=63 3 { 4 ~ 5 ~ 6 } score:>10 -7
+            // 1 2 user:alice width:>1160 height:=63 3 { 4 ~ 5 ~ 6 ~ id:>100 } score:>10 -7
             List<Token> tokens = new List<Token>() {
                 new Token(TokenType.WORD, "1"),
                 new Token(TokenType.WORD, "2"),
+
                 new Token(TokenType.WORD, "user"),
                 new Token(TokenType.META, ""),
                 new Token(TokenType.WORD, "alice"),
+
                 new Token(TokenType.WORD, "width"),
                 new Token(TokenType.META, ""),
                 new Token(TokenType.OPERATOR, ">"),
                 new Token(TokenType.WORD, "1160"),
+
                 new Token(TokenType.WORD, "height"),
                 new Token(TokenType.META, ""),
                 new Token(TokenType.OPERATOR, "="),
                 new Token(TokenType.WORD, "63"),
+
                 new Token(TokenType.WORD, "3"),
                 new Token(TokenType.OR_START, ""),
-                new Token(TokenType.WORD, "4"),
-                new Token(TokenType.OR_CONTINUE, ""),
-                new Token(TokenType.WORD, "5"),
-                new Token(TokenType.OR_CONTINUE, ""),
-                new Token(TokenType.WORD, "6"),
+                    new Token(TokenType.WORD, "4"),
+                    new Token(TokenType.OR_CONTINUE, ""),
+                    new Token(TokenType.WORD, "5"),
+                    new Token(TokenType.OR_CONTINUE, ""),
+                    new Token(TokenType.WORD, "6"),
+                    new Token(TokenType.OR_CONTINUE, ""),
+                    new Token(TokenType.WORD, "id"),
+                    new Token(TokenType.META, ""),
+                    new Token(TokenType.OPERATOR, ">"),
+                    new Token(TokenType.WORD, "100"),
                 new Token(TokenType.OR_END, ""),
+
                 new Token(TokenType.WORD, "score"),
                 new Token(TokenType.META, ""),
                 new Token(TokenType.OPERATOR, ">"),
                 new Token(TokenType.WORD, "10"),
+
                 new Token(TokenType.NOT, ""),
                 new Token(TokenType.WORD, "7")
             };
@@ -419,6 +533,11 @@ namespace honooru.Tests.Services.Parsing {
                         (node) => _CheckTagNodeValue(node, "4"),
                         (node) => _CheckTagNodeValue(node, "5"),
                         (node) => _CheckTagNodeValue(node, "6"),
+                        (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
+                            (node) => _CheckNode(node, NodeType.META_FIELD, "id"),
+                            (node) => _CheckNode(node, NodeType.META_OPERATOR, ">"),
+                            (node) => _CheckNode(node, NodeType.META_VALUE, "100")
+                        })
                     }),
                     (node) => _CheckNodeTree(node, NodeType.META, new List<Action<Node>>() {
                         (node) => _CheckNode(node, NodeType.META_FIELD, "score"),
@@ -428,10 +547,6 @@ namespace honooru.Tests.Services.Parsing {
                     (node) => _CheckNode(node, NodeType.NOT, "7")
                 }
             );
-
-            foreach (Node node in ast) {
-                Console.WriteLine($"{new string('\t', node.Depth + 1)}{node.Type} {node.Token.Type} {node.Token.Value}");
-            }
         }
 
         // ============================================================================================================
@@ -450,6 +565,7 @@ namespace honooru.Tests.Services.Parsing {
             Ast ast = builder.Build(tokens);
 
             Console.WriteLine($"parsed AST: {ast.Print()}");
+            _PrintAst(ast);
 
             Assert.IsNull(ast.Root.Parent);
 
@@ -512,6 +628,12 @@ namespace honooru.Tests.Services.Parsing {
             Assert.AreEqual(NodeType.TAG, node.Type);
             Assert.AreEqual(value, node.Token.Value);
             Assert.AreEqual(0, node.Children.Count);
+        }
+
+        private void _PrintAst(Ast ast) {
+            foreach (Node node in ast) {
+                Console.WriteLine($"{new string('\t', node.Depth + 1)}{node.Type} ({node.Token.Type}) {node.Token.Value}");
+            }
         }
 
         private class NodeIter {

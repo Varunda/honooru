@@ -57,6 +57,14 @@ namespace honooru.Tests.Model.Api {
             Assert.AreNotEqual(q1.HashKey, q2.HashKey);
         }
 
+        /// <summary>
+        ///     test to make sure that limits and offset don't affect the hash key of a search query
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="offset1"></param>
+        /// <param name="offset2"></param>
+        /// <param name="limit1"></param>
+        /// <param name="limit2"></param>
         [DataTestMethod]
         [DataRow("hi hello -howdy {tag_a ~ tag_b}", (uint)1, (uint)10, (uint)5, (uint)50)]
         public void SearchQueryTest_CheckHashKey_DifferentOffsetOrLimit(string input, uint offset1, uint offset2, uint limit1, uint limit2) {
@@ -83,12 +91,12 @@ namespace honooru.Tests.Model.Api {
             Console.WriteLine($"q3 [hash={q3.HashKey}] [ast={q3.QueryAst.Print()}]");
             Console.WriteLine($"q4 [hash={q4.HashKey}] [ast={q4.QueryAst.Print()}]");
 
-            Assert.AreNotEqual(q1.HashKey, q2.HashKey);
-            Assert.AreNotEqual(q1.HashKey, q3.HashKey);
-            Assert.AreNotEqual(q1.HashKey, q4.HashKey);
-            Assert.AreNotEqual(q2.HashKey, q3.HashKey);
-            Assert.AreNotEqual(q2.HashKey, q4.HashKey);
-            Assert.AreNotEqual(q3.HashKey, q4.HashKey);
+            Assert.AreEqual(q1.HashKey, q2.HashKey);
+            Assert.AreEqual(q1.HashKey, q3.HashKey);
+            Assert.AreEqual(q1.HashKey, q4.HashKey);
+            Assert.AreEqual(q2.HashKey, q3.HashKey);
+            Assert.AreEqual(q2.HashKey, q4.HashKey);
+            Assert.AreEqual(q3.HashKey, q4.HashKey);
         }
 
         

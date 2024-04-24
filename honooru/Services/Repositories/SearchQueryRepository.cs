@@ -166,39 +166,8 @@ namespace honooru.Services.Repositories {
                 Node op = node.Children[1];
                 Node value = node.Children[2];
 
-                //
-                // the following meta operations can be performed:
-                //      user:{NAME}
-                //          search for posts uploaded by this user
-                //      
-                //      rating:"general"|"unsafe"|"explicit"
-                //          search for posts with this rating
-                //
-                //      status:"ok"|"deleted"
-                //          search for posts with this status
-                //      
-                //      md5:{string}
-                //          search for posts with this md5
-                //
-                //      parent:{ID}
-                //          search for posts with a parent of this post ID
-                //  
-                //      child:{ID}
-                //          search for posts that are a child of this post ID
-                //
-                //      type:"image" | "video
-                //          search for image or video posts
-                //
-                //      extension:{string}
-                //          search for posts with this extension type
-                //
-                //      pool:{ID}
-                //          search for posts that are in a pool
-                //
-                //      sort
-                //          sort returned posts by this value
-                //
-
+                // select posts based on who posted it
+                // user:name OR id
                 if (field.Token.Value == "user") {
                     if (ulong.TryParse(value.Token.Value, out ulong userID) == false) {
                         throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
@@ -206,7 +175,11 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.poster_user_id " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(userID);
-                } else if (field.Token.Value == "rating") {
+                }
+
+                // select posts based on rating
+                // rating:general, rating:unsafe, rating:explicit
+                else if (field.Token.Value == "rating") {
                     PostRating rating;
                     if (value.Token.Value == "general") {
                         rating = PostRating.GENERAL;
@@ -222,7 +195,11 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.rating = " + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add((short)rating);
-                } else if (field.Token.Value == "status") {
+                }
+
+                // select posts based on status
+                // status:ok, status:deleted
+                else if (field.Token.Value == "status") {
                     PostStatus status;
 
                     if (value.Token.Value == "ok") {
@@ -235,26 +212,44 @@ namespace honooru.Services.Repositories {
 
                     query.SetStatus = true;
 
-                    cmd = $" p.status = " + $"${query.Parameters.Count + 1}\n";
+                    cmd = $" p.status = ${query.Parameters.Count + 1}\n";
                     query.Parameters.Add((short)status);
-                } else if (field.Token.Value == "md5") { // select by md5
+                }
+
+                // select by MD5
+                // md5:$string
+                else if (field.Token.Value == "md5") { // select by md5
                     cmd = $" p.md5 " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(value.Token.Value);
-                } else if (field.Token.Value == "parent") { // select posts with this post ID as a parent
+                }
+
+                // select posts with this post ID as a parent
+                // parent:103
+                else if (field.Token.Value == "parent") { // select posts with this post ID as a parent
                     if (ulong.TryParse(value.Token.Value, out ulong postID) == false) {
                         throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
                     }
 
                     cmd = $" p.id IN (SELECT distinct(child_post_id) FROM post_child WHERE parent_post_id = ${query.Parameters.Count + 1})\n";
                     query.Parameters.Add(postID);
-                } else if (field.Token.Value == "child") { // select posts with this post ID as a child
+                }
+
+                // select posts with this post ID as a child
+                // child:103
+                else if (field.Token.Value == "child") { // select posts with this post ID as a child
                     if (ulong.TryParse(value.Token.Value, out ulong postID) == false) {
                         throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
                     }
 
                     cmd = $" p.id IN (SELECT distinct(parent_post_id) FROM post_child WHERE child_post_id = ${query.Parameters.Count + 1})\n";
                     query.Parameters.Add(postID);
-                } else if (field.Token.Value == "type") {
+                }
+
+                // select based on file type of the post
+                // type:image
+                //      will select all posts with a file type of image
+                // type:video
+                else if (field.Token.Value == "type") {
                     string type;
                     if (value.Token.Value == "image") {
                         type = "image";
@@ -266,19 +261,43 @@ namespace honooru.Services.Repositories {
 
                     cmd = $" p.file_type = ${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(type);
-                } else if (field.Token.Value == "extension") {
+                }
+
+                // select based on the file extension
+                // extension:png
+                //      will select all posts with the "png" file extension
+                // extension:.jpg
+                //      bad example! file extensions are not stored with a leading dot
+                else if (field.Token.Value == "extension") {
                     cmd = $" p.file_extension " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(value.Token.Value);
-                } else if (field.Token.Value == "title") {
-                    cmd = $"LOWER(p.title) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                }
+
+                // select based on the title containing the input string
+                // title:gelos
+                else if (field.Token.Value == "title") {
+                    cmd = $" LOWER(p.title) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
                     query.Parameters.Add(value.Token.Value.ToLower());
-                } else if (field.Token.Value == "description") {
-                    cmd = $"LOWER(p.description) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                }
+
+                // select based on the description containing the input string
+                // description:gelos
+                else if (field.Token.Value == "description") {
+                    cmd = $" LOWER(p.description) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
                     query.Parameters.Add(value.Token.Value.ToLower());
-                } else if (field.Token.Value == "context") {
-                    cmd = $"LOWER(p.context) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                }
+
+                // select based on the context containing the input string
+                // context:gelos
+                else if (field.Token.Value == "context") {
+                    cmd = $" LOWER(p.context) LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
                     query.Parameters.Add(value.Token.Value.ToLower());
-                } else if (field.Token.Value == "contains") {
+                }
+
+                // select based on the title, description or context containing the input string
+                // contains:gelos
+                //      will select all posts that contain the string "gelos" in the title, description or context fields
+                else if (field.Token.Value == "contains") {
                     cmd = $" (" +
                         $"LOWER(p.title) LIKE '%' || ${query.Parameters.Count + 1} || '%' " +
                         $"OR LOWER(p.description) LIKE '%' || ${query.Parameters.Count + 2} || '%'" +
@@ -286,16 +305,67 @@ namespace honooru.Services.Repositories {
                     query.Parameters.Add(value.Token.Value.ToLower());
                     query.Parameters.Add(value.Token.Value.ToLower());
                     query.Parameters.Add(value.Token.Value.ToLower());
-                } else if (field.Token.Value == "pool") {
+                }
+
+                // select based on posts within a post pool
+                // pool:103
+                //      will select all posts within a pool. no check is performed to ensure that the post pool with that ID exists
+                else if (field.Token.Value == "pool") {
                     if (ulong.TryParse(value.Token.Value, out ulong poolID) == false) {
                         throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
                     }
 
                     cmd = $" p.id IN (select distinct(post_id) FROM post_pool_entry WHERE pool_id = ${query.Parameters.Count + 1})\n";
                     query.Parameters.Add(poolID);
-                } else if (field.Token.Value == "sort") {
+                }
+
+                // select posts based on duration
+                // duration:>3m4s
+                //      will select posts with a duration of greater than 3 minutes and 4 seconds
+                // duration:10s
+                //      will select posts with a duration of example 10 seconds
+                // duration:<10m
+                //      will select posts with a duration less than 10 minutes
+                else if (field.Token.Value == "duration") {
+                    if (DurationStringUtil.TryParse(value.Token.Value, out TimeSpan span) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid duration");
+                    }
+
+                    cmd = $" p.duration " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(span.TotalSeconds);
+
+                // select posts based on width
+                // width:>100
+                //      will select posts with a width of 100 or greater
+                } else if (field.Token.Value == "width") {
+                    if (ulong.TryParse(value.Token.Value, out ulong v) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.width " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(v);
+                }
+
+                // select posts based on height
+                // height:>100
+                //      will select posts with a height of 100 or greater
+                else if (field.Token.Value == "height") {
+                    if (ulong.TryParse(value.Token.Value, out ulong v) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.height " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(v);
+                }
+
+                // handle sort 
+                // sort:width_desc
+                else if (field.Token.Value == "sort") {
                     query.OrderBy = parseSort(value);
-                } else {
+                }
+
+                // otherwise we don't know how to handle this token
+                else {
                     throw new Exception($"invalid search field: {field} ({field.Token.Value} is not a valid search term)");
                 }
             }
@@ -303,7 +373,13 @@ namespace honooru.Services.Repositories {
             return cmd;
         }
 
-        public string parseOperation(Node node) {
+        /// <summary>
+        ///     parse the operator node of a token into the SQL value
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        private static string parseOperation(Node node) {
             return node.Token.Value switch {
                 "=" => "=",
                 ">" => ">",
@@ -313,20 +389,36 @@ namespace honooru.Services.Repositories {
             };
         }
 
-        private string parseSort(Node node) {
-            return node.Token.Value switch {
+        /// <summary>
+        ///     parse a sort field into a SQL statement. adding _asc or _desc on the end will respect that value
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private static string parseSort(Node node) {
+
+            string[] parts = node.Token.Value.Split("_");
+
+            string field = parts[0] switch {
                 "id" => "id",
-                "id_desc" => "id DESC",
                 "size" => "file_size_bytes",
-                "size_desc" => "file_size_bytes DESC",
                 "duration" => "duration_seconds",
-                "duration_desc" => "duration_seconds DESC",
                 "width" => "width",
-                "width_desc" => "width DESC",
                 "height" => "height",
-                "height_desc" => "height DESC",
-                _ => throw new Exception($"invalid sort field: {node.Token.Value}")
+                _ => throw new Exception($"invalid sort field: {parts[0]}")
             };
+
+            if (parts.Length == 2) {
+                if (parts[1] == "desc") {
+                    field += " DESC ";
+                } else if (parts[1] == "asc") {
+                    field += " ASC ";
+                } else {
+                    throw new Exception($"invalid sort order: {parts[1]}");
+                }
+            }
+
+            return field;
         }
 
         private class QuerySetup {

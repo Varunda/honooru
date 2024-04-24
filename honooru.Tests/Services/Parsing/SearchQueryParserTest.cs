@@ -23,22 +23,27 @@ namespace honooru.Tests.Services.Parsing {
         /// </summary>
         /// <param name="input">bad input</param>
         [DataTestMethod]
-        [DataRow("{ { hi howdy")]
-        [DataRow("{}")]
-        [DataRow("{ hi howdy }")]
-        [DataRow("{ - }")]
-        [DataRow("{ } }")]
-        [DataRow("}")]
-        [DataRow("")]
-        [DataRow("{~}")]
-        [DataRow("{{{{{{{{{{{{{{{{{{{{{{")]
-        [DataRow("--hi")]
-        [DataRow("--{}{}{hi")]
-        [DataRow("} oops ~ hi {")]
-        [DataRow("{ oops ~ hi")]
-        [DataRow("{ ~ ~ }")]
-        [DataRow("{ hi ~ ~ ")]
-        [DataRow(" { } ~ hi ")]
+        [DataRow("{ { hi howdy")] // invalid due to missing OR_END }
+        [DataRow("{}")] // invalid due to empty OR
+        [DataRow("{ hi howdy }")] // invalid due to no OR_CONTINUE (~) between tags
+        [DataRow("{ - }")] // invalid due to - not being a valid tag
+        [DataRow("{ } }")] // invalid due to an unexpected OR_END
+        [DataRow("}")] // missing a starting }
+        [DataRow("")] // empty
+        [DataRow("{~}")] // missing any tags
+        [DataRow("{{{{{{{{{{{{{{{{{{{{{{")] // too many ORs
+        [DataRow("--hi")] // double negative is bad
+        [DataRow("--{}{}{hi")] // just bad
+        [DataRow("} oops ~ hi {")] // swapped OR_START and OR_END
+        [DataRow("{ oops ~ hi")]  // missing OR_END
+        [DataRow("{ ~ ~ }")] // missing tags
+        [DataRow("{ hi ~ ~ ")] // not enough tags inbetween OR_CONTINUE
+        [DataRow(" { } ~ hi ")] // no tags within the OR
+        [DataRow(" { user: ~ }")] // missing a meta value
+        [DataRow(" { user:hi ~ }")] // missing another tag
+        [DataRow(" { user: ~ }")] // missing a meta value
+        [DataRow(" { user: ~ }")] // missing a meta value
+        [DataRow(" { user: ~ }")] // missing a meta value
         public void SearchQueryParserTest_Parse_Fail_Or(string input) {
             try {
                 Ast ast = _p().Parse(input);
@@ -58,6 +63,7 @@ namespace honooru.Tests.Services.Parsing {
         [DataRow("hi user:-apple")]
         [DataRow(" hi user : { hi }")]
         [DataRow("hi {howdy user:apple}")]
+        [DataRow("hi {user:apple howdy}")]
         public void SearchQueryParserTest_Parse_Fail_Meta(string input) {
             try {
                 Ast ast = _p().Parse(input);

@@ -39,59 +39,20 @@ namespace honooru.Services.Parsing {
 
                 _Logger.LogTrace($"AST iteration [iter.Type={iter.Type}] [iter.Value={iter.Value}] [parent={parent.Type}] [parent.Children count={parent.Children.Count}]");
 
+                if (tokens.PeekNext()?.Type == TokenType.META) {
+                    // already adds it to the parent
+                    _MakeMetaNode(iter, parent, tokens);
+                    iter = tokens.GetNext();
+                    continue;
+                }
+
                 if (iter.Type == TokenType.WORD) {
-                    // the parser doesn't use a look-behind, so we have to check in the valid spots for a META token
-                    //      to appear for them.
-                    // this catches cases like
-                    //      user : > 100
-                    //      ^ (CURRENT TOKEN)
-                    // by checking the next token
-                    if (tokens.PeekNext()?.Type == TokenType.META) {
-                        _Logger.LogTrace($"next token is META, looking-ahead [iter={iter}]");
-                        if (parent.Type == NodeType.OR) {
-                            throw new AstParseException(iter, $"cannot have a META lookup within an OR statement");
-                        }
-
-                        _Logger.LogTrace($"look-ahead found META token");
-                        Token? meta = tokens.GetNext();
-                        if (meta == null) {
-                            throw new SystemException($"something is fucked");
-                        }
-
-                        Token? opOrValue = tokens.GetNext();
-                        if (opOrValue == null) {
-                            throw new AstParseException(iter, $"look ahead failed: no token after META token");
-                        }
-
-                        Token? op = null;
-                        Token? value = null;
-                        if (opOrValue.Type == TokenType.OPERATOR) {
-                            _Logger.LogTrace($"token is OPERATOR, checking for WORD [type={opOrValue.Type}] [value={opOrValue.Value}]");
-                            op = opOrValue;
-                            value = tokens.GetNext();
-                            if (value == null) { throw new AstParseException(iter, $"look ahead failed: no token after OPERATOR token (for META)"); }
-                            if (value.Type != TokenType.WORD) { throw new AstParseException(iter, $"look ahead failed: expected WORD token after OPERATOR token (for META), got {value.Type} instead"); }
-                        } else if (opOrValue.Type == TokenType.WORD) {
-                            op = new Token(TokenType.OPERATOR, "=");
-                            value = opOrValue;
-                        } else {
-                            throw new AstParseException(iter, $"look ahead failed: expected WORD token after META token, got {opOrValue.Type} instead");
-                        }
-
-                        _Logger.LogTrace($"creating META node [field={iter.Value}] [operator='{op.Value}'] [value='{value.Value}']");
-
-                        Node metaParent = _c(NodeType.META, meta, parent);
-                        _c(NodeType.META_FIELD, iter, metaParent);
-                        _c(NodeType.META_OPERATOR, op, metaParent);
-                        _c(NodeType.META_VALUE, value, metaParent);
-                    } else {
-                        _Logger.LogTrace($"adding token to AND parent [iter={iter}] [parent={parent}]");
-                        _c(NodeType.TAG, iter, parent);
-                    }
+                    _c(NodeType.TAG, iter, parent);
 
                     if (parent.Type == NodeType.OR) {
-                        Token? next = tokens.GetNext();
-                        if (next == null || next.Type != TokenType.OR_CONTINUE) {
+                        Token next = tokens.GetNext() ?? throw new AstParseException(iter, $"look ahead failed: expected to see OR_CONTINUE token, had null instead");
+                        _Logger.LogTrace($"WORD is part of an OR [next={next}]");
+                        if (next.Type != TokenType.OR_CONTINUE) {
                             throw new AstParseException(iter, $"look ahead failed: expected to see OR_CONTINUE token");
                         }
                     }
@@ -104,14 +65,37 @@ namespace honooru.Services.Parsing {
                         throw new AstParseException(iter, $"failed to get WORD token after OR_START");
                     }
 
-                    _c(NodeType.TAG, next, parent);
+                    if (tokens.PeekNext()?.Type == TokenType.META) {
+                        _MakeMetaNode(next, parent, tokens);
+                        _Logger.LogTrace($"created META token within OR_START [next={tokens.PeekNext()}]");
+                    } else {
+                        _Logger.LogTrace($"consuming TAG token after OR_START [token={next}]");
+                        _c(NodeType.TAG, next, parent);
+                    }
+
+                    // ensure the next tokens are valid options
+                    if (tokens.PeekNext()?.Type != TokenType.OR_CONTINUE && tokens.PeekNext()?.Type != TokenType.OR_END) {
+                        throw new AstParseException(iter, $"failed to get OR_CONTINUE or an OR_END token after reading a META tag");
+                    }
                 } else if (iter.Type == TokenType.OR_CONTINUE) {
                     Token? next = tokens.GetNext();
                     if (next == null || next.Type != TokenType.WORD) {
                         throw new AstParseException(iter, $"failed to get WORD token after OR_CONTINUE");
                     }
 
-                    _c(NodeType.TAG, next, parent);
+                    // eat the next token. if it's a META token, eat all the tokens needed for that
+                    if (tokens.PeekNext()?.Type == TokenType.META) {
+                        _MakeMetaNode(next, parent, tokens);
+                        _Logger.LogTrace($"created META token within OR_CONTINUE [next={tokens.PeekNext()}]");
+                    } else {
+                        _Logger.LogTrace($"consuming TAG token after OR_START [token={next}]");
+                        _c(NodeType.TAG, next, parent);
+                    }
+
+                    // ensure the next tokens are valid options
+                    if (tokens.PeekNext()?.Type != TokenType.OR_CONTINUE && tokens.PeekNext()?.Type != TokenType.OR_END) {
+                        throw new AstParseException(iter, $"failed to get OR_CONTINUE or an OR_END token after reading a META tag");
+                    }
                 } else if (iter.Type == TokenType.OR_END) {
                     parent = stack.Pop(); // get rid of the OR node
                     if (parent.Type != NodeType.OR) {
@@ -120,10 +104,7 @@ namespace honooru.Services.Parsing {
 
                     parent = stack.Peek(); // back to whatever node was before the OR
                 } else if (iter.Type == TokenType.NOT) {
-                    Token? next = tokens.GetNext();
-                    if (next == null) {
-                        throw new AstParseException(iter, $"look ahead failed: missing token after NOT");
-                    }
+                    Token next = tokens.GetNext() ?? throw new AstParseException(iter, $"look ahead failed: missing token after NOT");
                     if (next.Type != TokenType.WORD) {
                         throw new AstParseException(iter, $"look ahead failed: needed WORD token, got {next.Type} instead");
                     }
@@ -190,6 +171,47 @@ namespace honooru.Services.Parsing {
         ///     the newly created node
         /// </returns>
         private Node _c(NodeType type, Token token, Node parent) => new Node(type, token, parent);
+
+        private Node _MakeMetaNode(Token iter, Node parent, TokenStream tokens) {
+            _Logger.LogTrace($"look-ahead found META token");
+            Token meta = tokens.GetNext() ?? throw new SystemException("something is fucked");
+
+            // an operator can optionally be set, but defaults to =
+            // for example, width:>10 has the tokens as "width", ">", "10"
+            Token? opOrValue = tokens.GetNext();
+            if (opOrValue == null) {
+                throw new AstParseException(iter, $"look ahead failed: no token after META token");
+            }
+
+            Token? op = null;
+            Token? value = null;
+            if (opOrValue.Type == TokenType.OPERATOR) { // a colon
+                _Logger.LogTrace($"token is OPERATOR, checking for WORD [type={opOrValue.Type}] [value={opOrValue.Value}]");
+                op = opOrValue;
+                value = tokens.GetNext();
+                if (value == null) { // expect a token after the colon (prevents something like width:>)
+                    throw new AstParseException(iter, $"look ahead failed: no token after OPERATOR token (for META)");
+                }
+                if (value.Type != TokenType.WORD) {
+                    throw new AstParseException(iter, $"look ahead failed: expected WORD token after OPERATOR token (for META), got {value.Type} instead");
+                }
+            } else if (opOrValue.Type == TokenType.WORD) {
+                // assume if no operator is given, that the = operator is used
+                op = new Token(TokenType.OPERATOR, "=");
+                value = opOrValue;
+            } else {
+                throw new AstParseException(iter, $"look ahead failed: expected WORD token after META token, got {opOrValue.Type} instead");
+            }
+
+            _Logger.LogTrace($"creating META node [field={iter.Value}] [operator='{op.Value}'] [value='{value.Value}']");
+
+            Node metaParent = _c(NodeType.META, meta, parent);
+            _c(NodeType.META_FIELD, iter, metaParent);
+            _c(NodeType.META_OPERATOR, op, metaParent);
+            _c(NodeType.META_VALUE, value, metaParent);
+
+            return metaParent;
+        }
 
     }
 }
