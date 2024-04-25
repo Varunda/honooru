@@ -13,6 +13,7 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<AppPermissionRepository>();
             services.AddSingleton<AppMetadataRepository>();
             services.AddSingleton<AppGroupRepository>();
+            services.AddSingleton<AppAccountRepository>();
             services.AddSingleton<AppAccountGroupMembershipRepository>();
             services.AddSingleton<UserSettingRepository>();
 

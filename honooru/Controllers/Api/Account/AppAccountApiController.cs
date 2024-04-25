@@ -69,6 +69,29 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
+        ///     get a specific <see cref="AppAccount"/> based on its <see cref="AppAccount.ID"/>
+        /// </summary>
+        /// <param name="accountID">ID of the <see cref="AppAccount"/> to get</param>
+        /// <response code="200">
+        ///     the response will contain the <see cref="AppAccount"/> with <see cref="AppAccount.ID"/>
+        ///     of <paramref name="accountID"/>
+        /// </response>
+        /// <response code="204">
+        ///     no <see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="accountID"/> exists
+        /// </response>
+        [HttpGet("{accountID}")]
+        [PermissionNeeded(AppPermission.APP_VIEW)]
+        public async Task<ApiResponse<AppAccount>> GetByID(ulong accountID) {
+            AppAccount? account = await _AccountDb.GetByID(accountID, CancellationToken.None);
+
+            if (account == null) {
+                return ApiNoContent<AppAccount>();
+            }
+
+            return ApiOk(account);
+        }
+
+        /// <summary>
         ///     Create a new account
         /// </summary>
         /// <param name="name"></param>

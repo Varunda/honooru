@@ -432,7 +432,7 @@
 
                         this.setMediaAsset(data.data);
                     } else {
-                        console.log(`unchecked status: ${data.data.status}`);
+                        console.error(`unchecked status: ${data.data.status}`);
                     }
                 }
             },
@@ -549,7 +549,8 @@
 
                 this.posting.post = Loadable.loading();
                 this.posting.post = await PostApi.upload(this.mediaAsset.guid,
-                    this.posting.tags, this.posting.rating, this.posting.title, this.posting.description, this.posting.source);
+                    this.posting.tags, this.posting.rating, this.posting.title,
+                    this.posting.description, this.posting.source, this.posting.context);
 
                 if (this.posting.post.state == "loaded") {
                     location.pathname = "/post/" + this.posting.post.data.id;

@@ -24,6 +24,9 @@ namespace honooru.Services.Repositories {
         private const string CACHE_KEY_SEARCH = "Tag.Search.{0}"; // {0} => name
         private const string CACHE_KEY_ALL_DICT = "Tag.All.Dict";
 
+        // when a tag is updated, the tag search results must be evicted
+        private readonly HashSet<string> _CachedKeys = new();
+
         private readonly TagDb _TagDb;
         private readonly TagInfoRepository _TagInfoRepository;
         private readonly TagAliasRepository _TagAliasRepository;
@@ -215,6 +218,8 @@ namespace honooru.Services.Repositories {
                 _Cache.Set(cacheKey, ret, new MemoryCacheEntryOptions() {
                     SlidingExpiration = TimeSpan.FromMinutes(10)
                 });
+
+                _CachedKeys.Add(cacheKey);
             }
 
             return ret;
@@ -324,6 +329,13 @@ namespace honooru.Services.Repositories {
 
         private void _ClearCache() {
             _Cache.Remove(CACHE_KEY_ALL_DICT);
+
+            _Logger.LogTrace($"removing cached tag name searches as well [CachedKeys.Count={_CachedKeys.Count}]");
+            foreach (string key in _CachedKeys) {
+                _Cache.Remove(key);
+            }
+            _CachedKeys.Clear();
+
         }
 
         /// <summary>

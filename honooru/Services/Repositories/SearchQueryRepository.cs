@@ -15,6 +15,7 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -25,6 +26,7 @@ namespace honooru.Services.Repositories {
 
         private readonly TagRepository _TagRepository;
         private readonly UserSettingRepository _UserSettingRepository;
+        private readonly AppAccountRepository _AccountRepository;
         private readonly FileExtensionService _ExtensionUtil;
 
         private readonly IMemoryCache _Cache;
@@ -33,7 +35,8 @@ namespace honooru.Services.Repositories {
 
         public SearchQueryRepository(ILogger<SearchQueryRepository> logger,
             UserSettingRepository userSettingRepository, TagRepository tagRepository,
-            FileExtensionService extensionUtil, IMemoryCache cache) {
+            FileExtensionService extensionUtil, IMemoryCache cache,
+            AppAccountRepository accountRepository) {
 
             _Logger = logger;
 
@@ -41,6 +44,7 @@ namespace honooru.Services.Repositories {
             _UserSettingRepository = userSettingRepository;
             _ExtensionUtil = extensionUtil;
             _Cache = cache;
+            _AccountRepository = accountRepository;
         }
 
         /// <summary>
@@ -55,8 +59,6 @@ namespace honooru.Services.Repositories {
             if (_Cache.TryGetValue(cacheKey, out NpgsqlCommand? sqlCmd) == true && sqlCmd != null) {
                 return sqlCmd;
             }
-
-            List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
 
             sqlCmd = new NpgsqlCommand();
             sqlCmd.CommandType = System.Data.CommandType.Text;
@@ -75,6 +77,7 @@ namespace honooru.Services.Repositories {
 
             // if a query did not explicitly say what ratings to include, use the users settings to determine it
             if (query.SetRating == false) {
+                List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
                 bool unsafeHide = settings.FirstOrDefault(iter => iter.Name == "postings.unsafe.behavior")?.Value == "hidden";
                 bool explicitHide = settings.FirstOrDefault(iter => iter.Name == "postings.explicit.behavior")?.Value == "hidden";
 
@@ -96,8 +99,6 @@ namespace honooru.Services.Repositories {
             }
 
             cmd += $" ORDER BY {(query.OrderBy ?? "id desc")}\n";
-            //cmd += $" OFFSET {ast.Offset}\n";
-            //cmd += $" LIMIT {ast.Limit}\n";
             sqlCmd.CommandText = cmd;
 
             foreach (object? param in query.Parameters) {
@@ -169,12 +170,23 @@ namespace honooru.Services.Repositories {
                 // select posts based on who posted it
                 // user:name OR id
                 if (field.Token.Value == "user") {
-                    if (ulong.TryParse(value.Token.Value, out ulong userID) == false) {
-                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+
+                    // first, get the account by name
+                    AppAccount? account = await _AccountRepository.GetByName(value.Token.Value, CancellationToken.None);
+                    if (account == null) {
+                        // if the account doesn't exist, next try by ID
+                        if (ulong.TryParse(value.Token.Value, out ulong userID) == false) {
+                            throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                        }
+                        account = await _AccountRepository.GetByID(userID, CancellationToken.None);
                     }
 
-                    cmd = $" p.poster_user_id " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
-                    query.Parameters.Add(userID);
+                    if (account != null) {
+                        cmd = $" p.poster_user_id " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                        query.Parameters.Add(account.ID);
+                    } else {
+                        cmd = $" 1 = 0\n"; // the account doesn't exist, there are no posts from this user
+                    }
                 }
 
                 // select posts based on rating
@@ -355,6 +367,18 @@ namespace honooru.Services.Repositories {
                     }
 
                     cmd = $" p.height " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    query.Parameters.Add(v);
+                }
+
+                // select posts based on how many tags it has
+                // tag_count:>25
+                //      will select posts with more than 25 tags
+                else if (field.Token.Value == "tag_count") {
+                    if (ulong.TryParse(value.Token.Value, out ulong v) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.id in (select distinct(post_id) from post_tag GROUP BY post_id HAVING COUNT(*) " + parseOperation(op) + $"${query.Parameters.Count + 1})\n";
                     query.Parameters.Add(v);
                 }
 

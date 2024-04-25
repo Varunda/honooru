@@ -54,12 +54,21 @@ namespace honooru.Services.Repositories {
             return _PostDb.GetByMD5(md5);
         }
 
+        /// <summary>
+        ///     perform a post search based on a query given
+        /// </summary>
+        /// <param name="query">query being performed</param>
+        /// <param name="user">user that is performing the query. used to know if hiding unsafe or explicit posts is needed</param>
+        /// <returns></returns>
         public async Task<List<Post>> Search(SearchQuery query, AppAccount user) {
+            // the whole result of a DB search is cached, and the offset//limit are taken after
             string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, query.HashKey);
             if (_Cache.TryGetValue(cacheKey, out List<Post>? posts) == false || posts == null) {
                 _Logger.LogDebug($"performing DB search as results are not cached [cacheKey={cacheKey}] [user={user.ID}/{user.Name}]");
+                // not cached, do the search
                 posts = await _PostDb.Search(query, user);
 
+                // mark this key as cached, so when a post is updated, the cached data can be evicted
                 _CachedKeys.Add(cacheKey);
                 _Cache.Set(cacheKey, posts, new MemoryCacheEntryOptions() {
                     SlidingExpiration = TimeSpan.FromMinutes(5)

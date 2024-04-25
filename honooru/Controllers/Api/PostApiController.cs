@@ -161,19 +161,22 @@ namespace honooru.Controllers.Api {
             long parseMs = timer.ElapsedMilliseconds; timer.Restart();
 
             SearchQuery query = new(searchAst);
-            query.Offset = offset;
-            query.Limit = limit * 10; // get 10 pages
-            _Logger.LogDebug($"query parsed [offset={offset}] [limit={limit}]");
+            query.Offset = 0;
+            query.Limit = int.MaxValue;
 
             // with the parsed AST, perform the search, passing the current user to include user settings
             timer.Start();
             List<Post> posts = await _PostRepository.Search(query, currentUser);
             long dbMs = timer.ElapsedMilliseconds; timer.Restart();
 
+            // now that the search is done, select the range of posts we actually care about
+            int rangeStart = (int)offset;
+            int rangeEnd = (int)(offset + Math.Min(limit, posts.Count - offset));
+            _Logger.LogDebug($"search performed [posts.Count={posts.Count}] [offset={offset}] [limit={limit}] [range={rangeStart}..{rangeEnd}]");
+
             SearchResults results = new(query);
-            results.Results = posts[..(int)Math.Min(limit, posts.Count)]; // this is probably fine ????
-            results.PageCount = (int)Math.Ceiling(posts.Count / (decimal)limit);
-            _Logger.LogDebug($"search done [limit={limit}] [posts.Count={posts.Count}] [PageCount={results.PageCount}]");
+            results.Results = posts[rangeStart..rangeEnd];
+            results.PostCount = posts.Count;
 
             // if the request wants the tags as well, get those here
             if (includeTags == true) {

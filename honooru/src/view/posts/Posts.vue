@@ -34,7 +34,7 @@
                 <div>
                     <post-list :q="search" :limit="limit" :offset="offset" @search-done="searchDone" class="mb-3"></post-list>
 
-                    <posts-page :query="query" :offset="offset" :limit="limit" :page-count="pageCount"></posts-page>
+                    <posts-page :query="query" :offset="offset" :limit="limit" :post-count="postCount"></posts-page>
                 </div>
             </div>
         </div>
@@ -174,12 +174,12 @@
                 return Math.floor(this.offset / this.limit);
             },
 
-            pageCount: function(): number {
+            postCount: function(): number {
                 if (this.posts.state != "loaded") {
                     return 0;
                 }
 
-                return this.posts.data.pageCount;
+                return this.posts.data.postCount;
             }
         },
 

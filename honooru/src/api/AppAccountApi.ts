@@ -1,5 +1,6 @@
 ﻿import { Loading, Loadable } from "Loading";
 import ApiWrapper from "api/ApiWrapper";
+import LocalStorageUtil from "../util/LocalStorage";
 
 export class AppAccount {
     public id: number = 0;
@@ -27,6 +28,14 @@ export class AppAccountApi extends ApiWrapper<AppAccount> {
 
     public static async getAll(): Promise<Loading<AppAccount[]>> {
         return AppAccountApi.get().readList(`/api/account/`, AppAccountApi.parse);
+    }
+
+    public static getByID(accountID: number): Promise<Loading<AppAccount>> {
+        return LocalStorageUtil.tryGet(`app.account.${accountID}`, () => {
+            return AppAccountApi.get().readSingle(`/api/account/${accountID}`, AppAccountApi.parse);
+        }, {
+            maxAge: 1000 * 60 * 60 // max one hour age
+        });
     }
 
     public static create(name: string, discordID: string): Promise<Loading<number>> {

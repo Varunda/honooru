@@ -16,7 +16,7 @@ export class SearchResults {
     public parsedAst: string = "";
     public results: Post[] = [];
     public tags: ExtendedTag[] = [];
-    public pageCount: number = 0;
+    public postCount: number = 0;
 }
 
 export class Post {
@@ -75,7 +75,7 @@ export class PostApi extends ApiWrapper<Post> {
         return {
             parsedAst: elem.parsedAst,
             query: PostApi.parseSearchResultsQuery(elem.query),
-            pageCount: elem.pageCount,
+            postCount: elem.postCount,
             timings: elem.timings,
             results: elem.results.map((iter: any) => PostApi.parse(iter)),
             tags: elem.tags.map((iter: any) => TagApi.parseExtendedTag(iter))

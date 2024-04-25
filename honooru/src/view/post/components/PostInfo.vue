@@ -7,6 +7,13 @@
             </tr>
 
             <tr>
+                <td>posted by</td>
+                <td>
+                    <user-account :account-id="post.posterUserID"></user-account>
+                </td>
+            </tr>
+
+            <tr>
                 <td>status</td>
                 <td>
                     <span v-if="post.status == 1" class="text-success">
@@ -72,6 +79,8 @@
 
     import { Post } from "api/PostApi";
 
+    import UserAccount from "components/app/UserAccount.vue";
+
     import "filters/ByteFilter";
     import "filters/MomentFilter";
     import "filters/LocaleFilter";
@@ -79,6 +88,10 @@
     export const PostInfo = Vue.extend({
         props: {
             post: { type: Object as PropType<Post>, required: true }
+        },
+
+        components: {
+            UserAccount
         }
 
     });

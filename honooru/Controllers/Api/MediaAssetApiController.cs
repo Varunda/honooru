@@ -115,8 +115,10 @@ namespace honooru.Controllers.Api {
         public async Task<ApiResponse<List<MediaAsset>>> GetProcessing() {
             List<MediaAsset> assets = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.PROCESSING);
             List<MediaAsset> queued = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.QUEUED);
+            List<MediaAsset> extracting = await _MediaAssetRepository.GetByStatus(MediaAssetStatus.EXTRACTING);
 
             assets.AddRange(queued);
+            assets.AddRange(extracting);
             return ApiOk(assets);
         }
 

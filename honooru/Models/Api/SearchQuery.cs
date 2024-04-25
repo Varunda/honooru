@@ -15,6 +15,8 @@ namespace honooru.Models.Api {
 
         public uint Limit { get; set; }
 
+        public bool IsRandom { get; set; } = false;
+
         public string HashKey {
             get {
                 return $"ast_{QueryAst.GetHashCode()}";
