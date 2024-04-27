@@ -7,11 +7,17 @@
             <button class="btn btn-primary" @click="searchTags">search</button>
         </div>
 
-        <div v-if="searchResults.state == 'loaded'">
+        <div v-if="searchResults.state == 'loaded'" class="no-underline-links">
 
-            <div v-for="tag in tags" :style="{ color: '#' + tag.hexColor }">
-                {{tag.name}}
-            </div>
+            <a v-for="tag in tags" :style="{ color: '#' + tag.hexColor }" class="d-block" :href="'/tag/' + tag.id">
+                <span :style="{ 'color': '#' + tag.hexColor }">
+                    {{tag.name.split("_").join(" ")}}
+                </span>
+
+                <span class="" style="color: var(--bs-gray-600)">
+                    {{tag.uses}}
+                </span>
+            </a>
 
         </div>
 
