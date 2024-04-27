@@ -2,6 +2,11 @@
     <div>
         <app-menu></app-menu>
 
+
+        <h2>
+            tag search
+        </h2>
+
         <div class="input-group">
             <input v-model="search" @keyup.enter="searchTags" class="form-control" />
             <button class="btn btn-primary" @click="searchTags">search</button>
