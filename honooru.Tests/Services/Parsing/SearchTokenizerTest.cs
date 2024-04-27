@@ -248,6 +248,25 @@ namespace honooru.Tests.Services.Parsing {
             _c(tokens, expected.ToArray());
         }
 
+        [DataTestMethod]
+        [DataRow("!<>*=")]
+        public void SearchTokenizerTest_OperatorBreaks(string input) {
+            List<Token> tokens = _t(input);
+
+            List<Token> expected = new List<Token>() {
+                new Token(TokenType.OPERATOR, "!"),
+                new Token(TokenType.OPERATOR, "<"),
+                new Token(TokenType.OPERATOR, ">"),
+                new Token(TokenType.OPERATOR, "*"),
+                new Token(TokenType.OPERATOR, "="),
+                new Token(TokenType.END, "")
+            };
+
+            Assert.AreEqual(expected.Count, tokens.Count);
+
+            _c(tokens, expected.ToArray());
+        }
+
         /// <summary>
         ///     (c)ompare a list of tokens from the tokenizer and the expected tokens
         /// </summary>

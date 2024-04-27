@@ -47,6 +47,9 @@ namespace honooru.Models.Internal {
         public const string APP_TAG_EDIT = "App.Tag.Edit";
         public readonly static AppPermission AppTagEdit = new(APP_TAG_EDIT, "edit tags");
 
+        public const string APP_TAG_DELETE = "App.Tag.Delete";
+        public readonly static AppPermission AppTagDelete = new(APP_TAG_DELETE, "delete a tag");
+
         public const string APP_POST_EDIT = "App.Post.Edit";
         public readonly static AppPermission AppPostEdit = new(APP_POST_EDIT, "edit a post");
 

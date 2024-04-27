@@ -309,5 +309,41 @@ namespace honooru.Controllers.Api {
             return ApiOk();
         }
 
+        /// <summary>
+        ///     delete an unused <see cref="Tag"/>
+        /// </summary>
+        /// <param name="tagID">ID of the <see cref="Tag"/> to delete</param>
+        /// <response code="200">
+        ///     the <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/>
+        ///     was successfully deleted
+        /// </response>
+        /// <response code="400">
+        ///     there are <see cref="PostTag"/> entries with <see cref="PostTag.TagID"/> still set.
+        ///     the <see cref="Tag"/> cannot be in use
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="Tag"/> with <see cref="Tag.ID"/> of <paramref name="tagID"/> exists
+        /// </response>
+        [HttpDelete("{tagID}")]
+        [PermissionNeeded(AppPermission.APP_TAG_DELETE)]
+        public async Task<ApiResponse> Delete(ulong tagID) {
+            Tag? tag = await _TagRepository.GetByID(tagID);
+            if (tag == null) {
+                return ApiNotFound($"{nameof(Tag)} {tagID}");
+            }
+
+            TagInfo tagInfo = await _TagInfoRepository.GetOrCreateByID(tagID);
+            if (tagInfo.Uses > 0) {
+                return ApiBadRequest($"{nameof(Tag)} {tagID} is still in use by {tagInfo.Uses} posts!");
+            }
+
+            _Logger.LogInformation($"tag is being deleted [tagID={tagID}] [tag.Name={tag.Name}] [tag.typeID={tag.TypeID}]");
+
+            await _TagInfoRepository.Delete(tagID);
+            await _TagRepository.Delete(tagID);
+
+            return ApiOk();
+        }
+
     }
 }

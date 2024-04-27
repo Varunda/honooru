@@ -71,4 +71,8 @@ export class TagApi extends ApiWrapper<Tag> {
         return TagApi.get().post(`/api/tag/${tagID}/recount`);
     }
 
+    public static delete(tagID: number): Promise<Loading<void>> {
+        return TagApi.get().delete(`/api/tag/${tagID}`);
+    }
+
 }

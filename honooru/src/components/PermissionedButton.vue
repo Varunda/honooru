@@ -1,7 +1,7 @@
 ﻿<template>
     <button v-on="$listeners" :disabled="!hasPermission"
             :title="hasPermission ? '' : 'you do not have permission to perform this action! (' + permission + ')'"
-            style="[ hasPermission ? '' : 'pointer-events: auto' ]">
+            style="pointer-events: auto">
         <slot></slot>
     </button>
 </template>

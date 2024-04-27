@@ -28,6 +28,7 @@ namespace honooru.Services.Db.Readers {
             services.AddSingleton<IDataReader<PostChild>, PostChildReader>();
             services.AddSingleton<IDataReader<PostPool>, PostPoolReader>();
             services.AddSingleton<IDataReader<PostPoolEntry>, PostPoolEntryReader>();
+            services.AddSingleton<IDataReader<ExtractorAuthorMapping>, ExtractorAuthorMappingReader>();
         }
 
     }

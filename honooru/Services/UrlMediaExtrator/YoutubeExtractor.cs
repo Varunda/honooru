@@ -1,6 +1,7 @@
 ﻿using honooru.Models.App;
 using honooru.Models.App.MediaUploadStep;
 using honooru.Models.Config;
+using honooru.Services.Repositories;
 using honooru.Services.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,20 +24,28 @@ namespace honooru.Services.UrlMediaExtrator {
 
         private readonly ILogger<YoutubeExtractor> _Logger;
 
+        private readonly ExtractorAuthorMappingRepository _AuthorMappingRepository;
+        private readonly TagRepository _TagRepository;
+
         private readonly PathEnvironmentService _PathUtil;
 
         public YoutubeExtractor(ILogger<YoutubeExtractor> logger,
-            PathEnvironmentService pathUtil) {
+            PathEnvironmentService pathUtil, ExtractorAuthorMappingRepository authorMappingRepository,
+            TagRepository tagRepository) {
 
             _Logger = logger;
+
             _PathUtil = pathUtil;
+            _AuthorMappingRepository = authorMappingRepository;
+            _TagRepository = tagRepository;
         }
 
         public bool CanHandle(Uri url) {
             return url.Host == "www.youtube.com"
                 || url.Host == "youtu.be"
                 || url.Host == "youtube.com"
-                || url.Host == "www.twitch.tv";
+                || url.Host == "www.twitch.tv"
+                || url.Host == "clips.twitch.tv";
         }
 
         public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
@@ -146,10 +155,27 @@ namespace honooru.Services.UrlMediaExtrator {
                     asset.AdditionalTags += $" meta:{timestamp.Value.Year}";
                 }
 
-                if (videoData.Data.Extractor.StartsWith("twitch")) {
+                if (videoData.Data.Extractor.StartsWith("twitch")) { // twitch:vod twitch:clip
                     asset.AdditionalTags += " twitch";
                 } else if (videoData.Data.Extractor == "youtube") {
                     asset.AdditionalTags += " youtube";
+                }
+
+                // check if the channel is mapped to a tag
+                string site = videoData.Data.Extractor ?? "";
+                string channel = videoData.Data.Channel ?? "";
+                _Logger.LogDebug($"performing author mapping [site={site}] [channel={channel}]");
+                ExtractorAuthorMapping? mapping = await _AuthorMappingRepository.GetMapping(site, channel);
+                if (mapping != null) {
+                    _Logger.LogDebug($"author mapping found [site={site}] [channel={channel}] [mapping.TagID={mapping.TagID}]");
+
+                    Tag? tag = await _TagRepository.GetByID(mapping.TagID);
+                    if (tag != null) {
+                        _Logger.LogDebug($"adding tag based on author mapping [site={site}] [channel={channel}] [tag.Name={tag.Name}]");
+                        asset.AdditionalTags += $" {tag.Name}";
+                    } else {
+                        _Logger.LogWarning($"missing tag from author mapping [mapping.TagID={mapping.TagID}]");
+                    }
                 }
 
                 asset.Title = videoData.Data.Title ?? "";

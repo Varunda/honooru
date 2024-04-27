@@ -58,5 +58,21 @@ namespace honooru.Services.Db {
             await conn.CloseAsync();
         }
 
+        public async Task Delete(ulong tagID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE FROM
+                    tag_info
+                WHERE
+                    id = @ID;
+            ");
+
+            cmd.AddParameter("ID", tagID);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+        }
+
     }
 }

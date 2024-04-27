@@ -86,7 +86,7 @@ namespace honooru.Services.Parsing {
                         tokens.Add(new Token(TokenType.NOT, ""));
                         _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");
                     }
-                } else if (i == '<' || i == '>' || i == '=' || i == '!') {
+                } else if (i == '<' || i == '>' || i == '=' || i == '!' || i == '*') {
                     if (word.Length > 0) {
                         tokens.Add(new Token(TokenType.WORD, word));
                         _Logger.LogTrace($"new token [type={tokens.Last().Type}] [value={tokens.Last().Value}]");

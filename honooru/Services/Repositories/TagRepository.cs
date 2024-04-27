@@ -275,6 +275,11 @@ namespace honooru.Services.Repositories {
             return ex;
         }
 
+        /// <summary>
+        ///     create an <see cref="ExtendedTag"/> from a <see cref="Tag"/>
+        /// </summary>
+        /// <param name="tag"></param>
+        /// <returns></returns>
         public async Task<ExtendedTag> CreateExtended(Tag tag) {
             TagInfo? info = await _TagInfoRepository.GetByID(tag.ID);
             TagType? type = await _TagTypeRepository.GetByID(tag.TypeID);
@@ -325,6 +330,16 @@ namespace honooru.Services.Repositories {
             _ClearCache();
 
             return t;
+        }
+
+        /// <summary>
+        ///     delete a <see cref="Tag"/>
+        /// </summary>
+        /// <param name="tagID">ID of the <see cref="Tag"/> to delete</param>
+        /// <returns></returns>
+        public Task Delete(ulong tagID) {
+            _ClearCache();
+            return _TagDb.Delete(tagID);
         }
 
         private void _ClearCache() {

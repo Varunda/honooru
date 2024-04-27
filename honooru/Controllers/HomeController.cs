@@ -74,6 +74,10 @@ namespace honooru.Controllers {
             return View();
         }
 
+        public IActionResult Tags() {
+            return View();
+        }
+
         [PermissionNeeded(AppPermission.APP_ACCOUNT_ADMIN)]
         public IActionResult Admin() {
             return View();

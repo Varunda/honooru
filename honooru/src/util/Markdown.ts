@@ -25,7 +25,7 @@ const honooruMarkdownExtension: MarkedExtension = {
         }
 
         const tagName: string = token.tagName;
-        _debug(`getting tag [tagName='${tagName}']`);
+        console.log(`getting tag [tagName='${tagName}']`);
 
         const tag: Loading<ExtendedTag> = await TagApi.getByName(tagName);
 

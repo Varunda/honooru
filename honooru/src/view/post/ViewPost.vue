@@ -175,7 +175,7 @@
                 </div>
 
                 <div v-else-if="post.state == 'loaded'">
-                    <div v-if="post.data.height > 720" class="alert alert-primary">
+                    <div v-if="post.data.height > 720 || post.data.width > 720" class="alert alert-primary">
                         view:
                         <span @click="sizing = 'fit'" :class="[ sizing == 'fit' ? 'fw-bold': 'text-muted' ]" class="text-decoration-underline">fit</span>
                         /

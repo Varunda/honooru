@@ -58,6 +58,13 @@ namespace honooru.Services.Repositories {
             return _TagInfoDb.Upsert(info);
         }
 
+        public Task Delete(ulong tagID) {
+            string cacheKey = string.Format(CACHE_KEY_ID, tagID);
+            _Cache.Remove(cacheKey);
+
+            return _TagInfoDb.Delete(tagID);
+        }
+
     }
 
     public static class TagInfoRepositoryExtensionMethods {

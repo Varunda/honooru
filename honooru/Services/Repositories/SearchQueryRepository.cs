@@ -382,6 +382,21 @@ namespace honooru.Services.Repositories {
                     query.Parameters.Add(v);
                 }
 
+                // select posts based on the source
+                // source:URL
+                //      will select posts where source is equal to URL
+                // source:*URL
+                //      will select posts where source contains URL
+                else if (field.Token.Value == "source") {
+                    if (op.Token.Value == "*") {
+                        cmd = $" p.source LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
+                    } else {
+                        cmd = $" p.source = ${query.Parameters.Count + 1}\n";
+                    }
+
+                    query.Parameters.Add(value.Token.Value);
+                }
+
                 // handle sort 
                 // sort:width_desc
                 else if (field.Token.Value == "sort") {

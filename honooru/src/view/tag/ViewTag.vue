@@ -13,14 +13,19 @@
         <div v-else-if="tag.state == 'loaded'">
 
             <div style="display: grid; grid-template-columns: 300px 1fr; gap: 0.5rem;">
-                <div class="border-right mr-3">
+                <div class="border-right me-3">
                     controls
 
-                    <div class="mr-3">
-                        <button class="btn btn-primary d-block w-100" @click="recountPostUsage">
-                            re-count post usage
-                        </button>
-                    </div>
+                    <button class="btn btn-primary d-block w-100 mb-3" @click="recountPostUsage">
+                        re-count post usage
+                    </button>
+
+                    <permissioned-button permission="App.Tag.Delete" class="btn btn-danger d-block w-100" @click="deleteTag">
+                        delete tag
+                    </permissioned-button>
+                    <span v-if="tag.data.uses > 0" class="text-muted">
+                        can only be deleted when not used by any post
+                    </span>
                 </div>
 
                 <div>
@@ -239,6 +244,7 @@
     import ApiError from "components/ApiError";
     import ToggleButton from "components/ToggleButton";
     import AlertCollapse from "components/AlertCollapse.vue";
+    import PermissionedButton from "components/PermissionedButton.vue";
 
     import PostList from "components/app/PostList.vue";
 
@@ -416,6 +422,22 @@
             changeType: async function(typeID: number): Promise<void> {
                 this.tagCopy.typeID = typeID;
                 await this.saveEdit();
+            },
+
+            deleteTag: async function(): Promise<void> {
+                const conf: boolean = confirm(`are you sure you want to delete this tag? this cannot be undone`);
+                if (conf != true) {
+                    return;
+                }
+
+                const l: Loading<void> = await TagApi.delete(this.tagID);
+                if (l.state == "loaded") {
+                    Toaster.add("tag deleted", "successfully deleted tag", "success");
+                } else if (l.state == "error") {
+                    Loadable.toastError(l, "error deleting tag");
+                } else {
+                    console.error(`unchecked response state (delete tag): ${l.state}`);
+                }
             }
         },
 
@@ -424,7 +446,7 @@
         },
 
         components: {
-            InfoHover, ApiError, AlertCollapse,
+            InfoHover, ApiError, AlertCollapse, PermissionedButton,
             AppMenu,
             ToggleButton, PostList,
             ViewTagImplications

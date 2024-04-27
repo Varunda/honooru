@@ -138,14 +138,33 @@ namespace honooru.Services.Db {
             cmd.AddParameter("ID", tag.ID);
             cmd.AddParameter("Name", tag.Name.ToLower());
             cmd.AddParameter("TypeID", tag.TypeID);
-
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();
-
             await conn.CloseAsync();
 
             return tag;
+        }
+
+        /// <summary>
+        ///     delete a <see cref="Tag"/> fro mthe DB
+        /// </summary>
+        /// <param name="tagID">ID of the <see cref="Tag"/> to delete</param>
+        /// <returns></returns>
+        public async Task Delete(ulong tagID) {
+            using NpgsqlConnection conn = _DbHelper.Connection();
+            using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
+                DELETE FROM 
+                    tag
+                WHERE
+                    id = @TagID;
+            ");
+
+            cmd.AddParameter("TagID", tagID);
+            await cmd.PrepareAsync();
+
+            await cmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
         }
 
     }

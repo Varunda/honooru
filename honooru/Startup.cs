@@ -74,7 +74,8 @@ namespace honooru {
             });
 
             services.AddMvc(options => {
-
+                // add our model binder to handle emtpy strings as an empty string, instead of it being converted to null
+                options.ModelBinderProviders.Insert(0, new EmptyStringModelBinderProvider());
             }).AddJsonOptions(config => {
                 config.JsonSerializerOptions.Converters.Add(new DateTimeJsonConverter());
                 config.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());

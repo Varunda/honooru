@@ -23,6 +23,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<PostChildDb>();
             services.AddSingleton<PostPoolDb>();
             services.AddSingleton<PostPoolEntryDb>();
+            services.AddSingleton<ExtractorAuthorMappingDb>();
         }
 
     }

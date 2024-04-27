@@ -1,5 +1,5 @@
 ﻿<template>
-    <div style="max-width: 180px;" :class="containerClasses" class="d-inline-block">
+    <div :id="'post-thumbnail-' + post.id" style="max-width: 180px;" :class="containerClasses" class="d-inline-block" @mouseenter="mouseOver" @mouseleave="mouseLeave">
         <span v-if="post.durationSeconds > 0" class="position-absolute font-monospace bg-dark ms-2" style="font-size: 0.8rem;">
             {{post.durationSeconds | mduration}}
         </span>
@@ -13,10 +13,15 @@
 
 <script lang="ts">
     import Vue, { PropType } from "vue";
+    import { Loading, Loadable } from "Loading";
 
     import { Post } from "api/PostApi";
+    import { PostTag, PostTagApi } from "api/PostTagApi";
+    import { ExtendedTag } from "api/TagApi";
 
     import AccountUtil from "util/AccountUtil";
+
+    import * as bootstrap from "bootstrap";
 
     export const PostThumbnail = Vue.extend({
         props: {
@@ -24,8 +29,85 @@
             query: { type: String, required: false }
         },
 
+        data: function() {
+            return {
+                tags: Loadable.idle() as Loading<ExtendedTag[]>,
+                popper: null as bootstrap.Popover | null,
+
+                hoverDelay: -1 as number
+            }
+        },
+
         methods: {
 
+            mouseOver: async function(): Promise<void> {
+                this.hoverDelay = setTimeout(() => {
+                    this.startHover();
+                }, 300) as unknown as number;
+
+                console.log(`mouse over ${this.post.id}`);
+            },
+
+            startHover: async function(): Promise<void> {
+                console.log(`start hover ${this.post.id}`);
+                if (this.popper == null) {
+                    this.popper = new bootstrap.Popover(`#post-thumbnail-${this.post.id}`, {
+                        trigger: "manual",
+                        title: `post #${this.post.id}`,
+                        customClass: "post-thumbnail-popper",
+                        html: true,
+                        sanitize: false // don't strip style attr from the tag colors
+                    });
+                    console.log(`created popover ${this.post.id}`);
+                }
+
+                if (this.tags.state == "idle") {
+                    console.log(`tags is idle, loading tags ${this.post.id}`);
+                    this.tags = Loadable.loading();
+                    this.tags = await PostTagApi.getByPostID(this.post.id);
+                }
+
+                if (this.tags.state == "loaded") {
+                    let html: string = `<div class="fs-5 border-bottom mb-1 pb-1">post #${this.post.id}</div>`;
+                    for (let i = 0; i < this.tags.data.length; ++i) {
+                        const tag = this.tags.data[i];
+                        // the <wbr> tells the html when to break
+                        const tagHtml: string = `<span style="color: #${tag.hexColor}">${tag.name}&nbsp;</span><wbr>`;
+
+                        html += tagHtml;
+
+                        if (html.length > 750) {
+                            html += `<div>plus ${this.tags.data.length - i - 1} more...</div>`;
+                            break;
+                        }
+                    }
+
+                    console.log(html);
+
+                    this.popper.setContent({
+                        ".popover-body": html
+                    });
+                }
+
+                this.popper.show();
+            },
+
+            mouseLeave: async function(): Promise<void> {
+                clearTimeout(this.hoverDelay);
+
+                if (this.popper != null) {
+                    this.popper.hide();
+                }
+
+                console.log(`hover leave ${this.post.id}`);
+            }
+
+        },
+
+        beforeDestroy: function(): void {
+            if (this.popper != null) {
+                this.popper.dispose();
+            }
         },
 
         computed: {
