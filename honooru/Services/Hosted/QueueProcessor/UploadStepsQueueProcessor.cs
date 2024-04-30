@@ -38,7 +38,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
                 //      (this was more interesting when the timeout was FromMinutes(10) instead of 120)
                 // with an error about: "No process is associated with this object."
                 // very annoying to debug, would not recommend missing this again
-                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(120));
+                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(180));
                 await _UploadStepsHandler.Run(entry, cts.Token);
                 _Logger.LogInformation($"successfully processed upload steps [assetID={entry.Asset.Guid}]");
             } catch (Exception ex) {

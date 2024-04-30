@@ -343,7 +343,7 @@ namespace honooru.Services.Repositories {
                         throw new Exception($"failed to parse {value.Token.Value} to a valid duration");
                     }
 
-                    cmd = $" p.duration " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
+                    cmd = $" p.duration_seconds " + parseOperation(op) + $"${query.Parameters.Count + 1}\n";
                     query.Parameters.Add(span.TotalSeconds);
 
                 // select posts based on width
