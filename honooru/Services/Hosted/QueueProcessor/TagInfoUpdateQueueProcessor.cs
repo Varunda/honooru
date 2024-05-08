@@ -33,11 +33,6 @@ namespace honooru.Services.Hosted.QueueProcessor {
 
             TagInfo? info = await _TagInfoRepository.GetByID(entry.TagID);
 
-            if (info == null && postTags.Count == 0) {
-                _Logger.LogInformation($"no {nameof(TagInfo)} and no {nameof(Post)}s have tag, skipping [tagID={entry.TagID}]");
-                return true;
-            }
-
             if (info == null) {
                 info = new TagInfo();
                 info.ID = entry.TagID;

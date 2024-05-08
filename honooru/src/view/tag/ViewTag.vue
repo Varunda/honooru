@@ -224,9 +224,20 @@
 
         </div>
 
+        <div v-else-if="tag.state == 'nocontent'" class="d-flex justify-content-center">
+            <span class="alert alert-danger">
+                no tag with ID of {{tagID}} exists!
+            </span>
+        </div>
+
+
         <div v-else-if="tag.state == 'error'">
             failed to load tag
             <api-error :error="tag.problem"></api-error>
+        </div>
+
+        <div v-else>
+            unchecked state of tag: {{tag.state}}
         </div>
 
     </div>

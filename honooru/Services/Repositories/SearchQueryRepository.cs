@@ -145,22 +145,34 @@ namespace honooru.Services.Repositories {
             } else if (node.Type == NodeType.NOT) {
                 string normalizedTag = node.Token.Value.ToLower();
 
-                Tag? tag = await _TagRepository.GetByName(normalizedTag);
-                if (tag != null) {
-                    cmd += $" p.ID NOT IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
-                    query.Parameters.Add(tag.ID);
+                // wildcard searches, for example 20% will search for any tag that starts with "20"
+                if (normalizedTag.StartsWith("%") || normalizedTag.EndsWith("%")) {
+                    cmd = $" p.ID NOT IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id IN (select id from tag WHERE name LIKE ${query.Parameters.Count + 1} ) )\n";
+                    query.Parameters.Add(normalizedTag.Replace("%", "%"));
                 } else {
-                    cmd += " 1 = 1 \n"; // if the tag does not exist, then no post includes this tag, so the term is effectively a noop
+                    Tag? tag = await _TagRepository.GetByName(normalizedTag);
+                    if (tag != null) {
+                        cmd += $" p.ID NOT IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
+                        query.Parameters.Add(tag.ID);
+                    } else {
+                        cmd += " 1 = 1 \n"; // if the tag does not exist, then no post includes this tag, so the term is effectively a noop
+                    }
                 }
             } else if (node.Type == NodeType.TAG) {
                 string normalizedTag = node.Token.Value.ToLower();
 
-                Tag? tag = await _TagRepository.GetByName(normalizedTag);
-                if (tag != null) {
-                    cmd = $" p.ID IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
-                    query.Parameters.Add(tag.ID);
+                // wildcard searches, for example 20% will search for any tag that starts with "20"
+                if (normalizedTag.StartsWith("%") || normalizedTag.EndsWith("%")) {
+                    cmd = $" p.ID IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id IN (select id from tag WHERE name LIKE ${query.Parameters.Count + 1} ) )\n";
+                    query.Parameters.Add(normalizedTag.Replace("%", "%"));
                 } else {
-                    cmd = " 0 = 1 \n"; // if the tag does not exist, a search is not valid, as no post contains the tag
+                    Tag? tag = await _TagRepository.GetByName(normalizedTag);
+                    if (tag != null) {
+                        cmd = $" p.ID IN (select distinct(post_id) AS post_id from post_tag WHERE tag_id = ${query.Parameters.Count + 1} )\n";
+                        query.Parameters.Add(tag.ID);
+                    } else {
+                        cmd = " 0 = 1 \n"; // if the tag does not exist, a search is not valid, as no post contains the tag
+                    }
                 }
             } else if (node.Type == NodeType.META) {
                 Node field = node.Children[0];
