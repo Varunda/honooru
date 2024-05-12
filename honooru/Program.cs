@@ -1,37 +1,25 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Drive.v3;
-using Google.Apis.Services;
-using Google.Apis.Sheets.v4;
+
+using FFMpegCore;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using Npgsql;
+
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using honooru.Code;
-using honooru.Code.DiscordInteractions;
-using honooru.Code.ExtensionMethods;
 using honooru.Code.Tracking;
 using honooru.Models;
 using honooru.Services;
-using FFMpegCore;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.IO;
 
 namespace honooru {
 
@@ -43,7 +31,7 @@ namespace honooru {
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
         public static async Task Main(string[] args) {
-            Console.WriteLine($"starting at {DateTime.UtcNow:u}");
+            Console.WriteLine($"starting at {DateTime.UtcNow:u} in {Directory.GetCurrentDirectory()} as {Environment.UserName}");
 
             GlobalFFOptions.Configure(new FFOptions() {
                 TemporaryFilesFolder = "./ffmpeg/temp",
@@ -51,9 +39,11 @@ namespace honooru {
             });
 
             bool hostBuilt = false;
+            bool hostRunning = false;
 
             CancellationTokenSource stopSource = new();
 
+            /*
             using TracerProvider? trace = Sdk.CreateTracerProviderBuilder()
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("npgsql"))
                 .AddAspNetCoreInstrumentation(options => {
@@ -69,6 +59,7 @@ namespace honooru {
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(AppActivitySource.ActivitySourceName))
                 .AddSource(AppActivitySource.ActivitySourceName)
                 .Build();
+            */
 
             // the app must be started in a background thread, as _Host.RunAsync will block until the whole server
             //      shuts down. If we were to await this Task, then it would be blocked until the server is done
@@ -84,20 +75,21 @@ namespace honooru {
                     _Host = CreateHostBuilder(args).Build();
                     logger = _Host.Services.GetService(typeof(ILogger<Program>)) as ILogger<Program>;
                     hostBuilt = true;
-                    Console.WriteLine($"Took {timer.ElapsedMilliseconds}ms to build program");
+                    Console.WriteLine($"took {timer.ElapsedMilliseconds}ms to build program");
                     timer.Stop();
                 } catch (Exception ex) {
                     if (logger != null) {
                         logger.LogError(ex, "fatal error starting program");
                     } else {
-                        Console.WriteLine($"Fatal error starting program:\n{ex}");
+                        Console.WriteLine($"fatal error starting program:\n{ex}");
                     }
                 }
 
                 try {
-                    //await _Host.RunConsoleAsync();
+                    hostRunning = true;
                     await _Host.RunAsync(stopSource.Token);
                 } catch (Exception ex) {
+                    hostRunning = true;
                     if (logger != null) {
                         logger.LogError(ex, $"error while running program");
                     } else {
@@ -109,6 +101,7 @@ namespace honooru {
             for (int i = 0; i < 10; ++i) {
                 await Task.Delay(1000);
                 if (hostBuilt == true) {
+                    Console.WriteLine($"host has been built by Task, starting...");
                     break;
                 }
             }
@@ -118,6 +111,9 @@ namespace honooru {
                 return;
             }
 
+            if (hostRunning == false) {
+                return;
+            }
             ILogger<Program> logger = _Host.Services.GetRequiredService<ILogger<Program>>();
 
             CommandBus? commands = _Host.Services.GetService(typeof(CommandBus)) as CommandBus;

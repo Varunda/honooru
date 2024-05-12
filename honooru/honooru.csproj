@@ -37,8 +37,6 @@
     <PackageReference Include="Emzi0767.Common" Version="2.6.6" />
     <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
     <PackageReference Include="FFMpegCore" Version="5.1.0" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.58.0.2922" />
-    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.58.0.2909" />
     <PackageReference Include="Kuylar.DSharpPlus.ButtonCommands" Version="1.4.0" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.6.0" />
     <PackageReference Include="Magick.NET.Core" Version="13.6.0" />
@@ -49,15 +47,16 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="morelinq" Version="3.3.2" />
-    <PackageReference Include="Npgsql" Version="6.0.5" />
-    <PackageReference Include="Npgsql.OpenTelemetry" Version="6.0.5" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+    <PackageReference Include="Npgsql.OpenTelemetry" Version="8.0.3" />
     <PackageReference Include="NReco.Logging.File" Version="1.1.5" />
-    <PackageReference Include="OpenTelemetry" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry" Version="1.8.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.7.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
+    <PackageReference Include="System.Net.Security" Version="4.3.1" />
     <PackageReference Include="YoutubeDLSharp" Version="1.1.0" />
   </ItemGroup>
 

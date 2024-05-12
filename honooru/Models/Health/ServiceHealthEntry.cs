@@ -18,7 +18,7 @@ namespace honooru.Models {
         /// <summary>
         ///     When this service was last ran
         /// </summary>
-        public DateTime LastRan { get; set; } = DateTime.UtcNow;
+        public DateTime LastRan { get; set; } = DateTime.MinValue;
 
         /// <summary>
         ///     How many milliseconds it took for the service to be ran last time

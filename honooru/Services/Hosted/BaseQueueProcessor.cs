@@ -40,10 +40,10 @@ namespace honooru.Services.Hosted {
 
             while (stoppingToken.IsCancellationRequested == false) {
                 try {
-
                     // check if this queue processor is disabled
                     ServiceHealthEntry healthEntry = _ServiceHealthMonitor.GetOrCreate(_ServiceName);
                     if (healthEntry.Enabled == false) {
+                        // only inform that the queue processor is disabled every 5 minutes
                         if (_LastInformedOfDisabled == null || (DateTime.UtcNow - _LastInformedOfDisabled) > TimeSpan.FromMinutes(5)) {
                             _Logger.LogInformation($"reminder: service {_ServiceName} is disabled (5m cooldown)");
                             _LastInformedOfDisabled = DateTime.UtcNow;
@@ -72,7 +72,7 @@ namespace honooru.Services.Hosted {
                 }
             }
 
-            _Logger.LogInformation($"stopping");
+            _Logger.LogInformation($"stopped [ServiceName={_ServiceName}]");
         }
 
         /// <summary>

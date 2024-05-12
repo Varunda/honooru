@@ -9,6 +9,7 @@ namespace honooru.Services.Hosted {
         public static void AddAppStartupServices(this IServiceCollection services) {
             services.AddHostedService<StorageOptionCheckStartupService>();
             services.AddHostedService<FFmpegConfigureStartupService>();
+            services.AddHostedService<InitialAccountStartupService>();
         }
 
         public static void AddAppHostedServices(this IServiceCollection services) {

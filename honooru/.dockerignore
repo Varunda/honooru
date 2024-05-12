@@ -1,0 +1,8 @@
+﻿.git
+notes/
+build/
+logs/
+bin/
+obj/
+node_modules/
+ffmpeg/

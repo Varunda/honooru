@@ -53,8 +53,8 @@ namespace honooru {
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services) {
-            string stuff = ((IConfigurationRoot)Configuration).GetDebugView();
-            Console.WriteLine(stuff);
+            //string stuff = ((IConfigurationRoot)Configuration).GetDebugView();
+            //Console.WriteLine(stuff);
 
             services.AddLogging(builder => {
                 builder.AddFile("logs/app-{0:yyyy}-{0:MM}-{0:dd}.log", options => {
@@ -74,7 +74,7 @@ namespace honooru {
             });
 
             services.AddMvc(options => {
-                // add our model binder to handle emtpy strings as an empty string, instead of it being converted to null
+                // add our model binder to handle empty strings as an empty string, instead of it being converted to null
                 options.ModelBinderProviders.Insert(0, new EmptyStringModelBinderProvider());
             }).AddJsonOptions(config => {
                 config.JsonSerializerOptions.Converters.Add(new DateTimeJsonConverter());
@@ -173,7 +173,6 @@ namespace honooru {
             services.AddSingleton<CommandBus, CommandBus>();
 
             services.AddUtilServices();
-            services.AddAppStartupServices();
             services.AddAppQueueServices(); // queue services
             services.AddDatabasesServices(); // Db services
             services.AddAppDatabaseReadersServices(); // DB readers
@@ -192,6 +191,8 @@ namespace honooru {
                 services.AddHostedService<DiscordService>();
                 services.AddAppDiscord();
             }
+
+            services.AddAppStartupServices();
 
             services.AddSingleton<IqdbClient>();
 

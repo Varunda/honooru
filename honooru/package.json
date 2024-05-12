@@ -1,5 +1,5 @@
 {
-  "name": "watchtower",
+  "name": "honooru",
   "version": "0.0.1",
   "description": "ps2",
   "main": "index.js",
@@ -36,7 +36,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "webpack --watch --progress"
+    "watch": "webpack --watch --progress",
+    "build": "webpack --progress --mode=development"
   },
   "author": "varunda",
   "license": "MIT"

@@ -1,29 +1,31 @@
 {
-    "profiles": {
-        "IIS Express": {
-            "commandName": "IISExpress",
-            "launchBrowser": true,
-            "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        "annuls": {
-            "commandName": "Project",
-            /*
-            "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            },
-            */
-            "applicationUrl": "https://localhost:6001;http://localhost:6000"
-        }
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     },
-    "$schema": "http://json.schemastore.org/launchsettings.json",
-    "iisSettings": {
-        "windowsAuthentication": false,
-        "anonymousAuthentication": true,
-        "iisExpress": {
-            "applicationUrl": "http://localhost:63227",
-            "sslPort": 44317
-        }
+    "annuls": {
+      "commandName": "Project",
+      "applicationUrl": "https://localhost:6001;http://localhost:6000"
+    },
+    "Profile 1": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "WindowsLocal"
+      },
+      "applicationUrl": "https://localhost:6001;http://localhost:6000"
     }
+  },
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:63227",
+      "sslPort": 44317
+    }
+  }
 }

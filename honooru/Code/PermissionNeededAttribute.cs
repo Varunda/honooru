@@ -83,8 +83,8 @@ namespace honooru.Code {
             _Logger.LogTrace($"checking if user has permission [account={account.ID}/{account.Name}] [Permissions={string.Join(", ", Permissions)}] " 
                 + $"[url={context.HttpContext.Request.Path.Value}]");
 
-            // user is owner
-            if (account.ID == 2) {
+            // account 1 is system user, account 2 is the first user made
+            if (account.ID <= 2) {
                 _Logger.LogTrace($"user has permission as they are the owner [account={account.Name}]");
                 return;
             }

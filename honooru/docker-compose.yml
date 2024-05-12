@@ -1,0 +1,44 @@
+﻿version: "3.4"
+name: "honooru"
+
+services:
+  psql:
+    image: "postgres:16.3"
+    shm_size: "1gb"
+    environment:
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      start_period: "30s"
+      interval: "1s"
+      retries: 1
+    volumes:
+      - "honooru-psql-data:/var/lib/postgresql/data"
+
+  plap:
+    image: "honu_plap"
+    stdin_open: true
+    depends_on:
+      psql:
+        condition: "service_healthy"
+      iqdb:
+        condition: "service_started"
+    ports:
+      - "${HONOORU_PORT:-6001}:8080"
+    volumes:
+      - "honooru-images:/plap"
+
+  iqdb:
+    image: "iqdb_honu"
+    command: [ "http", "0.0.0.0", "5588", "/mnt/iqdb.sqlite" ]
+    volumes:
+      - "honooru-iqdb-dir:/mnt"
+
+volumes:
+  honooru-psql-data:
+    name: "${COMPOSE_PROJECT_NAME}-psql-data"
+  honooru-images:
+    name: "${COMPOSE_PROJECT_NAME}-images"
+  honooru-iqdb-dir:
+    name: "${COMPOSE_PROJECT_NAME}-iqdb-dir"
