@@ -22,7 +22,7 @@
 
     import { Loadable, Loading } from "Loading";
 
-    import { ExtendedTag, TagApi, TagSearchResults } from "api/TagApi";
+    import { ExtendedTag, TagApi, TagSearchResults, ExtendedTagSearchResult } from "api/TagApi";
 
     //import Tribute, { TributeCollection, TributeItem } from "node_modules/tributejs";
     import Tribute, { TributeCollection, TributeItem } from "lib/tribute";
@@ -39,7 +39,7 @@
 
                 enterLockout: 0 as number,
 
-                tribute: null as Tribute<ExtendedTag> | null,
+                tribute: null as Tribute<ExtendedTagSearchResult> | null,
                 search: "" as string,
                 searchInput: {} as HTMLElement,
             }
@@ -54,7 +54,7 @@
                     throw `failed to find #search-input-${this.ID}!`;
                 }
 
-                this.tribute = new Tribute<ExtendedTag>({
+                this.tribute = new Tribute<ExtendedTagSearchResult>({
                     trigger: "", // don't trigger on anything special
                     menuShowMinLength: 2, // tag search requires at least 2 characters
                     autocompleteMode: true, // autocomplete this, not sure what false does tho
@@ -84,19 +84,28 @@
                     },
 
                     // remote callback
-                    values: (text: string, callback: (r: ExtendedTag[]) => void) => {
+                    values: (text: string, callback: (r: ExtendedTagSearchResult[]) => void) => {
                         console.log(`performing search [text=${text}]`);
                         TagApi.search(text).then((value: Loading<TagSearchResults>) => {
                             if (value.state == "loaded") {
-                                console.log(`loaded searched tags: [${value.data.tags.map(iter => iter.name).join(" ")}]`);
-                                callback(value.data.tags);
+                                if (value.data.input != text) {
+                                    console.warn(`not updating tag search, ouput does not match input [text=${text}] [input=${value.data.input}]`);
+                                } else {
+                                    console.log(`loaded searched tags: [${value.data.tags.map(iter => iter.tag.name).join(" ")}]`);
+                                    callback(value.data.tags);
+                                }
                             }
                         });
                     },
 
                     // change the menu template to have the color of the tag type
-                    menuItemTemplate: (item: TributeItem<ExtendedTag>): string => {
-                        return `<span contentediable="false" style="color: #${item.original.hexColor}">${item.original.name} <span class="text-muted">(${item.original.uses})</span></span>`;
+                    menuItemTemplate: (item: TributeItem<ExtendedTagSearchResult>): string => {
+                        let name: string = item.original.tag.name;
+                        if (item.original.alias != null) {
+                            name = `${item.original.alias.alias} -> ` + name;
+                        }
+
+                        return `<span contentediable="false" style="color: #${item.original.tag.hexColor}">${name} <span class="text-muted">(${item.original.tag.uses})</span></span>`;
                     }
                 });
 

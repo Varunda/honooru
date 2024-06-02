@@ -10,11 +10,19 @@
             </div>
 
             <div v-else-if="pool.state == 'loaded'">
-                <h1>
-                    view pool
-                    #{{pool.data.id}}:
-                    {{pool.data.name}}
-                </h1>
+                <div class="pb-3 mb-3 border-bottom">
+                    <h1 class="d-inline">
+                        pool
+                        #{{pool.data.id}}:
+                        {{pool.data.name}}
+                    </h1>
+                    <h4>
+                        created by
+                        <user-account :account-id="pool.data.createdByID"></user-account>
+                        at
+                        {{pool.data.timestamp | moment}}
+                    </h4>
+                </div>
 
                 <post-list :q="'pool:' + poolID" :limit="500"></post-list>
             </div>
@@ -39,8 +47,10 @@
     import InfoHover from "components/InfoHover.vue";
     import ApiError from "components/ApiError";
     import AlertCollapse from "components/AlertCollapse.vue";
-    import PostSearch from "components/app/PostSearch.vue";
     import PostList from "components/app/PostList.vue";
+    import UserAccount from "components/app/UserAccount.vue";
+
+    import "filters/MomentFilter";
 
     import { PostPool, PostPoolApi } from "api/PostPoolApi";
 
@@ -94,6 +104,7 @@
             InfoHover, ApiError, AlertCollapse,
             AppMenu,
             PostList, 
+            UserAccount
         }
     });
     export default PoolView;

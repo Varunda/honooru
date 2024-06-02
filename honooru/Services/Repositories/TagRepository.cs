@@ -1,4 +1,5 @@
-﻿using honooru.Models.Api;
+﻿using Emzi0767.Utilities;
+using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Services.Db;
 using honooru.Services.Util;
@@ -173,12 +174,12 @@ namespace honooru.Services.Repositories {
         /// <param name="name"></param>
         /// <param name="cancel"></param>
         /// <returns></returns>
-        public async Task<List<Tag>> SearchByName(string name, CancellationToken cancel) {
+        public async Task<List<TagSearchResult>> SearchByName(string name, CancellationToken cancel) {
             string cacheKey = string.Format(CACHE_KEY_SEARCH, name);
 
-            if (_Cache.TryGetValue(cacheKey, out List<Tag>? ret) == false || ret == null) {
+            if (_Cache.TryGetValue(cacheKey, out List<TagSearchResult>? ret) == false || ret == null) {
                 _Logger.LogDebug($"search results not cached, performing search [name={name}]");
-                ret = new List<Tag>();
+                ret = new List<TagSearchResult>();
 
                 List<Tag> tags = await GetAll(cancel);
 
@@ -188,27 +189,36 @@ namespace honooru.Services.Repositories {
                     cancel.ThrowIfCancellationRequested();
 
                     if (TagNameCloseEnough(name, tag.Name)) {
-                        ret.Add(tag);
+                        ret.Add(new TagSearchResult(tag));
                     }
                 }
 
                 HashSet<ulong> aliasTagIds = new();
+                List<TagAlias> foundAliases = new();
                 List<TagAlias> aliases = await _TagAliasRepository.GetAll();
                 foreach (TagAlias a in aliases) {
                     cancel.ThrowIfCancellationRequested();
 
                     if (TagNameCloseEnough(name, a.Alias)) {
-                        aliasTagIds.Add(a.TagID);
+                        if (aliasTagIds.Contains(a.TagID) == false) {
+                            aliasTagIds.Add(a.TagID);
+                            foundAliases.Add(a);
+                        }
                     }
                 }
 
                 if (aliasTagIds.Count > 0) {
-                    List<Tag> aliasedTags = await GetByIDs(aliasTagIds);
-                    HashSet<ulong> alreadyInList = new(ret.Select(iter => iter.ID));
+                    Dictionary<ulong, Tag> aliasedTags = (await GetByIDs(aliasTagIds)).ToDictionary(iter => iter.ID);
+                    HashSet<ulong> alreadyInList = new(ret.Select(iter => iter.Tag.ID));
 
-                    foreach (Tag t in aliasedTags) {
-                        if (alreadyInList.Contains(t.ID) == false) {
-                            ret.Add(t);
+                    foreach (TagAlias t in foundAliases) {
+                        if (alreadyInList.Contains(t.TagID) == false) {
+                            Tag? aliasedTag = aliasedTags.GetValueOrDefault(t.TagID);
+                            if (aliasedTag == null) {
+                                _Logger.LogError($"failed to find {nameof(Tag)} {t.TagID} from alias {t.Alias}");
+                            } else {
+                                ret.Add(new TagSearchResult(aliasedTag, t));
+                            }
                         }
                     }
                 }

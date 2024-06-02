@@ -14,13 +14,17 @@
 
         <div v-if="searchResults.state == 'loaded'" class="no-underline-links">
 
-            <a v-for="tag in tags" :style="{ color: '#' + tag.hexColor }" class="d-block" :href="'/tag/' + tag.id">
-                <span :style="{ 'color': '#' + tag.hexColor }">
-                    {{tag.name.split("_").join(" ")}}
+            <a v-for="tag in tags" :style="{ color: '#' + tag.tag.hexColor }" class="d-block" :href="'/tag/' + tag.tag.id">
+                <span :style="{ 'color': '#' + tag.tag.hexColor }">
+                    <span v-if="tag.alias != null">
+                        {{tag.alias.alias.split("_").join(" ")}}
+                        ->
+                    </span>
+                    {{tag.tag.name.split("_").join(" ")}}
                 </span>
 
                 <span class="" style="color: var(--bs-gray-600)">
-                    {{tag.uses}}
+                    {{tag.tag.uses}}
                 </span>
             </a>
 
@@ -40,7 +44,7 @@
     import PostSearch from "components/app/PostSearch.vue";
     import PostList from "components/app/PostList.vue";
 
-    import { ExtendedTag, Tag, TagApi, TagSearchResults } from "api/TagApi";
+    import { ExtendedTag, ExtendedTagSearchResult, Tag, TagApi, TagSearchResults } from "api/TagApi";
 
     export const TagList = Vue.extend({
         props: {
@@ -64,14 +68,13 @@
 
         computed: {
 
-            tags: function(): ExtendedTag[] {
+            tags: function(): ExtendedTagSearchResult[] {
                 if (this.searchResults.state != "loaded") {
                     return [];
                 }
 
                 return this.searchResults.data.tags;
             }
-
 
         },
 

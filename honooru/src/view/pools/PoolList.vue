@@ -14,13 +14,9 @@
             </div>
 
             <div v-else-if="pools.state == 'loaded'">
-                <a v-for="pool in pools.data" :href="'/pool/' + pool.id">
-                    {{pool.name}}
-                </a>
-
+                <pool-list-entry v-for="pool in pools.data" :key="pool.id" :pool="pool" class="mb-3 pb-3 border-bottom"></pool-list-entry>
             </div>
         </div>
-
 
     </div>
 </template>
@@ -35,6 +31,10 @@
     import AlertCollapse from "components/AlertCollapse.vue";
     import PostSearch from "components/app/PostSearch.vue";
     import PostList from "components/app/PostList.vue";
+    import UserAccount from "components/app/UserAccount.vue";
+    import PoolListEntry from "./PoolListEntry.vue";
+
+    import "filters/MomentFilter";
 
     import { PostPool, PostPoolApi } from "api/PostPoolApi";
 
@@ -50,6 +50,7 @@
         },
 
         mounted: function(): void {
+            document.title = "Honooru / Pools";
             this.loadAll();
         },
 
@@ -65,6 +66,8 @@
             InfoHover, ApiError, AlertCollapse,
             AppMenu,
             PostList,
+            UserAccount,
+            PoolListEntry
         }
 
     });

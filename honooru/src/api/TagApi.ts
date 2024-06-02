@@ -2,6 +2,7 @@
 import ApiWrapper from "api/ApiWrapper";
 
 import { TagType } from "api/TagTypeApi";
+import { TagAlias, TagAliasApi } from "./TagAliasApi";
 
 export class Tag {
     public id: number = 0;
@@ -21,9 +22,15 @@ export class ExtendedTag {
     public description: string | null = null;
 }
 
+export class ExtendedTagSearchResult {
+    public tag: ExtendedTag = new ExtendedTag();
+    public name: string = "";
+    public alias: TagAlias | null = null;
+}
+
 export class TagSearchResults {
     public input: string = "";
-    public tags: ExtendedTag[] = [];
+    public tags: ExtendedTagSearchResult[] = [];
 }
 
 export class TagApi extends ApiWrapper<Tag> {
@@ -44,10 +51,18 @@ export class TagApi extends ApiWrapper<Tag> {
         };
     }
 
+    public static parseExtendedTagSearchResult(elem: any): ExtendedTagSearchResult {
+        return {
+            tag: TagApi.parseExtendedTag(elem.tag),
+            name: TagApi.parseExtendedTag(elem.tag).name,
+            alias: elem.alias == null ? null : TagAliasApi.parse(elem.alias)
+        };
+    }
+
     public static parseTagSearchResults(elem: any): TagSearchResults {
         return {
             input: elem.input,
-            tags: elem.tags.map((iter: any) => TagApi.parseExtendedTag(iter))
+            tags: elem.tags.map((iter: any) => TagApi.parseExtendedTagSearchResult(iter))
         }
     }
 

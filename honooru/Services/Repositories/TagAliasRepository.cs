@@ -47,10 +47,12 @@ namespace honooru.Services.Repositories {
         }
 
         public Task Insert(TagAlias alias) {
+            _Cache.Remove(CACHE_KEY_ALL);
             return _TagAliasDb.Insert(alias);
         }
 
         public Task Delete(TagAlias alias) {
+            _Cache.Remove(CACHE_KEY_ALL);
             return _TagAliasDb.Delete(alias.Alias);
         }
 

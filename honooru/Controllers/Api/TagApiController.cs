@@ -9,6 +9,7 @@ using honooru.Services.Queues;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using MoreLinq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -119,8 +120,11 @@ namespace honooru.Controllers.Api {
         ///     defaults to "uses", which uses <see cref="ExtendedTag.Uses"/>
         /// </param>
         /// <param name="sortAscending">if the sorted results will be in ascending (0 to 9) order or descending (9 to 0). defaults to false</param>
-        /// <returns></returns>
         /// <exception cref="System.Exception"></exception>
+        /// <response code="200">
+        ///     the response will contain a <see cref="TagSearchResults"/> object that contains the tags found,
+        ///     and what those tags were aliased from if an alias was used
+        /// </response>
         [HttpGet("search")]
         [PermissionNeeded(AppPermission.APP_VIEW)]
         public async Task<ApiResponse<TagSearchResults>> Search(
@@ -148,9 +152,10 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<TagSearchResults>($"limit cannot go above 500");
             }
 
-            List<Tag> tags = await _TagRepository.SearchByName(name, CancellationToken.None);
+            List<TagSearchResult> tags = await _TagRepository.SearchByName(name, CancellationToken.None);
+            Dictionary<ulong, TagSearchResult> tagDict = tags.ToDictionary(iter => iter.Tag.ID);
 
-            List<ExtendedTag> ex = await _TagRepository.CreateExtended(tags);
+            List<ExtendedTag> ex = await _TagRepository.CreateExtended(tags.Select(iter => iter.Tag));
             ex.Sort((a, b) => {
                 // make sure that words that match exactly are above words that are just similar
                 // for example if searching for "test", you wouldn't want "best", even if "best" has more uses
@@ -182,7 +187,13 @@ namespace honooru.Controllers.Api {
 
             TagSearchResults res = new();
             res.Input = name;
-            res.Tags = ex.Take(realLimit).ToList();
+
+            res.Tags = ex.Take(realLimit).Select(iter => {
+                return new ExtendedTagSearchResult() {
+                    Tag = iter,
+                    Alias = tagDict.GetValueOrDefault(iter.ID)?.Alias
+                };
+            }).ToList();
 
             return ApiOk(res);
         }

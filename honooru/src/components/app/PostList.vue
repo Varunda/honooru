@@ -18,43 +18,45 @@
                 no posts found!
             </div>
 
-            <div v-if="blurUnsafe || blurExplicit" class="text-muted text-center">
-                posts with a rating of
+            <div v-if="HideFooter == false">
+                <div v-if="blurUnsafe || blurExplicit" class="text-muted text-center">
+                    posts with a rating of
 
-                <span v-if="blurExplicit" class="text-danger">
-                    explicit
-                </span>
-                <span v-if="blurExplicit && blurUnsafe">
-                    or
-                </span>
-                <span v-if="blurUnsafe" class="text-warning">
-                    unsafe
-                </span>
+                    <span v-if="blurExplicit" class="text-danger">
+                        explicit
+                    </span>
+                    <span v-if="blurExplicit && blurUnsafe">
+                        or
+                    </span>
+                    <span v-if="blurUnsafe" class="text-warning">
+                        unsafe
+                    </span>
 
-                are blurred because of your <a href="/settings">settings</a> (hover to unblur)
-            </div>
+                    are blurred because of your <a href="/settings">settings</a> (hover to unblur)
+                </div>
 
-            <div v-if="hideUnsafe || hideExplicit" class="text-muted text-center">
-                posts with a rating of
+                <div v-if="hideUnsafe || hideExplicit" class="text-muted text-center">
+                    posts with a rating of
 
-                <span v-if="hideExplicit" class="text-danger">
-                    explicit
-                </span>
-                <span v-if="hideExplicit && hideUnsafe">
-                    or
-                </span>
-                <span v-if="hideUnsafe" class="text-warning">
-                    unsafe
-                </span>
+                    <span v-if="hideExplicit" class="text-danger">
+                        explicit
+                    </span>
+                    <span v-if="hideExplicit && hideUnsafe">
+                        or
+                    </span>
+                    <span v-if="hideUnsafe" class="text-warning">
+                        unsafe
+                    </span>
 
-                are not return in this search because of your <a href="/settings">settings</a>
-            </div>
+                    are not return in this search because of your <a href="/settings">settings</a>
+                </div>
 
-            <div class="text-center text-muted font-monospace">
-                timings:
-                <code v-for="timing in posts.data.timings">
-                    {{timing}}
-                </code>
+                <div class="text-center text-muted font-monospace">
+                    timings:
+                    <code v-for="timing in posts.data.timings">
+                        {{timing}}
+                    </code>
+                </div>
             </div>
         </div>
 
@@ -86,7 +88,8 @@
         props: {
             q: { type: String, required: true },
             limit: { type: Number, required: false, default: 100 },
-            offset: { type: Number, required: false, default: 0 }
+            offset: { type: Number, required: false, default: 0 },
+            HideFooter: { type: Boolean, required: false, default: false }
         },
 
         data: function() {
@@ -95,13 +98,17 @@
             }
         },
 
+        created: function(): void {
+            console.log(`created`);
+        },
+
         mounted: function(): void {
             this.search();
         },
 
         methods: {
             search: async function(): Promise<void> {
-                console.log(`searching [limit=${this.limit}] [offset=${this.offset}] [query=${this.q}]`);
+                console.log(`PostList> searching [query=${this.q}] [limit=${this.limit}] [offset=${this.offset}]`);
                 this.posts = Loadable.loading();
                 this.posts = await PostApi.search(this.q, this.limit, this.offset);
                 this.$emit("search-done", this.posts);
@@ -130,8 +137,6 @@
             hideExplicit: function(): boolean {
                 return AccountUtil.getSetting("postings.explicit.behavior")?.value == "hidden";
             },
-
-
         },
 
         components: {

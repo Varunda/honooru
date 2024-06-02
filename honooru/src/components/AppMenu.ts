@@ -21,6 +21,7 @@ export const AppMenu = Vue.extend({
                             <li><a class="dropdown-item" href="/upload">Upload</a></li>
                             <li><a class="dropdown-item" href="/tagtype">Tag types</a></li>
                             <li><a class="dropdown-item" href="/tags">Tags</a></li>
+                            <li><a class="dropdown-item" href="/pools">Pools</a></li>
                         </ul>
                     </li>
 
@@ -39,6 +40,12 @@ export const AppMenu = Vue.extend({
                     <li class="nav-item">
                         <a class="nav-link" href="/tags">
                             tags
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pools">
+                            pools
                         </a>
                     </li>
 

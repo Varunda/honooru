@@ -45,7 +45,8 @@ namespace honooru.Services.UrlMediaExtrator {
                 || url.Host == "youtu.be"
                 || url.Host == "youtube.com"
                 || url.Host == "www.twitch.tv"
-                || url.Host == "clips.twitch.tv";
+                || url.Host == "clips.twitch.tv"
+                || url.Host == "streamable.com";
         }
 
         public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
@@ -145,10 +146,11 @@ namespace honooru.Services.UrlMediaExtrator {
 
             RunResult<YoutubeDLSharp.Metadata.VideoData> videoData = await ytdl.RunVideoDataFetch(url.ToString());
             if (videoData.Success) {
+                // removed unwanted data
                 videoData.Data.AutomaticCaptions = new Dictionary<string, YoutubeDLSharp.Metadata.SubtitleData[]>();
                 videoData.Data.Thumbnails = [];
                 videoData.Data.Formats = [];
-                _Logger.LogInformation($"metadata found from video: {videoData.Data}");
+                _Logger.LogInformation($"metadata found from video: {videoData.Data.ToString().Replace("\n", "")}");
 
                 DateTime? timestamp = videoData.Data.Timestamp ?? videoData.Data.UploadDate;
                 if (timestamp != null) {
@@ -159,6 +161,8 @@ namespace honooru.Services.UrlMediaExtrator {
                     asset.AdditionalTags += " twitch";
                 } else if (videoData.Data.Extractor == "youtube") {
                     asset.AdditionalTags += " youtube";
+                } else if (videoData.Data.Extension == "streamable") {
+                    asset.AdditionalTags += " streamable";
                 }
 
                 // check if the channel is mapped to a tag

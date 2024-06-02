@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using honooru.Models.App;
+using System.Collections.Generic;
 
 namespace honooru.Models.Api {
 
@@ -6,7 +7,16 @@ namespace honooru.Models.Api {
 
         public string Input { get; set; } = "";
 
-        public List<ExtendedTag> Tags { get; set; } = new();
+        public List<ExtendedTagSearchResult> Tags { get; set; } = new();
 
     }
+
+    public class ExtendedTagSearchResult {
+
+        public ExtendedTag Tag { get; set; } = new();
+
+        public TagAlias? Alias { get; set; } = null;
+
+    }
+
 }
