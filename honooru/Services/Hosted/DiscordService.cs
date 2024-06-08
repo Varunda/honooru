@@ -21,6 +21,15 @@ using DSharpPlus.ButtonCommands.Extensions;
 using DSharpPlus.ButtonCommands;
 using DSharpPlus.ButtonCommands.EventArgs;
 using System.Diagnostics;
+using honooru.Services.UrlMediaExtrator;
+using honooru.Models.App;
+using honooru.Services.Repositories;
+using System.Security.Cryptography;
+using System.Linq;
+using honooru.Models.App.MediaUploadStep;
+using honooru.Models.Config;
+using honooru.Services.UploadStepHandler;
+using FFMpegCore.Enums;
 
 namespace honooru.Services.Hosted {
 
@@ -30,11 +39,19 @@ namespace honooru.Services.Hosted {
 
         private readonly DiscordMessageQueue _MessageQueue;
 
+        private readonly IOptions<DiscordOptions> _DiscordOptions;
+        private readonly IOptions<StorageOptions> _StorageOptions;
+        private readonly InstanceInfo _InstanceInfo;
+
         //public DiscordClient _Discord;
         private readonly DiscordWrapper _Discord;
         private readonly SlashCommandsExtension _SlashCommands;
         private readonly ButtonCommandsExtension _ButtonCommands;
-        private IOptions<DiscordOptions> _DiscordOptions;
+        private readonly AppCurrentAccount _CurrentUser;
+        private readonly UrlMediaExtractorHandler _UrlExtractor;
+        private readonly MediaAssetRepository _MediaAssetRepository;
+        private readonly UploadStepsProcessor _UploadStepsHandler;
+        private readonly BaseQueue<UploadSteps> _UploadStepsQueue;
 
         private bool _IsConnected = false;
         private const string SERVICE_NAME = "discord";
@@ -42,12 +59,21 @@ namespace honooru.Services.Hosted {
         private Dictionary<ulong, ulong> _CachedMembership = new();
 
         public DiscordService(ILogger<DiscordService> logger, ILoggerFactory loggerFactory,
-            DiscordMessageQueue msgQueue, IOptions<DiscordOptions> discordOptions, IServiceProvider services,
-            DiscordWrapper discord) { 
+            DiscordMessageQueue msgQueue, IOptions<DiscordOptions> discordOptions,
+            IServiceProvider services, DiscordWrapper discord,
+            AppCurrentAccount currentUser, UrlMediaExtractorHandler urlExtractor,
+            MediaAssetRepository mediaAssetRepository, UploadStepsProcessor uploadStepsHandler,
+            IOptions<StorageOptions> storageOptions, BaseQueue<UploadSteps> uploadStepsQueue, InstanceInfo instanceInfo) {
 
             _Logger = logger;
             _MessageQueue = msgQueue ?? throw new ArgumentNullException(nameof(msgQueue));
+            _CurrentUser = currentUser;
+            _UrlExtractor = urlExtractor;
+            _MediaAssetRepository = mediaAssetRepository;
+            _UploadStepsHandler = uploadStepsHandler;
+            _UploadStepsQueue = uploadStepsQueue;
 
+            _StorageOptions = storageOptions;
             _DiscordOptions = discordOptions;
 
             _Discord = discord;
@@ -56,6 +82,7 @@ namespace honooru.Services.Hosted {
             _Discord.Get().InteractionCreated += Generic_Interaction_Created;
             _Discord.Get().ContextMenuInteractionCreated += Generic_Interaction_Created;
             _Discord.Get().GuildAvailable += Guild_Available;
+            _Discord.Get().MessageCreated += Message_Created;
 
             _SlashCommands = _Discord.Get().UseSlashCommands(new SlashCommandsConfiguration() {
                 Services = services
@@ -83,19 +110,12 @@ namespace honooru.Services.Hosted {
 
             _ButtonCommands.ButtonCommandExecuted += Button_Command_Executed;
             _ButtonCommands.ButtonCommandErrored += Button_Command_Error;
+            _InstanceInfo = instanceInfo;
         }
 
         public async override Task StartAsync(CancellationToken cancellationToken) {
             try {
-                await _Discord.Get().ConnectAsync();
-
-                /*
-                IReadOnlyList<DiscordApplicationCommand> cmds = await _Discord.Get().GetGuildApplicationCommandsAsync(_DiscordOptions.Value.GuildId);
-                _Logger.LogDebug($"Have {cmds.Count} commands");
-                foreach (DiscordApplicationCommand cmd in cmds) {
-                    _Logger.LogDebug($"{cmd.Id} {cmd.Name}: {cmd.Description}");
-                }
-                */
+                await _Discord.Get().ConnectAsync(activity: null, status: UserStatus.Online);
                 await base.StartAsync(cancellationToken);
             } catch (Exception ex) {
                 _Logger.LogError(ex, "Error in start up of DiscordService");
@@ -229,31 +249,111 @@ namespace honooru.Services.Hosted {
             _IsConnected = true;
 
             return Task.CompletedTask;
-
-            /*
-            DiscordGuild? guild = await sender.GetGuildAsync(_DiscordOptions.Value.GuildId);
-            if (guild == null) {
-                _Logger.LogError($"Failed to get guild {_DiscordOptions.Value.GuildId} (what was passed in the options)");
-            } else {
-                _Logger.LogInformation($"Successfully found home guild '{guild.Name}'/{guild.Id}");
-            }
-
-            DiscordChannel? channel = await sender.GetChannelAsync(_DiscordOptions.Value.ChannelId);
-            if (channel == null) {
-                _Logger.LogWarning($"Failed to find channel {_DiscordOptions.Value.ChannelId}");
-            }
-            */
         }
 
         private Task Guild_Available(DiscordClient sender, GuildCreateEventArgs args) {
             DiscordGuild? guild = args.Guild;
             if (guild == null) {
-                _Logger.LogDebug($"no guild");
+                _Logger.LogDebug($"no guild?");
                 return Task.CompletedTask;
             }
 
             _Logger.LogDebug($"guild available: {guild.Id} / {guild.Name}");
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        ///     whenever a message is sent in a DM that contains a link or attachments, upload those into honooru
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private async Task Message_Created(DiscordClient sender, MessageCreateEventArgs args) {
+            if (args.Channel.IsPrivate == false) { // ignore non-private DMs
+                return;
+            }
+
+            if (args.Author.IsBot == true) { // ignore bot messages
+                return;
+            }
+
+            AppAccount? account = await _CurrentUser.GetByDiscordID(args.Author.Id);
+            if (account == null) {
+                _Logger.LogDebug($"message from {args.Author.Username}/{args.Author.Id} is not a user, ignoring");
+                return;
+            }
+
+            _Logger.LogTrace($"discord message recieved [msg={args.Message}]");
+
+            string msg = args.Message.Content;
+
+            int breakout = 10;
+            while (true) {
+                if (--breakout == 0) {
+                    _Logger.LogWarning($"something went wrong in message [msg={msg}]");
+                    break;
+                }
+
+                int linkIndex = msg.IndexOf("http");
+                if (linkIndex == -1) {
+                    break;
+                }
+
+                int endIndex = msg[linkIndex..].IndexOf(" ");
+                if (endIndex == -1) { // if the message is only a link, then there will be no space, so consume the rest of the string
+                    endIndex = msg.Length;
+                }
+
+                string url = msg[linkIndex..endIndex];
+                _Logger.LogDebug($"found url [url={url}]");
+                msg = msg.Replace(url, "");
+                _Logger.LogDebug($"url from message removed [msg={msg}]");
+                await _HandleUrl(url, args.Author.Id);
+            }
+
+            foreach (DiscordAttachment attachment in args.Message.Attachments) {
+                string url = attachment.Url;
+                await _HandleUrl(url, args.Author.Id);
+            }
+        }
+
+        private async Task _HandleUrl(string url, ulong targetUserID) {
+            _Logger.LogDebug($"handling URL from Discord DM [url={url}]");
+
+            if (_UrlExtractor.CanHandle(url) == false) {
+                _MessageQueue.Queue(new AppDiscordMessage() {
+                    TargetUserID = targetUserID,
+                    Message = $"url `{url}` cannot be handled"
+                });
+            } else {
+                MediaAsset asset = new();
+                asset.Guid = Guid.NewGuid();
+                asset.Source = url;
+                asset.Timestamp = DateTime.UtcNow;
+
+                // since no md5 currently exists due to the file not being extracted, get one based on the GUID
+                byte[] md5 = MD5.HashData(asset.Guid.ToByteArray());
+                string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
+                asset.MD5 = md5Str;
+
+                await _MediaAssetRepository.Upsert(asset);
+
+                asset.Status = MediaAssetStatus.EXTRACTING;
+                await _MediaAssetRepository.Upsert(asset);
+
+                UploadSteps steps = new(asset, _StorageOptions.Value);
+                steps.AddExtractStep(url);
+                steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
+                steps.AddFinalMoveStep();
+                steps.AddImageHashStep();
+
+                _UploadStepsQueue.Queue(steps);
+
+                _MessageQueue.Queue(new AppDiscordMessage() {
+                    TargetUserID = targetUserID,
+                    Message = $"URL is being uploaded to Honooru\n`{url}`\n\nhttps://{_InstanceInfo.GetHost()}/upload"
+                });
+            }
         }
 
         /// <summary>

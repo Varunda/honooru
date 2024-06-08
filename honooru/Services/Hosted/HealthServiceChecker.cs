@@ -34,7 +34,7 @@ namespace honooru.Services.Hosted {
 
                 try {
                     _Logger.LogDebug($"checking health of IQDB");
-                    ServiceHealthEntry iqdbHealth = await _IqdbClient.UpdateHealth();
+                    ServiceHealthEntry iqdbHealth = await _IqdbClient.CheckHealth();
                     ServiceHealthEntry? entry = _PreviousEntries.GetValueOrDefault(iqdbHealth.Name);
                     if (entry == null || entry.Enabled != iqdbHealth.Enabled) {
                         _Logger.LogInformation($"health of service changed [name={iqdbHealth.Name}] [enabled={iqdbHealth.Enabled}] [message={iqdbHealth.Message}]");

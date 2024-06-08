@@ -33,12 +33,14 @@ namespace honooru.Services {
             _DiscordOptions = discordOptions;
 
             try {
+                _Logger.LogDebug($"discord key: {_DiscordOptions.Value.Key}");
                 _Discord = new DiscordClient(new DiscordConfiguration() {
                     Token = _DiscordOptions.Value.Key,
                     TokenType = TokenType.Bot,
                     LoggerFactory = loggerFactory,
-                    Intents = DiscordIntents.MessageContents | DiscordIntents.AllUnprivileged
+                    Intents = DiscordIntents.MessageContents | DiscordIntents.AllUnprivileged | DiscordIntents.DirectMessages
                 });
+                _Logger.LogInformation($"discord bot created");
             } catch (Exception) {
                 throw;
             }

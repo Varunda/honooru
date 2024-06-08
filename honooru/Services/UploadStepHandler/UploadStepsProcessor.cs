@@ -147,9 +147,15 @@ namespace honooru.Services.UploadStepHandler {
                 MediaAsset asset = steps.Asset;
 
                 _Logger.LogDebug($"updating asset [asset.ID={asset.Guid}]");
+
                 asset.FileType = _FileExtensionUtil.GetFileType(asset.FileExtension) ?? "";
                 asset.Status = MediaAssetStatus.DONE;
-                await _MediaAssetRepository.Upsert(asset);
+                if ((await _MediaAssetRepository.GetByID(asset.Guid)) == null) {
+                    _Logger.LogInformation($"uploaded asset was deleting during upload, not saving [guid={asset.Guid}]");
+                } else {
+                    await _MediaAssetRepository.Upsert(asset);
+                }
+
                 await group.Finish(asset);
                 _UploadProgressRepository.Remove(entry.MediaAssetID);
 

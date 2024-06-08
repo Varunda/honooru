@@ -55,7 +55,7 @@
                         <div v-if="upload.processing.state == 'loaded'">
                             <div v-for="entry in upload.processing.data">
                                 <a :href="'/upload?m=' + entry.guid">
-                                    {{entry.guid}} - {{entry.fileName}} ({{entry.timestamp | moment}})
+                                    <code>{{entry.guid}}</code> - {{entry.fileName}} ({{entry.timestamp | moment}})
                                 </a>
                             </div>
                             <div v-if="upload.processing.data.length == 0" class="text-muted">
@@ -83,8 +83,7 @@
                         <div v-if="upload.ready.state == 'loaded'">
                             <a v-for="entry in upload.ready.data" :href="'/upload?m=' + entry.guid" class="d-block">
                                 <span>
-                                    -
-                                    {{entry.guid}} - {{entry.fileName}} ({{entry.timestamp | moment}})
+                                    <code>{{entry.guid}}</code> - {{entry.fileName}} ({{entry.timestamp | moment}})
                                 </span>
                             </a>
                             <div v-if="upload.ready.data.length == 0" class="text-muted">

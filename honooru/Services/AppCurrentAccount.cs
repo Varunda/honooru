@@ -48,6 +48,12 @@ namespace honooru.Services {
             return account;
         }
 
+        public async Task<AppAccount?> GetByDiscordID(ulong accountID) {
+            AppAccount? account = await _AppAccountDb.GetByDiscordID(accountID, CancellationToken.None);
+
+            return account;
+        }
+
         /// <summary>
         ///     Get the current user, null if the user is not signed in
         /// </summary>

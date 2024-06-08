@@ -154,7 +154,6 @@ namespace honooru.Controllers.Api {
         public async Task<ApiResponse<MediaAsset>> UploadUrl([FromQuery] string url) {
             _Logger.LogInformation($"uploading from url [url={url}]");
 
-
             if (_UrlExtractor.CanHandle(url) == false) {
                 return ApiBadRequest<MediaAsset>($"no extractor is setup to handle this type of url: '{url}'");
             }

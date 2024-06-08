@@ -42,6 +42,12 @@ namespace honooru.Models.App.MediaUploadStep {
                     return true;
                 }
 
+                if (order.Asset.FileExtension == "png" || order.Asset.FileExtension == "jpg") {
+                    _Logger.LogDebug($"skipping re-encoding of file that is not a video [FileExtension={order.Asset.FileExtension}] [id={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                    progressCallback(100m);
+                    return true;
+                }
+
                 cancel.Register(() => {
                     _Logger.LogWarning($"cancellation token called! [order.Asset={order.Asset.Guid}]");
                 });
@@ -49,7 +55,8 @@ namespace honooru.Models.App.MediaUploadStep {
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
                 string output = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + ".mp4");
 
-                _Logger.LogInformation($"performing re-encode work [videoFormat={order.VideoFormat.Name}] [audioFormat={order.AudioCodec.Name}] [input={input}] [output={output}]");
+                _Logger.LogInformation($"performing re-encode work [videoFormat={order.VideoFormat.Name}] [audioFormat={order.AudioCodec.Name}] "
+                    + $"[fileExt={order.Asset.FileExtension}] [input={input}] [output={output}]");
 
                 if (File.Exists(output) == true) {
                     _Logger.LogInformation($"re-encoded file already exists, skipping [output={output}] [md5={order.Asset.MD5}]");
