@@ -393,6 +393,35 @@ namespace honooru.Services {
                 }
 
                 return ret;
+            } else if (fileType == "pdf") {
+
+                using MagickImageCollection coll = new();
+                await coll.ReadAsync(path);
+
+                if (coll.Count == 0) {
+                    _Logger.LogWarning($"failed to read a page from the PDF file [path={path}]");
+                }
+
+                IqdbEntry? ret = null;
+
+                for (int i = 0; i < coll.Count; ++i) {
+                    IMagickImage<ushort> image = coll.ElementAt(i);
+                    image.Strip();
+                    image.BackgroundColor = MagickColor.FromRgb(0xff, 0xff, 0xff);
+                    image.Alpha(AlphaOption.Remove);
+                    image.Alpha(AlphaOption.Off);
+                    image.Format = MagickFormat.Jpg;
+                    using MemoryStream jpgStream = new();
+                    await image.WriteAsync(jpgStream);
+                    byte[] bytes = jpgStream.ToArray();
+
+                    ret = await Insert(bytes, $"{md5}-page-{i}", md5);
+                }
+
+                if (ret == null) {
+                    throw new Exception($"ret is not supposed to be null now");
+                }
+
             } else {
                 _Logger.LogError($"cannot create IQDB entry from given file extension [fileExt={fileExt}]");
                 return null;
