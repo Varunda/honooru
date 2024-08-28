@@ -48,6 +48,11 @@ namespace honooru.Controllers.Api {
                 return ApiNotFound<List<PostPool>>($"{nameof(Post)} {postID}");
             }
 
+            AppAccount currentUser = await _CurrentUser.GetRequired();
+            if (post.Private == true && currentUser.ID != post.PosterUserID) {
+                return ApiBadRequest<List<PostPool>>($"post {postID} is private, cannot get pools of post");
+            }
+
             List<PostPool> pools = new();
             List<PostPoolEntry> entries = await _PoolEntryRepository.GetByPostID(postID);
             foreach (PostPoolEntry entry in entries) {

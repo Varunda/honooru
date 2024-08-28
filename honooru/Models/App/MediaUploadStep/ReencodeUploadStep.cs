@@ -42,7 +42,7 @@ namespace honooru.Models.App.MediaUploadStep {
                     return true;
                 }
 
-                if (order.Asset.FileExtension == "png" || order.Asset.FileExtension == "jpg") {
+                if (order.Asset.FileExtension == "png" || order.Asset.FileExtension == "jpg" || order.Asset.FileExtension == "jpeg") {
                     _Logger.LogDebug($"skipping re-encoding of file that is not a video [FileExtension={order.Asset.FileExtension}] [id={order.Asset.Guid}] [md5={order.Asset.MD5}]");
                     progressCallback(100m);
                     return true;

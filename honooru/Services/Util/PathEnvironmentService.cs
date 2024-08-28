@@ -38,7 +38,7 @@ namespace honooru.Services.Util {
             foreach (string dir in path.Split(Path.PathSeparator)) {
                 string fullPath = Path.Combine(dir, name);
                 if (File.Exists(fullPath)) {
-                    _Logger.LogInformation($"found ffmpeg executable [fullPath={fullPath}]");
+                    _Logger.LogInformation($"found executable [name={name}] [fullPath={fullPath}]");
                     return fullPath;
                 }
             }

@@ -22,10 +22,11 @@ namespace honooru.Services.Util {
             { "mp3", "audio/mpeg" },
             { "mp4", "video/mp4" },
             { "mpeg", "image/mpeg" },
-            { "opsu", "audio/opus" },
+            { "opus", "audio/opus" },
             { "png", "image/png" },
             { "svg", "image/svg+xml" },
             { "wav", "audio/wav" },
+            { "pdf", "application/pdf" },
         };
 
         private static readonly Dictionary<string, string> _FileTypeMappings = new() {
@@ -42,6 +43,9 @@ namespace honooru.Services.Util {
             { "mkv", "video" },
             { "m4v", "video" },
             { "webm", "video" },
+
+            // pdf
+            { "pdf", "pdf" },
         };
 
         public FileExtensionService(ILogger<FileExtensionService> logger) {

@@ -34,9 +34,14 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger.LogDebug($"generating image hash [md5={order.Asset.MD5}] [fileExtension={order.Asset.FileExtension}]");
                 string input = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.FileLocation);
 
-                IqdbEntry? response = await _Iqdb.Create(input, order.Asset.MD5, order.Asset.FileExtension);
+                if ((await _Iqdb.CheckHealth()).Enabled == false) {
+                    _Logger.LogWarning($"IQDB service is not enabled, skipping IQDB hash set [md5={order.Asset.MD5}]");
+                    order.Asset.IqdbHash = "";
+                } else {
+                    IqdbEntry? response = await _Iqdb.Create(input, order.Asset.MD5, order.Asset.FileExtension);
 
-                order.Asset.IqdbHash = response?.Hash;
+                    order.Asset.IqdbHash = response?.Hash;
+                }
 
                 progressCallback(100m);
 

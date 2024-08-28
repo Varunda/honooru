@@ -14,13 +14,17 @@ namespace honooru.Services.Repositories {
         private readonly PostPoolEntryDb _Db;
         private readonly IMemoryCache _Cache;
 
+        private readonly PostRepository _PostRepository;
+
         public PostPoolEntryRepository(ILogger<PostPoolEntryRepository> logger,
-            IMemoryCache cache,
-            PostPoolEntryDb db) {
+            IMemoryCache cache, PostPoolEntryDb db,
+            PostRepository postRepository) {
 
             _Logger = logger;
             _Cache = cache;
             _Db = db;
+
+            _PostRepository = postRepository;
         }
 
         public Task<List<PostPoolEntry>> GetByPoolID(ulong poolID) {
@@ -32,10 +36,12 @@ namespace honooru.Services.Repositories {
         }
 
         public Task Insert(PostPoolEntry entry) {
+            _PostRepository.RemovedCachedSearches();
             return _Db.Insert(entry);
         }
 
         public Task Delete(PostPoolEntry entry) {
+            _PostRepository.RemovedCachedSearches();
             return _Db.Delete(entry);
         }
 
@@ -45,6 +51,7 @@ namespace honooru.Services.Repositories {
         /// <param name="poolID">ID of the <see cref="PostPool"/> to remove all posts from</param>
         /// <returns></returns>
         public async Task DeleteByPoolID(ulong poolID) {
+            _PostRepository.RemovedCachedSearches();
             List<PostPoolEntry> entries = await GetByPoolID(poolID);
 
             foreach (PostPoolEntry entry in entries) {

@@ -108,6 +108,11 @@ namespace honooru.Models.Db {
         /// </summary>
         public long Width { get; set; }
 
+        /// <summary>
+        ///     if this post is private, and only the poster can see it
+        /// </summary>
+        public bool Private { get; set; }
+
         public string FileLocation {
             get {
                 return Path.Combine(MD5[..2], MD5 + "." + FileExtension);

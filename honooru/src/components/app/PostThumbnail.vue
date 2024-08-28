@@ -34,6 +34,8 @@
                 tags: Loadable.idle() as Loading<ExtendedTag[]>,
                 popper: null as bootstrap.Popover | null,
 
+                showing: false as boolean,
+
                 hoverDelay: -1 as number
             }
         },
@@ -49,6 +51,7 @@
             },
 
             startHover: async function(): Promise<void> {
+                this.showing = true;
                 console.log(`start hover ${this.post.id}`);
                 if (this.popper == null) {
                     this.popper = new bootstrap.Popover(`#post-thumbnail-${this.post.id}`, {
@@ -89,17 +92,24 @@
                     });
                 }
 
-                this.popper.show();
+                if (this.showing == true) {
+                    this.popper.show();
+                } else {
+                    console.log(`popper for ${this.post.id} is to be hidden by now`);
+                }
             },
 
             mouseLeave: async function(): Promise<void> {
                 clearTimeout(this.hoverDelay);
+                this.showing = false;
 
                 if (this.popper != null) {
+                    console.log(`hover leave ${this.post.id}`);
                     this.popper.hide();
+                } else {
+                    console.log(`hover leave (no popper is up!) ${this.post.id}`);
                 }
 
-                console.log(`hover leave ${this.post.id}`);
             }
 
         },

@@ -139,10 +139,10 @@ namespace honooru.Services.Db {
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 INSERT INTO post (
                     poster_user_id, timestamp, status, title, description, context, last_editor_user_id, iqdb_hash,
-                    md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height, file_type
+                    md5, rating, file_name, source, file_extension, file_size_bytes, duration_seconds, width, height, file_type, private
                 ) VALUES (
                     @PosterUserID, @Timestamp, @Status, @Title, @Description, @Context, 0, @IqdbHash,
-                    @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height, @FileType
+                    @MD5, @Rating, @FileName, @Source, @FileExtension, @FileSizeBytes, @DurationSeconds, @Width, @Height, @FileType, @Private
                 ) RETURNING id;
             ");
 
@@ -163,6 +163,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("Width", post.Width);
             cmd.AddParameter("Height", post.Height);
             cmd.AddParameter("FileType", post.FileType);
+            cmd.AddParameter("Private", post.Private);
             await cmd.PrepareAsync();
 
             ulong id = await cmd.ExecuteUInt64(CancellationToken.None);
@@ -191,7 +192,8 @@ namespace honooru.Services.Db {
                     last_editor_user_id = @LastUserEditorID,
                     last_edited = @LastEdited,
                     file_type = @FileType,
-                    iqdb_hash = @IqdbHash
+                    iqdb_hash = @IqdbHash,
+                    private = @Private
                 WHERE
                     id = @ID;
             ");
@@ -206,6 +208,7 @@ namespace honooru.Services.Db {
             cmd.AddParameter("LastEdited", post.LastEdited);
             cmd.AddParameter("FileType", post.FileType);
             cmd.AddParameter("IqdbHash", post.IqdbHash);
+            cmd.AddParameter("Private", post.Private);
             await cmd.PrepareAsync();
 
             await cmd.ExecuteNonQueryAsync();

@@ -1,13 +1,15 @@
 ﻿<template>
-    <div>
+    <div id="file-view-parent">
         <video v-if="FileType == 'video'" id="video-playback" controls preload="auto" class="video-js" style="max-width: 1920px;">
             <source :src="'/media/original/' + md5 + '.' + FileExtension" type="video/mp4" />
         </video>
 
         <img v-else-if="FileType == 'image'" :width="widthSize" :height="heightSize" :class="[ classWidth, classHeight ]" :src="'/media/original/' + md5 + '.' + FileExtension" />
 
+        <embed v-else-if="FileType == 'pdf'" :src="'/media/original/' + md5 + '.' + FileExtension" :width="containerWidth" :height="containerHeight" />
+
         <div v-else class="text-danger">
-            unchecked FileType: {{FileType}}
+            unchecked FileType: {{FileType}} (from FileView.vue)
         </div>
     </div>
 </template>
@@ -33,7 +35,11 @@
                 player: null as VideoJsPlayer | null,
 
                 staticClass: "" as string,
-                staticStyle: "" as string
+                staticStyle: "" as string,
+
+                containerElement: null as HTMLElement | null,
+                containerWidth: 0 as number,
+                containerHeight: 0 as number
             }
         },
 
@@ -41,6 +47,21 @@
             this.$nextTick(() => {
                 if (this.FileType == "video") {
                     this.makeVideo();
+                }
+
+                // add observer to the post-container resizing for showing the post resize controls
+                this.containerElement = document.getElementById("file-view-parent");
+                if (this.containerElement != null) {
+                    const obs = new ResizeObserver((mutations: ResizeObserverEntry[], observer: ResizeObserver) => {
+                        for (const mut of mutations) {
+                            this.containerWidth = mut.contentRect.width;
+                            //this.containerHeight = mut.contentRect.height - 100;
+                            this.containerHeight = 800;
+                            console.log(`FileView> parent container changed sized to: ${this.containerWidth}x${this.containerHeight}`);
+                        }
+                    });
+
+                    obs.observe(this.containerElement);
                 }
             });
         },

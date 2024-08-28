@@ -11,6 +11,7 @@ using honooru.Services.Parsing;
 using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Any;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -96,6 +97,14 @@ namespace honooru.Services.Repositories {
             // if the query didn't set a status, assume the status is OK
             if (query.SetStatus == false) {
                 cmd += " AND p.status = 1\n";
+            }
+
+            if (query.PrivateStatus == PRIVATE_STATUS.SHOW) {
+                cmd += $" AND (p.private = false OR (p.private = true AND p.poster_user_id = {user.ID}))\n";
+            } else if (query.PrivateStatus == PRIVATE_STATUS.NON_PRIVATE_ONLY) {
+                cmd += $" AND p.private = false\n";
+            } else if (query.PrivateStatus == PRIVATE_STATUS.ONLY_MINE) {
+                cmd += $" AND p.private = true AND p.poster_user_id = {user.ID}\n";
             }
 
             cmd += $" ORDER BY {(query.OrderBy ?? "id desc")}\n";
@@ -199,6 +208,17 @@ namespace honooru.Services.Repositories {
                     } else {
                         cmd = $" 1 = 0\n"; // the account doesn't exist, there are no posts from this user
                     }
+                }
+
+                // select post based on id
+                // id:1234
+                // id:>1000
+                else if (field.Token.Value == "id") {
+                    if (ulong.TryParse(value.Token.Value, out ulong postID) == false) {
+                        throw new Exception($"failed to parse {value.Token.Value} to a valid ulong");
+                    }
+
+                    cmd = $" p.id {parseOperation(op)} {addParameter(query, postID)}\n";
                 }
 
                 // select posts based on rating
@@ -400,13 +420,33 @@ namespace honooru.Services.Repositories {
                 // source:*URL
                 //      will select posts where source contains URL
                 else if (field.Token.Value == "source") {
+                    assertOperations(op, "source", ["=", "*"]);
+
                     if (op.Token.Value == "*") {
+                        cmd = $" p.source LIKE '%' || {addParameter(query, value.Token.Value)} || '%'\n";
                         cmd = $" p.source LIKE '%' || ${query.Parameters.Count + 1} || '%'\n";
                     } else {
                         cmd = $" p.source = ${query.Parameters.Count + 1}\n";
                     }
 
                     query.Parameters.Add(value.Token.Value);
+                }
+
+                // select posts based on the private flag of the post
+                // private:0/false
+                //      will select posts that are not private
+                // private:1/true
+                //      will select only posts that are private for the user
+                else if (field.Token.Value == "private") {
+                    assertOperations(op, "private", [ "=" ]);
+
+                    if (value.Token.Value == "0" || value.Token.Value == "false") {
+                        query.PrivateStatus = PRIVATE_STATUS.NON_PRIVATE_ONLY;
+                    } else if (value.Token.Value == "1" || value.Token.Value == "true") {
+                        query.PrivateStatus = PRIVATE_STATUS.ONLY_MINE;
+                    } else {
+                        throw new Exception($"unknown value '{op.Token.Value}' (expected 0, 1, true or false)");
+                    }
                 }
 
                 // handle sort 
@@ -425,6 +465,17 @@ namespace honooru.Services.Repositories {
         }
 
         /// <summary>
+        ///     add a DB parameter to the query
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private static string addParameter(QuerySetup query, object? value) {
+            query.Parameters.Add(value);
+            return $"${query.Parameters.Count}";
+        }
+
+        /// <summary>
         ///     parse the operator node of a token into the SQL value
         /// </summary>
         /// <param name="node"></param>
@@ -438,6 +489,19 @@ namespace honooru.Services.Repositories {
                 "!" => "!=",
                 _ => throw new ArgumentException($"invalid field operator: {node.Token.Value}"),
             };
+        }
+
+        /// <summary>
+        ///     assert a valid operator on a field
+        /// </summary>
+        /// <param name="node">operation node</param>
+        /// <param name="meta">what field is being used, such as "source", or "private"</param>
+        /// <param name="valid">a list of valid operations</param>
+        /// <exception cref="Exception"></exception>
+        private static void assertOperations(Node node, string meta, string[] valid) {
+            if (valid.Contains(node.Token.Value) == false) {
+                throw new Exception($"unsupported operator using the '{meta}' field. valid operations are: {string.Join(", ", valid)}");
+            }
         }
 
         /// <summary>
@@ -485,6 +549,28 @@ namespace honooru.Services.Repositories {
             public bool SetRating { get; set; } = false;
 
             public bool SetStatus { get; set; } = false;
+
+            public PRIVATE_STATUS PrivateStatus { get; set; } = PRIVATE_STATUS.SHOW;
+
+        }
+
+
+        private enum PRIVATE_STATUS {
+
+            /// <summary>
+            ///     default, show all posts that are private to the user, and non-private
+            /// </summary>
+            SHOW = 0,
+
+            /// <summary>
+            ///     only show non-private posts
+            /// </summary>
+            NON_PRIVATE_ONLY = 1,
+
+            /// <summary>
+            ///     show only private posts of the user
+            /// </summary>
+            ONLY_MINE = 2
 
         }
 

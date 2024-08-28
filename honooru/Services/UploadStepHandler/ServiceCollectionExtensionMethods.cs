@@ -13,6 +13,7 @@ namespace honooru.Services.UploadStepHandler {
             services.AddScoped<MoveUploadStep.Worker>();
             services.AddScoped<ExtractStep.Worker>();
             services.AddScoped<GenerateImageHashUploadStep.Worker>();
+            services.AddScoped<PdfUploadStep.Worker>();
         }
 
     }

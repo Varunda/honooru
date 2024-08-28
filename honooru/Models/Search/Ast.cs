@@ -37,25 +37,51 @@ namespace honooru.Models.Search {
             return list;
         }
 
-        public string Print() {
-            return _PrintNode(Root);
+        public string Print(bool indented = false) {
+            if (indented) {
+                return _PrintNodeIndent(Root, 0);
+            } else {
+                return _PrintNode(Root);
+            }
         }
 
-        private string _PrintNode(Node node) {
+        private string _PrintNode(Node node, int depth = 0) {
             if (node.Type == NodeType.TAG) {
                 return node.Token.Value;
             }
 
             StringBuilder sb = new();
             sb.Append(node.Type.ToString().ToUpper());
-            sb.Append(' ');
+            sb.Append(" ");
 
             if (node.Children.Count > 0) {
                 sb.Append("(");
-                sb.Append(string.Join(", ", node.Children.Select(iter => _PrintNode(iter))));
+                sb.Append(string.Join(", ", node.Children.Select(iter => _PrintNode(iter, depth + 1))));
                 sb.Append(")");
             } else {
                 sb.Append(node.Token.Value);
+            }
+
+            return sb.ToString();
+        }
+
+        private string _PrintNodeIndent(Node node, int depth = 0) {
+            StringBuilder sb = new();
+            for (int i = 0; i < depth; ++i) { sb.Append("\t"); }
+            sb.Append(node.Type.ToString().ToUpper());
+            sb.Append("=");
+
+            if (node.Children.Count > 0) {
+                sb.Append("(");
+                sb.Append("\n");
+                sb.Append(string.Join(" ", node.Children.Select(iter => _PrintNodeIndent(iter, depth + 1))));
+                sb.Append("\n");
+                for (int i = 0; i < depth; ++i) { sb.Append("\t"); }
+                sb.Append(")");
+                sb.Append("\n");
+            } else {
+                sb.Append("'" + node.Token.Value + "'");
+                sb.Append("\n");
             }
 
             return sb.ToString();

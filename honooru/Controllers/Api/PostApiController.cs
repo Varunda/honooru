@@ -116,6 +116,15 @@ namespace honooru.Controllers.Api {
                 return ApiNoContent<Post>();
             }
 
+            AppAccount? currentUser = await _CurrentAccount.Get();
+            if (currentUser == null) {
+                return ApiAuthorize<Post>();
+            }
+
+            if (post.Private == true && currentUser.ID != post.PosterUserID) {
+                return ApiBadRequest<Post>($"post {postID} is private, can only be accessed by the poster");
+            }
+
             return ApiOk(post);
         }
 
@@ -158,7 +167,8 @@ namespace honooru.Controllers.Api {
             // parse the query into an AST that can be compiled into an SQL query
             Stopwatch timer = Stopwatch.StartNew();
             Ast searchAst = _SearchQueryParser.Parse(q);
-            long parseMs = timer.ElapsedMilliseconds; timer.Restart();
+            _Logger.LogDebug($"query parsed [q=\"{q}\"] [ast={searchAst.Print(true)}]");
+            long parseMs = timer.ElapsedMillisecondsReset();
 
             SearchQuery query = new(searchAst);
             query.Offset = 0;
@@ -167,7 +177,7 @@ namespace honooru.Controllers.Api {
             // with the parsed AST, perform the search, passing the current user to include user settings
             timer.Start();
             List<Post> posts = await _PostRepository.Search(query, currentUser);
-            long dbMs = timer.ElapsedMilliseconds; timer.Restart();
+            long dbMs = timer.ElapsedMillisecondsReset();
 
             // now that the search is done, select the range of posts we actually care about
             int rangeStart = (int)offset;
@@ -581,6 +591,10 @@ namespace honooru.Controllers.Api {
             AppAccount? currentUser = await _CurrentAccount.Get();
             if (currentUser == null) {
                 return ApiAuthorize();
+            }
+
+            if (post.Private == true && currentUser.ID != post.PosterUserID) {
+                return ApiBadRequest($"post {postID} is private, can only be updated by poster");
             }
 
             bool doSave = false;

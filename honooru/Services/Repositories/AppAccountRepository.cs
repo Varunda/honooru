@@ -2,6 +2,7 @@
 using honooru.Services.Db;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,10 @@ namespace honooru.Services.Repositories {
 
         private readonly IMemoryCache _Cache;
 
+        private const string CACHE_KEY_ID = "Account.ID.{0}";
+
+        private const string CACHE_KEY_DISCORD = "Account.Discord.{0}";
+
         public AppAccountRepository(ILogger<AppAccountRepository> logger,
             AppAccountDbStore accountDb, IMemoryCache cache) {
 
@@ -24,8 +29,32 @@ namespace honooru.Services.Repositories {
             _Cache = cache;
         }
 
-        public Task<AppAccount?> GetByID(ulong accountID, CancellationToken cancel) {
-            return _AccountDb.GetByID(accountID, cancel);
+        public async Task<AppAccount?> GetByID(ulong accountID, CancellationToken cancel = default) {
+            string cacheKey = string.Format(CACHE_KEY_ID, accountID);
+
+            if (_Cache.TryGetValue(cacheKey, out AppAccount? acc) == false) {
+                acc = await _AccountDb.GetByID(accountID, cancel);
+
+                _Cache.Set(cacheKey, acc, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(10)
+                });
+            }
+
+            return acc;
+        }
+
+        public async Task<AppAccount?> GetByDiscordID(ulong discordID, CancellationToken cancel = default) {
+            string cacheKey = string.Format(CACHE_KEY_DISCORD, discordID);
+
+            if (_Cache.TryGetValue(cacheKey, out AppAccount? acc) == false) {
+                acc = await _AccountDb.GetByDiscordID(discordID, cancel);
+
+                _Cache.Set(cacheKey, acc, new MemoryCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(10)
+                });
+            }
+
+            return acc;
         }
 
         /// <summary>

@@ -55,38 +55,46 @@ namespace honooru.Code {
         }
 
         public async Task OnAuthorizationAsync(AuthorizationFilterContext context) {
-            HttpContext httpContext = context.HttpContext;
-            if (httpContext == null) {
-                throw new ArgumentNullException($"_Context.HttpContext cannot be null");
-            }
 
             AppAccount? account = await _CurrentAccount.Get();
-            if (account == null) {
-                _Logger.LogTrace($"user was authed, but does not have an account [url={context.HttpContext.Request.Path.Value}]");
 
+            Stopwatch timer = Stopwatch.StartNew();
+            bool hasPerm = await checkPermission(context, account);
+            long timerMs = timer.ElapsedMilliseconds;
+            _Logger.LogDebug($"user permission check done [timer={timerMs}ms] [granted={hasPerm}] [account={account?.ID}/{account?.Name}] "
+                + $"[Permissions={string.Join(", ", Permissions)}] [url={context.HttpContext.Request.Path.Value}]");
+
+            if (hasPerm == false) {
                 if (context.HttpContext.Response.HasStarted == true) {
                     _Logger.LogError($"response started, cannot set 403Forbidden");
                     throw new ApplicationException($"cannot forbid access to action, response has started");
                 }
 
-                if (httpContext.Request.Path.StartsWithSegments("/api") == true) {
+                if (context.HttpContext.Request.Path.StartsWithSegments("/api") == true) {
                     context.Result = new ApiResponse(403, new Dictionary<string, string>() {
-                        { "error", "user does not have an account" }
+                        { "error", "no permission" }
                     });
                 } else {
                     context.Result = new RedirectToActionResult("Unauthorized", "Home", null);
                 }
-
-                return;
             }
 
-            _Logger.LogTrace($"checking if user has permission [account={account.ID}/{account.Name}] [Permissions={string.Join(", ", Permissions)}] " 
+        }
+
+        private async Task<bool> checkPermission(AuthorizationFilterContext context, AppAccount? account) {
+            if (account == null) {
+                _Logger.LogTrace($"user was authed, but does not have an account [url={context.HttpContext.Request.Path.Value}]");
+
+                return false;
+            }
+
+            _Logger.LogTrace($"checking if user has permission [account={account.ID}/{account.Name}] [Permissions={string.Join(", ", Permissions)}] "
                 + $"[url={context.HttpContext.Request.Path.Value}]");
 
             // account 1 is system user, account 2 is the first user made
             if (account.ID <= 2) {
-                _Logger.LogTrace($"user has permission as they are the owner [account={account.Name}]");
-                return;
+                _Logger.LogTrace($"user has permission as they are the owner [account={account.Name}] [url={context.HttpContext.Request.Path.Value}]");
+                return true;
             }
 
             HashSet<string> accountPerms = new();
@@ -106,22 +114,9 @@ namespace honooru.Code {
                 }
             }
 
-            if (hasPerm == false) {
-                if (context.HttpContext.Response.HasStarted == true) {
-                    _Logger.LogError($"Response started, cannot set 403Forbidden");
-                    throw new ApplicationException($"Cannot forbid access to psb admin action, response has started.");
-                }
-
-                if (httpContext.Request.Path.StartsWithSegments("/api") == true) {
-                    context.Result = new ApiResponse(403, new Dictionary<string, string>() {
-                        { "error", "no permission" }
-                    });
-                } else {
-                    context.Result = new RedirectToActionResult("Index", "Unauthorized", null);
-                }
-            }
-
+            return hasPerm;
         }
+
 
     }
 

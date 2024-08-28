@@ -23,6 +23,11 @@ namespace honooru.Models.App.MediaUploadStep {
             return this;
         }
 
+        public UploadSteps AddPdfStep() {
+            Steps.Add(new PdfUploadStep.Order(Asset, StorageOptions));
+            return this;
+        }
+
         public UploadSteps AddFinalMoveStep() {
             Steps.Add(new MoveUploadStep.Order(Asset, StorageOptions));
             return this;

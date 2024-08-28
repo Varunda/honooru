@@ -97,6 +97,7 @@ namespace honooru {
             services.Configure<HttpConfig>(Configuration.GetSection("Http"));
             services.Configure<StorageOptions>(Configuration.GetSection("Storage"));
             services.Configure<IqdbOptions>(Configuration.GetSection("Iqdb"));
+            services.Configure<GhostscriptOptions>(Configuration.GetSection("Ghostscript"));
 
             // require all endpoints to be authorized unless another policy is defined
             services.AddAuthorization(options => {

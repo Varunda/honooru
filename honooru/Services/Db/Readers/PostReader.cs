@@ -46,6 +46,7 @@ namespace honooru.Services.Db.Readers {
             post.DurationSeconds = reader.GetInt64("duration_seconds");
             post.Width = reader.GetInt64("width");
             post.Height = reader.GetInt64("height");
+            post.Private = reader.GetBoolean("private");
 
             return post;
         }

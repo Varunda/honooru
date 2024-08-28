@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using honooru.Models;
 using honooru.Services.Db;
+using honooru.Services.Repositories;
 
 namespace honooru.Services {
 
@@ -20,14 +21,14 @@ namespace honooru.Services {
 
         private readonly ILogger<AppCurrentAccount> _Logger;
         private readonly IHttpContextAccessor _Context;
-        private readonly AppAccountDbStore _AppAccountDb;
+        private readonly AppAccountRepository _AppAccountRepository;
 
         public AppCurrentAccount(ILogger<AppCurrentAccount> logger,
-            IHttpContextAccessor context, AppAccountDbStore accountDb) {
+            IHttpContextAccessor context, AppAccountRepository appAccountRepository) {
 
             _Logger = logger;
             _Context = context;
-            _AppAccountDb = accountDb;
+            _AppAccountRepository = appAccountRepository;
         }
 
         /// <summary>
@@ -43,13 +44,13 @@ namespace honooru.Services {
                 return null;
             }
 
-            AppAccount? account = await _AppAccountDb.GetByDiscordID(caller.Id, CancellationToken.None);
+            AppAccount? account = await _AppAccountRepository.GetByDiscordID(caller.Id);
 
             return account;
         }
 
         public async Task<AppAccount?> GetByDiscordID(ulong accountID) {
-            AppAccount? account = await _AppAccountDb.GetByDiscordID(accountID, CancellationToken.None);
+            AppAccount? account = await _AppAccountRepository.GetByDiscordID(accountID);
 
             return account;
         }
@@ -95,12 +96,58 @@ namespace honooru.Services {
                     throw new InvalidCastException($"failed to convert {id} to a valid ulong");
                 }
 
-                return await _AppAccountDb.GetByDiscordID(discordID, CancellationToken.None);
+                return await _AppAccountRepository.GetByDiscordID(discordID, CancellationToken.None);
             } else {
                 _Logger.LogWarning($"Unchecked stat of httpContext.User");
             }
 
             return null;
+        }
+
+        public async Task<AppAccount> GetRequired() {
+            if (_Context.HttpContext == null) {
+                _Logger.LogWarning($"_Context.HttpContext is null, cannot get claims");
+                throw new Exception($"user is required (no http context)");
+            }
+
+            HttpContext httpContext = _Context.HttpContext;
+
+            if (httpContext.User.Identity == null) {
+                _Logger.LogWarning($"httpContext.User.Identity is null");
+                throw new Exception($"user is required (identity is null)");
+            }
+
+            if (httpContext.User.Identity.IsAuthenticated == false) {
+                _Logger.LogWarning($"User is not authed, return them to the sign in");
+                throw new Exception($"user is required (user is not authed)");
+            } else if (httpContext.User is ClaimsPrincipal claims) {
+                /*
+                string s = "";
+                foreach (Claim claim in claims.Claims) {
+                    s += $"{claim.Type} = {claim.Value};";
+                }
+                _Logger.LogDebug($"{s}");
+                */
+
+                // Get the email claim of the authed user
+                Claim? idClaim = claims.FindFirst(ClaimTypes.NameIdentifier);
+                if (idClaim == null || string.IsNullOrEmpty(idClaim.Value)) {
+                    throw new Exception($"user is required (missing ID claim)");
+                }
+
+                string id = idClaim.Value;
+
+                if (ulong.TryParse(id, out ulong discordID) == false) {
+                    throw new InvalidCastException($"failed to convert {id} to a valid ulong");
+                }
+
+                return await _AppAccountRepository.GetByDiscordID(discordID, CancellationToken.None)
+                    ?? throw new Exception($"user is required (no account from ID)");
+            } else {
+                _Logger.LogWarning($"Unchecked stat of httpContext.User");
+            }
+
+            throw new Exception($"user is required");
         }
 
     }

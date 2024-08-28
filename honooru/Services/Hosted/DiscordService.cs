@@ -244,7 +244,7 @@ namespace honooru.Services.Hosted {
         /// <param name="args"></param>
         /// <returns></returns>
         private Task Client_Ready(DiscordClient sender, ReadyEventArgs args) {
-            _Logger.LogInformation($"Discord client connected");
+            _Logger.LogInformation($"Discord client connected [username={sender.CurrentUser.Username}] [id={sender.CurrentUser.Id}]");
 
             _IsConnected = true;
 
@@ -351,7 +351,7 @@ namespace honooru.Services.Hosted {
 
                 _MessageQueue.Queue(new AppDiscordMessage() {
                     TargetUserID = targetUserID,
-                    Message = $"URL is being uploaded to Honooru\n`{url}`\n\nhttps://{_InstanceInfo.GetHost()}/upload"
+                    Message = $"URL is being uploaded to Honooru\n`{url}`\n\nhttps://{_InstanceInfo.GetHost()}/upload?m={asset.Guid}"
                 });
             }
         }

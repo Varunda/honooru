@@ -308,7 +308,7 @@
 
             <div class="pl-2 ml-2 border-left overflow-y-auto">
                 <div v-if="post.state == 'loaded' && post.data.iqdbHash == ''">
-                    <span class="text-danger">
+                    <span class="text-danger d-block">
                         this post is missing an IQDB hash!
                     </span>
 

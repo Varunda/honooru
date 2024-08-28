@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -64,6 +65,8 @@ namespace honooru.Services.Hosted.QueueProcessor {
             Stopwatch timer = Stopwatch.StartNew();
             if (fileType == "image") {
                 await _ProcessImage(path, thumbnailPath, cancel);
+            } else if (fileType == "pdf") {
+                await _ProcessPdf(path, thumbnailPath, cancel);
             } else if (fileType == "video") {
                 await _ProcessVideo(path, thumbnailPath, cancel);
             } else {
@@ -87,6 +90,34 @@ namespace honooru.Services.Hosted.QueueProcessor {
             mImage.Extent(180, 180, Gravity.Center, MagickColor.FromRgba(0, 0, 0, 0));
 
             await mImage.WriteAsync(output, cancel);
+        }
+
+        private async Task _ProcessPdf(string input, string output, CancellationToken cancel) {
+            using MagickImageCollection coll = new();
+
+            await coll.ReadAsync(input, new MagickReadSettings() {
+                FrameIndex = 0,
+                FrameCount = 1,
+            }, cancel);
+
+            if (coll.Count == 0) {
+                _Logger.LogWarning($"failed to read a page from the PDF file [input={input}]");
+            }
+
+            using IMagickImage<ushort> firstPage = coll.ElementAt(0);
+            firstPage.Strip();
+            firstPage.BackgroundColor = MagickColor.FromRgb(0xff, 0xff, 0xff);
+            firstPage.Alpha(AlphaOption.Remove);
+            firstPage.Alpha(AlphaOption.Off);
+
+            if (firstPage.Width > firstPage.Height) {
+                firstPage.Resize(180, 0);
+            } else {
+                firstPage.Resize(0, 180);
+            }
+            firstPage.Extent(180, 180, Gravity.Center, MagickColor.FromRgba(0, 0, 0, 0));
+
+            await firstPage.WriteAsync(output, cancel);
         }
 
         private async Task _ProcessVideo(string input, string output, CancellationToken cancel) {
