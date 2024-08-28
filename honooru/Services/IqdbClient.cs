@@ -422,6 +422,8 @@ namespace honooru.Services {
                     throw new Exception($"ret is not supposed to be null now");
                 }
 
+                return ret;
+
             } else {
                 _Logger.LogError($"cannot create IQDB entry from given file extension [fileExt={fileExt}]");
                 return null;
