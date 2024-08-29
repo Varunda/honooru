@@ -52,6 +52,7 @@ namespace honooru.Controllers.Api {
         private readonly UploadStepsProcessor _UploadStepsHandler;
         private readonly UrlMediaExtractorHandler _UrlExtractor;
         private readonly IqdbClient _IqdbClient;
+        private readonly ChunkedUploadRepository _ChunkedUploadRepository;
 
         private readonly BaseQueue<UploadSteps> _UploadStepsQueue;
 
@@ -61,7 +62,8 @@ namespace honooru.Controllers.Api {
             MediaAssetRepository mediaAssetRepository, FileExtensionService fileExtensionHelper,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> mediaAssetHub,
             UploadStepsProcessor uploadStepsHandler, BaseQueue<UploadSteps> uploadStepsQueue,
-            UrlMediaExtractorHandler urlExtractor, IqdbClient iqdbClient) {
+            UrlMediaExtractorHandler urlExtractor, IqdbClient iqdbClient,
+            ChunkedUploadRepository chunkedUploadRepository) {
 
             _Logger = logger;
 
@@ -77,6 +79,7 @@ namespace honooru.Controllers.Api {
             _UploadStepsQueue = uploadStepsQueue;
             _UrlExtractor = urlExtractor;
             _IqdbClient = iqdbClient;
+            _ChunkedUploadRepository = chunkedUploadRepository;
         }
 
         /// <summary>
@@ -311,6 +314,142 @@ namespace honooru.Controllers.Api {
             return response;
         }
 
+        [HttpPost("upload/new")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
+        public async Task<ApiResponse<Guid>> StartMultipartUpload() {
+            Guid uploadId = Guid.NewGuid();
+
+            MediaAsset asset = new();
+            asset.Guid = uploadId;
+            asset.Timestamp = DateTime.UtcNow;
+            // since no md5 currently exists due to the file not being extracted, get one based on the GUID
+            byte[] md5 = MD5.HashData(asset.Guid.ToByteArray());
+            string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
+            asset.MD5 = md5Str;
+
+            await _MediaAssetRepository.Upsert(asset);
+            _ChunkedUploadRepository.Create(asset.Guid);
+
+            _Logger.LogInformation($"created new chunked upload [uploadId={asset.Guid}]");
+
+            return ApiOk(uploadId);
+        }
+
+        [HttpPost("upload/{uploadId}/done")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
+        public async Task<ApiResponse<MediaAsset>> FinishMultipartUpload(Guid uploadId) {
+
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(uploadId);
+            if (asset == null) {
+                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
+            }
+
+            Stream? stream = _ChunkedUploadRepository.Get(uploadId);
+            if (stream == null) {
+                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
+            }
+
+            string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", uploadId + "." + asset.FileExtension);
+            _Logger.LogInformation($"writing new upload [filePath={filePath}]");
+            using FileStream targetFile = System.IO.File.Create(filePath, 1024 * 1024 * 128); // 128 MB buffer instead of the default 4'096
+            await stream.CopyToAsync(targetFile);
+            asset.FileSizeBytes = targetFile.Position;
+            _ChunkedUploadRepository.Close(uploadId);
+
+            return await _HandleAsset(asset, targetFile, filePath);
+        }
+
+        /// <summary>
+        ///     upload a chunk of a large file
+        /// </summary>
+        /// <param name="uploadId">ID of the <see cref="MediaAsset"/> to append this upload to</param>
+        /// <returns></returns>
+        [HttpPost("upload/part")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
+        [DisableFormValueModelBinding]
+        public async Task<ApiResponse<MediaAsset>> UploadPart([FromQuery] Guid uploadId) {
+            string contentType = Request.ContentType ?? "";
+            if (string.IsNullOrWhiteSpace(contentType) || !contentType.Contains("multipart/", StringComparison.OrdinalIgnoreCase)) {
+                return ApiBadRequest<MediaAsset>($"ContentType '{contentType}' is not a multipart-upload");
+            }
+
+            MediaTypeHeaderValue type = MediaTypeHeaderValue.Parse(Request.ContentType);
+            string boundary = HeaderUtilities.RemoveQuotes(type.Boundary).Value ?? "";
+
+            if (string.IsNullOrWhiteSpace(boundary)) {
+                return ApiBadRequest<MediaAsset>($"boundary from ContentType '{Request.ContentType}' was is null or empty ({type}) ({type.Boundary})");
+            }
+
+            MultipartReader reader = new(boundary, Request.Body);
+            MultipartSection? part = await reader.ReadNextSectionAsync();
+
+            if (part == null) {
+                return ApiBadRequest<MediaAsset>($"Multipart section missing");
+            }
+
+            bool hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(part.ContentDisposition, out ContentDispositionHeaderValue? contentDisposition);
+            if (hasContentDispositionHeader == false) {
+                return ApiInternalError<MediaAsset>($"failed to get {nameof(contentDisposition)} from {part.ContentDisposition}");
+            }
+
+            if (contentDisposition == null) {
+                return ApiInternalError<MediaAsset>($"failed to get {nameof(contentDisposition)} from {part.ContentDisposition}");
+            }
+
+            if (!HasFileContentDisposition(contentDisposition)) {
+                _Logger.LogError($"not a file content disposition");
+                return ApiBadRequest<MediaAsset>($"not a file content disposition");
+            }
+
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(uploadId);
+            if (asset == null) {
+                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
+            }
+
+            string originalName = contentDisposition.FileName.Value ?? "";
+            _Logger.LogDebug($"originalName={originalName}");
+            asset.FileName = WebUtility.HtmlEncode(originalName) ?? "";
+
+            string? extension = HeaderUtilities.RemoveQuotes(Path.GetExtension(originalName)).Value;
+            if (string.IsNullOrWhiteSpace(extension)) {
+                return ApiBadRequest<MediaAsset>($"extension from name {originalName} is null or empty");
+            }
+
+            extension = extension[1..]; // remove the leading .
+
+            if (_FileExtensionHelper.IsValid(extension) == false) {
+                _Logger.LogWarning($"disallowing invalid extension [extension={extension}] [originalName={originalName}]");
+                return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (invalid)");
+            }
+
+            string? fileType = _FileExtensionHelper.GetFileType(extension);
+            if (fileType == null) {
+                _Logger.LogWarning($"failed to get file type from extension [extension={extension}]");
+                return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (failed to get file type)");
+            } else if (fileType == "image") {
+                if (extension != "gif") {
+                    asset.AdditionalTags += " image";
+                } else {
+                    asset.AdditionalTags += " animated";
+                }
+            } else if (fileType == "video") {
+                asset.AdditionalTags += " video animated";
+            }
+
+            _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}] [fileType={fileType}]");
+            asset.FileExtension = extension;
+            await _MediaAssetRepository.Upsert(asset);
+
+            await _ChunkedUploadRepository.Append(uploadId, part.Body);
+            
+            part = await reader.ReadNextSectionAsync();
+            if (part != null) {
+                _Logger.LogInformation($"expected part to be null here?");
+            }
+
+            return ApiOk(asset);
+        }
+
         /// <summary>
         ///     common code to handle asset stuff
         /// </summary>
@@ -455,7 +594,7 @@ namespace honooru.Controllers.Api {
                 return ApiNotFound($"{nameof(MediaAsset)} {assetID}");
             }
 
-            if (asset.IqdbHash != null) {
+            if (asset.IqdbHash != null && asset.IqdbHash != "") {
                 await _IqdbClient.RemoveByMD5(asset.MD5);
             }
 

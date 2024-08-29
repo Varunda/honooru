@@ -30,6 +30,7 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<PostPoolRepository>();
             services.AddSingleton<PostPoolEntryRepository>();
             services.AddSingleton<ExtractorAuthorMappingRepository>();
+            services.AddSingleton<ChunkedUploadRepository>();
         }
 
     }

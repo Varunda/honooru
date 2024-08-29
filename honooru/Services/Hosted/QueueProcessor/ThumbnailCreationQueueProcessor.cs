@@ -95,6 +95,7 @@ namespace honooru.Services.Hosted.QueueProcessor {
         private async Task _ProcessPdf(string input, string output, CancellationToken cancel) {
             using MagickImageCollection coll = new();
 
+            // get only the first page
             await coll.ReadAsync(input, new MagickReadSettings() {
                 FrameIndex = 0,
                 FrameCount = 1,

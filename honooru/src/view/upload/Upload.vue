@@ -498,12 +498,22 @@
                     }
 
                     this.upload.show = true;
-                    const asset: Loading<MediaAsset> = await MediaAssetApi.upload(f, (progress: number, total: number) => {
-                        this.upload.progress = progress;
-                        this.upload.total = total;
-                        console.log(`${progress} of ${total} uploaded`);
-                    });
-                    await this._handleAsset(asset);
+
+                    if (f.size > 1024 * 1024 * 80) {
+                        const asset: Loading<MediaAsset> = await MediaAssetApi.uploadChunk(f, (progress: number, total: number) => {
+                            this.upload.progress = progress;
+                            this.upload.total = total;
+                            console.log(`${progress} of ${total} uploaded`);
+                        });
+                        await this._handleAsset(asset);
+                    } else {
+                        const asset: Loading<MediaAsset> = await MediaAssetApi.upload(f, (progress: number, total: number) => {
+                            this.upload.progress = progress;
+                            this.upload.total = total;
+                            console.log(`${progress} of ${total} uploaded`);
+                        });
+                        await this._handleAsset(asset);
+                    }
                 }
             },
 

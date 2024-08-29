@@ -234,6 +234,9 @@ namespace honooru {
             app.UseAuthorization();
 
             app.UseCors();
+
+            app.UseMiddleware<TimerMiddleware>();
+
             app.UseEndpoints(endpoints => {
                 endpoints.MapControllerRoute(
                     name: "unauth",
