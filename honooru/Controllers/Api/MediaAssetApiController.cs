@@ -52,7 +52,6 @@ namespace honooru.Controllers.Api {
         private readonly UploadStepsProcessor _UploadStepsHandler;
         private readonly UrlMediaExtractorHandler _UrlExtractor;
         private readonly IqdbClient _IqdbClient;
-        private readonly ChunkedUploadRepository _ChunkedUploadRepository;
 
         private readonly BaseQueue<UploadSteps> _UploadStepsQueue;
 
@@ -62,8 +61,7 @@ namespace honooru.Controllers.Api {
             MediaAssetRepository mediaAssetRepository, FileExtensionService fileExtensionHelper,
             IHubContext<MediaAssetUploadHub, IMediaAssetUploadHub> mediaAssetHub,
             UploadStepsProcessor uploadStepsHandler, BaseQueue<UploadSteps> uploadStepsQueue,
-            UrlMediaExtractorHandler urlExtractor, IqdbClient iqdbClient,
-            ChunkedUploadRepository chunkedUploadRepository) {
+            UrlMediaExtractorHandler urlExtractor, IqdbClient iqdbClient) {
 
             _Logger = logger;
 
@@ -79,7 +77,6 @@ namespace honooru.Controllers.Api {
             _UploadStepsQueue = uploadStepsQueue;
             _UrlExtractor = urlExtractor;
             _IqdbClient = iqdbClient;
-            _ChunkedUploadRepository = chunkedUploadRepository;
         }
 
         /// <summary>
@@ -328,7 +325,6 @@ namespace honooru.Controllers.Api {
             asset.MD5 = md5Str;
 
             await _MediaAssetRepository.Upsert(asset);
-            _ChunkedUploadRepository.Create(asset.Guid);
 
             _Logger.LogInformation($"created new chunked upload [uploadId={asset.Guid}]");
 
@@ -344,17 +340,15 @@ namespace honooru.Controllers.Api {
                 return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
             }
 
-            Stream? stream = _ChunkedUploadRepository.Get(uploadId);
-            if (stream == null) {
-                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
-            }
-
             string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", uploadId + "." + asset.FileExtension);
             _Logger.LogInformation($"writing new upload [filePath={filePath}]");
-            using FileStream targetFile = System.IO.File.Create(filePath, 1024 * 1024 * 128); // 128 MB buffer instead of the default 4'096
-            await stream.CopyToAsync(targetFile);
-            asset.FileSizeBytes = targetFile.Position;
-            _ChunkedUploadRepository.Close(uploadId);
+            FileStreamOptions opt = new() {
+                BufferSize = 1024 * 1024 * 128, // 128 MB buffer instead of default 4'096
+                Mode = FileMode.Open,
+                Access = FileAccess.Read
+            };
+            using FileStream targetFile = System.IO.File.Open(filePath, opt);
+            asset.FileSizeBytes = targetFile.Length;
 
             return await _HandleAsset(asset, targetFile, filePath);
         }
@@ -422,25 +416,36 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (invalid)");
             }
 
-            string? fileType = _FileExtensionHelper.GetFileType(extension);
-            if (fileType == null) {
-                _Logger.LogWarning($"failed to get file type from extension [extension={extension}]");
-                return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (failed to get file type)");
-            } else if (fileType == "image") {
-                if (extension != "gif") {
-                    asset.AdditionalTags += " image";
-                } else {
-                    asset.AdditionalTags += " animated";
+            if (asset.AdditionalTags == "") {
+                string? fileType = _FileExtensionHelper.GetFileType(extension);
+                if (fileType == null) {
+                    _Logger.LogWarning($"failed to get file type from extension [extension={extension}]");
+                    return ApiBadRequest<MediaAsset>($"invalid extension '{extension}' (failed to get file type)");
+                } else if (fileType == "image") {
+                    if (extension != "gif") {
+                        asset.AdditionalTags += " image";
+                    } else {
+                        asset.AdditionalTags += " animated";
+                    }
+                } else if (fileType == "video") {
+                    asset.AdditionalTags += " video animated";
                 }
-            } else if (fileType == "video") {
-                asset.AdditionalTags += " video animated";
+                _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}] [fileType={fileType}]");
             }
 
-            _Logger.LogDebug($"extension found [originalName={originalName}] [extension={extension}] [fileType={fileType}]");
             asset.FileExtension = extension;
             await _MediaAssetRepository.Upsert(asset);
 
-            await _ChunkedUploadRepository.Append(uploadId, part.Body);
+            string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", uploadId + "." + asset.FileExtension);
+            _Logger.LogInformation($"writing new upload [filePath={filePath}]");
+
+            FileStreamOptions opt = new() {
+                BufferSize = 1024 * 1024 * 128, // 128 MB buffer instead of default 4'096
+                Mode = FileMode.Append,
+                Access = FileAccess.Write
+            };
+            using FileStream targetFile = System.IO.File.Open(filePath, opt);
+            await part.Body.CopyToAsync(targetFile);
             
             part = await reader.ReadNextSectionAsync();
             if (part != null) {
