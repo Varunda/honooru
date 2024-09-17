@@ -26,6 +26,10 @@
                     <span v-if="tag.data.uses > 0" class="text-muted">
                         can only be deleted when not used by any post
                     </span>
+
+                    <permissions-button permission="App.Post.Upload" class="btn btn-primary d-block w-100" @click="ensureImplications">
+                        ensure implications
+                    </permissions-button>
                 </div>
 
                 <div>
@@ -196,11 +200,10 @@
                         <template v-slot:header>
                             implications
                             <h6 class="text-muted">
-                                implications are tags that when added to a post, will add another tag as well.
-                                implications only go one level deep.
+                                implications are tags that when added to a post, will add another tag as well
                                 <br />
-                                for example, if there is an implication A -> B -> C, if tag A is added to a post,
-                                only tag B will be added as well, NOT tag C, despite an implication from tag B to tag C
+                                for example, if there is an implication <code>A -> B -> C</code>, when tag <code>A</code> is added to a post,
+                                tags <code>B</code> and <code>C</code> will be added as well
                             </h6>
                         </template>
 
@@ -433,6 +436,16 @@
             changeType: async function(typeID: number): Promise<void> {
                 this.tagCopy.typeID = typeID;
                 await this.saveEdit();
+            },
+
+            ensureImplications: async function(): Promise<void> {
+                const l: Loading<void> = await TagApi.ensureImplications(this.tagID);
+                if (l.state == "loaded") {
+                    Toaster.add("implications ensured", "successfully ensured all tag implications exist", "success");
+                } else if (l.state == "error") {
+                    Toaster.add("implications failed", `failed to ensure tag implications: ${l.problem.detail}`, "danger");
+                }
+
             },
 
             deleteTag: async function(): Promise<void> {

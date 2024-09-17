@@ -86,6 +86,10 @@ export class TagApi extends ApiWrapper<Tag> {
         return TagApi.get().post(`/api/tag/${tagID}/recount`);
     }
 
+    public static async ensureImplications(tagID: number): Promise<Loading<void>> {
+        return TagApi.get().post(`/api/tag/${tagID}/ensure-implications`);
+    }
+
     public static delete(tagID: number): Promise<Loading<void>> {
         return TagApi.get().delete(`/api/tag/${tagID}`);
     }

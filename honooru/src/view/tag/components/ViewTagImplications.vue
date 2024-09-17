@@ -14,7 +14,7 @@
                         - when this tag is added to a post, these tags will also be added
                     </span>
                 </h5>
-                <div v-for="i in tagImplies" class="d-inline">
+                <div v-for="i in tagImpliesExact" class="d-inline">
                     <div class="btn-group">
                         <button v-if="del == i.id" class="btn btn-danger" @click="deleteImplication(i.id)">
                             <span class="bi-trash"></span>
@@ -37,7 +37,30 @@
                         click again to delete
                     </span>
                 </div>
-                <div v-if="tagImplies.length == 0">
+                <div v-if="tagImpliesExact.length == 0">
+                    <span class="text-muted">
+                        nothing
+                    </span>
+                </div>
+
+                <h5 class="mt-2 mb-1">
+                    implies (chain)
+                    <span class="text-muted h6">
+                        - these implications are added by the exact implications above
+                    </span>
+                </h5>
+                <div v-for="i in tagImpliesChain" class="d-inline">
+                    <div class="btn-group">
+                        <button v-if="del == i.id" class="btn btn-danger" @click="deleteImplication(i.id)">
+                            <span class="bi-trash"></span>
+                        </button>
+
+                        <a class="btn btn-info" :href="'/tag/' + i.id">
+                            {{i.name}}
+                        </a>
+                    </div>
+                </div>
+                <div v-if="tagImpliesChain.length == 0">
                     <span class="text-muted">
                         nothing
                     </span>
@@ -86,9 +109,9 @@
                     </span>
                 </h5>
                 <div v-for="i in tagImpliedBy">
-                    <button class="btn btn-secondary">
+                    <a class="btn btn-secondary" :href="'/tag/' + i.id">
                         {{i.name}}
-                    </button>
+                    </a>
                 </div>
                 <div v-if="tagImpliedBy.length == 0">
                     <span class="text-muted">
@@ -152,7 +175,7 @@
                     Toaster.add("deleted implication", "successfully deleted implication", "success");
                     this.getTagImplicationBlock(this.TagId);
                 } else if (r.state == "error") {
-                    Toaster.add("failed!", "failed to delete implication", "danger");
+                    Toaster.add("failed!", `failed to delete implication: ${r.problem.detail}`, "danger");
                 }
             },
 
@@ -177,18 +200,34 @@
 
                 if (r.state == "error") {
                     console.log(r.problem);
-                    Toaster.add("failed!", `failed to create implication`, "danger");
+                    Toaster.add("failed!", `failed to create implication: ${r.problem.title}`, "danger");
                 }
             }
         },
 
         computed: {
-            tagImplies: function(): Tag[] {
+            tagImpliesChain: function(): Tag[] {
                 if (this.implications.state != "loaded") {
                     return [];
                 }
 
-                const sources: number[] = this.implications.data.sources.map(iter => iter.tagB);
+                const sources: number[] = this.implications.data.sources
+                    .filter(iter => iter.tagA != this.TagId)
+                    .map(iter => iter.tagB);
+                return this.implications.data.tags.filter((iter: Tag) => {
+                    return sources.indexOf(iter.id) > -1;
+                });
+            },
+
+            tagImpliesExact: function(): Tag[] {
+                if (this.implications.state != "loaded") {
+                    return [];
+                }
+
+                const sources: number[] = this.implications.data.sources
+                    .filter(iter => iter.tagA == this.TagId)
+                    .map(iter => iter.tagB);
+
                 return this.implications.data.tags.filter((iter: Tag) => {
                     return sources.indexOf(iter.id) > -1;
                 });

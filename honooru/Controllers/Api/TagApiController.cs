@@ -8,6 +8,7 @@ using honooru.Services.Db;
 using honooru.Services.Queues;
 using honooru.Services.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 using MoreLinq;
 using System.Collections.Generic;
@@ -26,12 +27,15 @@ namespace honooru.Controllers.Api {
         private readonly TagRepository _TagRepository;
         private readonly TagTypeRepository _TagTypeRepository;
         private readonly TagInfoRepository _TagInfoRepository;
+        private readonly TagImplicationRepository _TagImplicationRepository;
+        private readonly PostTagRepository _PostTagRepository;
 
         private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
 
         public TagApiController(ILogger<TagApiController> logger,
             TagRepository tagRepository, TagTypeRepository tagTypeRepository,
-            TagInfoRepository tagInfoRepository, BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue) {
+            TagInfoRepository tagInfoRepository, BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue,
+            TagImplicationRepository tagImplicationRepository, PostTagRepository postTagRepository) {
 
             _Logger = logger;
 
@@ -39,6 +43,8 @@ namespace honooru.Controllers.Api {
             _TagTypeRepository = tagTypeRepository;
             _TagInfoRepository = tagInfoRepository;
             _TagInfoUpdateQueue = tagInfoUpdateQueue;
+            _TagImplicationRepository = tagImplicationRepository;
+            _PostTagRepository = postTagRepository;
         }
 
         /// <summary>
@@ -316,6 +322,38 @@ namespace honooru.Controllers.Api {
             _TagInfoUpdateQueue.Queue(new TagInfoUpdateQueueEntry() {
                 TagID = tagID
             });
+
+            return ApiOk();
+        }
+
+        [HttpPost("{tagID}/ensure-implications")]
+        [PermissionNeeded(AppPermission.APP_UPLOAD)]
+        public async Task<ApiResponse> EnsureImplications(ulong tagID) {
+            Tag? tag = await _TagRepository.GetByID(tagID);
+            if (tag == null) {
+                return ApiNotFound($"{nameof(Tag)} {tagID}");
+            }
+
+            List<PostTag> posts = await _PostTagRepository.GetByTagID(tagID);
+            List<TagImplication> imps = await _TagImplicationRepository.GetBySourceTagID(tagID);
+            _Logger.LogInformation($"ensuring implications on tag [tagID={tagID}] [imps.Count={imps.Count}] [posts.Count={posts.Count}]");
+
+            foreach (PostTag post in posts) {
+                _Logger.LogDebug($"ensuring tag implications on post [postID={post.PostID}] [tagID={tagID}]");
+                List<PostTag> postTags = await _PostTagRepository.GetByPostID(post.PostID);
+                HashSet<ulong> existingTags = new(postTags.Select(iter => iter.TagID));
+
+                foreach (TagImplication imp in imps) {
+                    if (existingTags.Contains(imp.TagB)) {
+                        _Logger.LogTrace($"ensuring tag implication on post [postID={post.PostID}] [implicationID={imp.TagB}] [outcome=skipped]");
+                        continue;
+                    }
+
+                    await _PostTagRepository.Insert(new PostTag() { PostID = post.PostID, TagID = imp.TagB });
+                    _Logger.LogTrace($"ensuring tag implication on post [postID={post.PostID}] [implicationID={imp.TagB}] [outcome=added]");
+                }
+
+            }
 
             return ApiOk();
         }

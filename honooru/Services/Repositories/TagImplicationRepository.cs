@@ -1,7 +1,9 @@
 ﻿using honooru.Models.App;
 using honooru.Services.Db;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace honooru.Services.Repositories {
@@ -22,8 +24,33 @@ namespace honooru.Services.Repositories {
             return _TagImplicationDb.GetAll();
         }
 
-        public Task<List<TagImplication>> GetBySourceTagID(ulong tagID) {
-            return _TagImplicationDb.GetBySourceTagID(tagID);
+        public async Task<List<TagImplication>> GetBySourceTagID(ulong tagID) {
+            Queue<ulong> getImplies = [];
+            HashSet<ulong> found = [];
+            List<TagImplication> implies = [];
+
+            getImplies.Enqueue(tagID);
+
+            while (getImplies.Count > 0) {
+                ulong iterID = getImplies.Dequeue();
+
+                List<TagImplication> imps = await _TagImplicationDb.GetBySourceTagID(iterID);
+
+                _Logger.LogDebug($"getting tag implications [tagID={tagID}] [iterID={iterID}] [imps.Count={imps.Count}] "
+                    + $"[imps={string.Join(", ", imps.Select(iter => $"{iter.TagA}->{iter.TagB}"))}");
+
+                foreach (TagImplication imp in imps) {
+                    if (found.Contains(imp.TagB)) {
+                        continue;
+                    }
+
+                    implies.Add(imp);
+                    getImplies.Enqueue(imp.TagB);
+                    found.Add(imp.TagB);
+                }
+            }
+
+            return implies;
         }
 
         public Task<List<TagImplication>> GetByTargetTagID(ulong tagID) {

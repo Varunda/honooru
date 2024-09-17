@@ -311,6 +311,14 @@ namespace honooru.Controllers.Api {
             return response;
         }
 
+        /// <summary>
+        ///     start a multi-chunk upload, returning the <see cref="MediaAsset.Guid"/>
+        ///     that will be used for the upload
+        /// </summary>
+        /// <response code="200">
+        ///     the response will contain a <see cref="Guid"/> that is the <see cref="MediaAsset.Guid"/>
+        ///     of the <see cref="MediaAsset"/> that was created for the chunked upload
+        /// </response>
         [HttpPost("upload/new")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse<Guid>> StartMultipartUpload() {
@@ -323,6 +331,7 @@ namespace honooru.Controllers.Api {
             byte[] md5 = MD5.HashData(asset.Guid.ToByteArray());
             string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
             asset.MD5 = md5Str;
+            asset.Status = MediaAssetStatus.DEFAULT;
 
             await _MediaAssetRepository.Upsert(asset);
 
@@ -331,6 +340,17 @@ namespace honooru.Controllers.Api {
             return ApiOk(uploadId);
         }
 
+        /// <summary>
+        ///     complete a multi-part upload
+        /// </summary>
+        /// <param name="uploadId">ID of the <see cref="MediaAsset"/> to complete</param>
+        /// <response code="200">
+        ///     the response will contain the <see cref="MediaAsset"/> that was
+        ///     just completed upload
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="uploadId"/> exists
+        /// </response>
         [HttpPost("upload/{uploadId}/done")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         public async Task<ApiResponse<MediaAsset>> FinishMultipartUpload(Guid uploadId) {
@@ -338,6 +358,10 @@ namespace honooru.Controllers.Api {
             MediaAsset? asset = await _MediaAssetRepository.GetByID(uploadId);
             if (asset == null) {
                 return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
+            }
+
+            if (asset.Status != MediaAssetStatus.DEFAULT) {
+                return ApiBadRequest<MediaAsset>($"expected {nameof(MediaAsset)} {uploadId} to be {MediaAssetStatus.DEFAULT}, but it was {asset.Status} instead");
             }
 
             string filePath = Path.Combine(_StorageOptions.Value.RootDirectory, "upload", uploadId + "." + asset.FileExtension);
@@ -354,14 +378,32 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
-        ///     upload a chunk of a large file
+        ///     upload a chunk of a large file. the body must contain a content type of multipart upload
         /// </summary>
         /// <param name="uploadId">ID of the <see cref="MediaAsset"/> to append this upload to</param>
-        /// <returns></returns>
+        /// <response code="200">
+        ///     the response will contain the <see cref="MediaAsset"/> whos content was just appended to
+        /// </response>
+        /// <response code="400">
+        ///     the <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="uploadId"/>
+        ///     has a <see cref="MediaAsset.Status"/> that is not <see cref="MediaAssetStatus.DEFAULT"/>
+        /// </response>
+        /// <response code="404">
+        ///     no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="uploadId"/> exists
+        /// </response>
         [HttpPost("upload/part")]
         [PermissionNeeded(AppPermission.APP_UPLOAD)]
         [DisableFormValueModelBinding]
         public async Task<ApiResponse<MediaAsset>> UploadPart([FromQuery] Guid uploadId) {
+            MediaAsset? asset = await _MediaAssetRepository.GetByID(uploadId);
+            if (asset == null) {
+                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
+            }
+
+            if (asset.Status != MediaAssetStatus.DEFAULT) {
+                return ApiBadRequest<MediaAsset>($"expected {nameof(MediaAsset)} {uploadId} to be {MediaAssetStatus.DEFAULT}, but it was {asset.Status} instead");
+            }
+
             string contentType = Request.ContentType ?? "";
             if (string.IsNullOrWhiteSpace(contentType) || !contentType.Contains("multipart/", StringComparison.OrdinalIgnoreCase)) {
                 return ApiBadRequest<MediaAsset>($"ContentType '{contentType}' is not a multipart-upload");
@@ -393,11 +435,6 @@ namespace honooru.Controllers.Api {
             if (!HasFileContentDisposition(contentDisposition)) {
                 _Logger.LogError($"not a file content disposition");
                 return ApiBadRequest<MediaAsset>($"not a file content disposition");
-            }
-
-            MediaAsset? asset = await _MediaAssetRepository.GetByID(uploadId);
-            if (asset == null) {
-                return ApiNotFound<MediaAsset>($"{nameof(MediaAsset)} {uploadId}");
             }
 
             string originalName = contentDisposition.FileName.Value ?? "";
@@ -441,7 +478,7 @@ namespace honooru.Controllers.Api {
 
             FileStreamOptions opt = new() {
                 BufferSize = 1024 * 1024 * 128, // 128 MB buffer instead of default 4'096
-                Mode = FileMode.Append,
+                Mode = FileMode.Append, // append to the end of the file
                 Access = FileAccess.Write
             };
             using FileStream targetFile = System.IO.File.Open(filePath, opt);
