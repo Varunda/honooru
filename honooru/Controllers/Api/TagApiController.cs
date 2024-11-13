@@ -144,7 +144,7 @@ namespace honooru.Controllers.Api {
             sortBy ??= "uses";
             sortAscending ??= false;
 
-            name = name.Trim();
+            name = name.Trim().ToLower();
 
             if (name.Length <= 1) {
                 return ApiBadRequest<TagSearchResults>($"please provide at least 2 characters to search");

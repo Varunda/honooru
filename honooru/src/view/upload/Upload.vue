@@ -192,27 +192,43 @@
                         </div>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <label class="mb-0">title</label>
                         <input type="text" class="form-control" v-model="posting.title" />
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <label class="mb-0">description</label>
                         <textarea v-model="posting.description" class="form-control"></textarea>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <label class="mb-0">context</label>
                         <textarea v-model="posting.context" class="form-control"></textarea>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <label class="mb-0">source</label>
                         <input type="text" class="form-control" v-model="posting.source" />
+
+                        <div v-if="isYoutubeLink && posting.source == ''">
+                            suggested:
+                            <br />
+
+                            <div v-for="source in sourceMatches" class="input-group mb-1">
+                                <input disabled readonly :value="source" class="form-control" />
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary rounded-0" @click="useSource(source)">
+                                        use
+                                    </button><a class="btn btn-success rounded-0 rounded-end" target="_blank" :href="source">
+                                        view
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <label class="mb-0">
                             additional tags
                             <info-hover text="these tags will be added when posted"></info-hover>
@@ -233,6 +249,13 @@
 
                     <div v-if="posting.post.state == 'error'">
                         <api-error :error="posting.post.problem"></api-error>
+                    </div>
+
+                    <hr class="border" />
+
+                    <div>
+                        <strong>filename:</strong>
+                        <code>{{mediaAsset.fileName}}</code>
                     </div>
 
                     <hr class="border" />
@@ -651,6 +674,10 @@
                 } else {
                     console.error(`unchecked state from deleting a media asset: ${l.state}`);
                 }
+            },
+
+            useSource: function(suggestion: string): void {
+                this.posting.source = suggestion;
             }
         },
 
@@ -682,6 +709,34 @@
             canPost: function(): boolean {
                 return this.error.rating == false
                     && this.error.tags == false;
+            },
+
+            sourceMatches: function(): string[] {
+                const matches: string[] = [];
+
+                const yt = this.mediaAsset.fileName.match(/\[(([a-zA-Z0-9_-]){10,})\]/);
+                if (yt != null && yt.length >= 2) {
+                    matches.push(`https://youtube.com/watch?v=${yt[1]}`);
+                }
+
+                const twitch = this.mediaAsset.fileName.match(/\[v(([0-9]){8,})\]/);
+                if (twitch != null && twitch.length >= 2) {
+                    matches.push(`https://twitch.tv/videos/${twitch[1]}`);
+                }
+
+                return matches;
+            },
+
+            isYoutubeLink: function(): boolean {
+                return this.youtubeLink != null;
+            },
+
+            youtubeLink: function(): string | null {
+                const match = this.mediaAsset.fileName.match(/\[(([a-zA-Z0-9_-]){10,})\]/);
+                if (match == null || match.length < 2) {
+                    return null;
+                }
+                return `https://youtube.com/watch?v=${match[1]}`;
             }
         },
 

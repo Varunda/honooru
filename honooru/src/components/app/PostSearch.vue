@@ -88,7 +88,7 @@
                         console.log(`performing search [text=${text}]`);
                         TagApi.search(text).then((value: Loading<TagSearchResults>) => {
                             if (value.state == "loaded") {
-                                if (value.data.input != text) {
+                                if (value.data.input != text.toLowerCase()) {
                                     console.warn(`not updating tag search, ouput does not match input [text=${text}] [input=${value.data.input}]`);
                                 } else {
                                     console.log(`loaded searched tags: [${value.data.tags.map(iter => iter.tag.name).join(" ")}]`);

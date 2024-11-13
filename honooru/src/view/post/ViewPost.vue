@@ -1,10 +1,10 @@
 ﻿<template>
-    <div style="display: grid; grid-template-rows: min-content 1fr; gap: 0.5rem; max-height: 100vh; max-width: 100vw;">
+    <div class="post-page-container">
 
         <app-menu></app-menu>
 
-        <div style="display: grid; grid-template-columns: 400px 1fr 200px; gap: 0.5rem; overflow: hidden">
-            <div class="overflow-y-auto">
+        <div class="post-content-container">
+            <div class="post-overflow" style="">
                 <div class="mb-3">
                     <post-search v-model="query" @keyup.enter="performSearch" @do-search="performSearch"></post-search>
                 </div>

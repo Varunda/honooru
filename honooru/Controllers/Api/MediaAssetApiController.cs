@@ -271,7 +271,7 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<MediaAsset>($"extension from name {originalName} is null or empty");
             }
 
-            extension = extension[1..]; // remove the leading .
+            extension = extension[1..].ToLower(); // remove the leading .
 
             if (_FileExtensionHelper.IsValid(extension) == false) {
                 _Logger.LogWarning($"disallowing invalid extension [extension={extension}] [originalName={originalName}]");
@@ -446,7 +446,7 @@ namespace honooru.Controllers.Api {
                 return ApiBadRequest<MediaAsset>($"extension from name {originalName} is null or empty");
             }
 
-            extension = extension[1..]; // remove the leading .
+            extension = extension[1..].ToLower(); // remove the leading .
 
             if (_FileExtensionHelper.IsValid(extension) == false) {
                 _Logger.LogWarning($"disallowing invalid extension [extension={extension}] [originalName={originalName}]");

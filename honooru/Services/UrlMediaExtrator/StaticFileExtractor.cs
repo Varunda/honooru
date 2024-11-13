@@ -26,7 +26,10 @@ namespace honooru.Services.UrlMediaExtrator {
         public bool CanHandle(Uri url) {
             return url.AbsolutePath.EndsWith(".png")
                 || url.AbsolutePath.EndsWith(".jpg")
-                || url.AbsolutePath.EndsWith(".jpeg");
+                || url.AbsolutePath.EndsWith(".jpeg")
+                || url.AbsolutePath.EndsWith(".mp4")
+                || url.AbsolutePath.EndsWith(".webp")
+                || url.AbsolutePath.EndsWith(".webm");
         }
 
         public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
@@ -39,7 +42,7 @@ namespace honooru.Services.UrlMediaExtrator {
             _Logger.LogDebug($"static file request [status={response.StatusCode}] [url={url}]");
 
             if (!response.IsSuccessStatusCode) {
-                _Logger.LogError($"failed to get static file [statis={response.StatusCode}] [url={url}]");
+                _Logger.LogError($"failed to get static file [status={response.StatusCode}] [url={url}]");
                 return;
             }
 
@@ -47,7 +50,7 @@ namespace honooru.Services.UrlMediaExtrator {
             if (fileName.Split(".").Length < 2) {
                 _Logger.LogWarning($"failed to split '{fileName}' into 2 parts (based on '.'), missing file extension!");
             }
-            string fileExtension = fileName.Split(".")[1];
+            string fileExtension = fileName.Split(".")[^1];
 
             _Logger.LogDebug($"saving file to upload directory [fileName={fileName}] [fileExtension={fileExtension}]");
             string path = Path.Combine(options.RootDirectory, "upload", asset.Guid + "." + fileExtension);
