@@ -1,4 +1,5 @@
-﻿using honooru.Models.App;
+﻿using honooru.Code.ExtensionMethods;
+using honooru.Models.App;
 using honooru.Models.Config;
 using honooru.Services.Repositories;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -58,7 +59,7 @@ namespace honooru.Services.UrlMediaExtrator {
 
             Uri uri = new Uri(url);
             Stopwatch timer = Stopwatch.StartNew();
-            await extractor.Handle(uri, _Options.Value, asset, progress);
+            asset = await extractor.Handle(uri, _Options.Value, asset, progress);
             _Logger.LogDebug($"download complete [timer={timer.ElapsedMilliseconds}ms] [url={url}] [asset.Guid={asset.Guid}]");
             timer.Restart();
 
@@ -79,13 +80,12 @@ namespace honooru.Services.UrlMediaExtrator {
             using FileStream file = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024 * 128);
             byte[] md5 = await MD5.Create().ComputeHashAsync(file);
             file.Close(); // IMPORTANT: if this is not closed, the handle is left open, and the file cannot be moved
-            string md5Str = string.Join("", md5.Select(iter => iter.ToString("x2"))); // turn that md5 into a string
-            _Logger.LogInformation($"updating md5 of extracted media asset [timer={timer.ElapsedMilliseconds}ms] [md5={md5Str}] [path={path}]");
-            asset.MD5 = md5Str;
+            asset.MD5 = md5.JoinToString();
+            _Logger.LogInformation($"updating md5 of extracted media asset [timer={timer.ElapsedMilliseconds}ms] [md5={asset.MD5}] [path={path}]");
 
             MediaAsset? existingAsset = await _MediaAssetRepository.GetByMD5(asset.MD5);
-            if (existingAsset != null) {
-                _Logger.LogWarning($"media asset with MD5 already uploaded, deleting existing asset [guid={asset.Guid}] [md5={md5Str}]");
+            if (existingAsset != null && existingAsset.Guid != asset.Guid) {
+                _Logger.LogWarning($"media asset with MD5 already uploaded, deleting existing asset [guid={asset.Guid}] [md5={asset.MD5}]");
                 await _MediaAssetRepository.Delete(asset.Guid);
                 return existingAsset;
             }

@@ -31,7 +31,7 @@ namespace honooru.Services.Db {
         ///     The <see cref="AppAccount"/> with <see cref="AppAccount.ID"/> of <paramref name="ID"/>,
         ///     or <c>null</c> if it does not exist
         /// </returns>
-        public async Task<AppAccount?> GetByID(ulong ID, CancellationToken cancel) {
+        public async Task<AppAccount?> GetByID(ulong ID, CancellationToken cancel = default) {
             using NpgsqlConnection conn = _DbHelper.Connection();
             using NpgsqlCommand cmd = await _DbHelper.Command(conn, @"
                 SELECT *

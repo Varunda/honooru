@@ -16,6 +16,7 @@ namespace honooru.Services.Repositories {
             services.AddSingleton<AppAccountRepository>();
             services.AddSingleton<AppAccountGroupMembershipRepository>();
             services.AddSingleton<UserSettingRepository>();
+            services.AddSingleton<ApiKeyRepository>();
 
             services.AddSingleton<PostRepository>();
             services.AddSingleton<SearchQueryRepository>();

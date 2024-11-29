@@ -11,6 +11,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<AppGroupPermissionDbStore>();
             services.AddSingleton<AppAccountGroupMembershipDbStore>();
             services.AddSingleton<UserSettingDb>();
+            services.AddSingleton<ApiKeyDb>();
 
             services.AddSingleton<PostDb>();
             services.AddSingleton<MediaAssetDb>();
@@ -24,6 +25,7 @@ namespace honooru.Services.Db {
             services.AddSingleton<PostPoolDb>();
             services.AddSingleton<PostPoolEntryDb>();
             services.AddSingleton<ExtractorAuthorMappingDb>();
+            services.AddSingleton<DistributedJobDb>();
         }
 
     }

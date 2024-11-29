@@ -16,8 +16,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public string Name => "turn a pdf into an image";
 
-            public Order(MediaAsset asset, StorageOptions options)
-                : base(asset, options) { }
+            public Order(Guid assetID, StorageOptions options) : base(assetID, options) { }
 
         }
 
@@ -29,26 +28,26 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger = logger;
             }
 
-            public async Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
+            public async Task<bool> Run(Order order, MediaAsset asset, Action<decimal> progressCallback, CancellationToken cancel) {
                 cancel.Register(() => {
-                    _Logger.LogWarning($"cancellation token called! [order.Asset={order.Asset.Guid}]");
+                    _Logger.LogWarning($"cancellation token called! [asset={asset.Guid}]");
                 });
 
-                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
+                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
 
-                string outputDir = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5);
+                string outputDir = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5);
                 if (Directory.Exists(outputDir) == true) {
-                    _Logger.LogDebug($"outputDir for PDF conversion already exists [outputDir={outputDir}] [md5={order.Asset.MD5}] [order.Asset={order.Asset.Guid}]");
+                    _Logger.LogDebug($"outputDir for PDF conversion already exists [outputDir={outputDir}] [md5={asset.MD5}] [asset={asset.Guid}]");
                 } else {
                     DirectoryInfo info = Directory.CreateDirectory(outputDir);
                 }
 
-                string output = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + ".png");
+                string output = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5 + ".png");
 
-                _Logger.LogInformation($"converting pdf to png [fileExt={order.Asset.FileExtension}] [input={input}] [output={output}]");
+                _Logger.LogInformation($"converting pdf to png [fileExt={asset.FileExtension}] [input={input}] [output={output}]");
 
                 if (File.Exists(output) == true) {
-                    _Logger.LogInformation($"converted file already exists, skipping [output={output}] [md5={order.Asset.MD5}]");
+                    _Logger.LogInformation($"converted file already exists, skipping [output={output}] [md5={asset.MD5}]");
                     return true;
                 }
 
@@ -61,18 +60,18 @@ namespace honooru.Models.App.MediaUploadStep {
                 };
 
                 using MagickImageCollection pdfInput = new();
-                _Logger.LogDebug($"reading pdf into image collection [input={input}] [order.Asset={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                _Logger.LogDebug($"reading pdf into image collection [input={input}] [asset={asset.Guid}] [md5={asset.MD5}]");
                 progressCallback(25m);
                 await pdfInput.ReadAsync(input, mRead, cancel);
                 progressCallback(50m);
-                _Logger.LogDebug($"pdf read, appending vertically [input={input}] [order.Asset={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                _Logger.LogDebug($"pdf read, appending vertically [input={input}] [asset={asset.Guid}] [md5={asset.MD5}]");
 
                 using IMagickImage<ushort> pdfImage = pdfInput.AppendVertically();
                 progressCallback(75m);
-                _Logger.LogDebug($"created image stream, writing to output [output={output}] [order.Asset={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                _Logger.LogDebug($"created image stream, writing to output [output={output}] [asset={asset.Guid}] [md5={asset.MD5}]");
                 await pdfImage.WriteAsync(output, cancel);
                 progressCallback(90m);
-                _Logger.LogDebug($"created image [output={output}] [order.Asset={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                _Logger.LogDebug($"created image [output={output}] [asset={asset.Guid}] [md5={asset.MD5}]");
 
                 if (File.Exists(output) == false) {
                     _Logger.LogError($"why does the output file not exist ??? [output={output}]");
@@ -83,8 +82,8 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger.LogDebug($"file deleted [input={input}]");
 
                 _Logger.LogDebug($"creating FileInfo [output={output}]");
-                order.Asset.FileSizeBytes = new FileInfo(output).Length;
-                order.Asset.FileExtension = "png";
+                asset.FileSizeBytes = new FileInfo(output).Length;
+                asset.FileExtension = "png";
 
                 progressCallback(100m);
 

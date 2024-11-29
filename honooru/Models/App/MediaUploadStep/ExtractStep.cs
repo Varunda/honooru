@@ -16,7 +16,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public string Url { get; set; }
 
-            public Order(MediaAsset asset, StorageOptions options, string url) : base(asset, options) {
+            public Order(Guid assetID, StorageOptions options, string url) : base(assetID, options) {
                 Url = url;
             }
 
@@ -35,7 +35,7 @@ namespace honooru.Models.App.MediaUploadStep {
                 _UrlExtractor = urlExtractor;
             }
 
-            public async Task<bool> Run(Order order, Action<decimal> updateProgress, CancellationToken cancel) {
+            public async Task<bool> Run(Order order, MediaAsset asset, Action<decimal> updateProgress, CancellationToken cancel) {
                 _Logger.LogInformation($"extracting from url [url={order.Url}]");
 
                 if (_UrlExtractor.CanHandle(order.Url) == false) {
@@ -43,11 +43,11 @@ namespace honooru.Models.App.MediaUploadStep {
                 }
 
                 updateProgress(0m);
-                MediaAsset a = await _UrlExtractor.HandleUrl(order.Asset, order.Url, updateProgress);
+                MediaAsset a = await _UrlExtractor.HandleUrl(asset, order.Url, updateProgress);
                 updateProgress(100m);
 
-                if (a.Guid != order.Asset.Guid) {
-                    _Logger.LogInformation($"detected change in extracted asset, Guid changed [input={order.Asset.Guid}] [output={a.Guid}");
+                if (a.Guid != asset.Guid) {
+                    _Logger.LogInformation($"detected change in extracted asset, Guid changed [input={asset.Guid}] [output={a.Guid}");
                     return false;
                 }
 

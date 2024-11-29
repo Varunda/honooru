@@ -1,11 +1,38 @@
 ﻿using honooru.Models.Db;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 
 namespace honooru.Models.App {
 
     public class MediaAsset {
+
+        /// <summary>
+        ///     copy ctor
+        /// </summary>
+        /// <param name="asset"></param>
+        public MediaAsset(MediaAsset asset) {
+            this.Guid = asset.Guid;
+            this.PostID = asset.PostID;
+            this.MD5 = asset.MD5;
+            this.Status = asset.Status;
+            this.FileName = asset.FileName;
+            this.FileExtension = asset.FileExtension;
+            this.FileType = asset.FileType;
+            this.Timestamp = asset.Timestamp;
+            this.FileSizeBytes = asset.FileSizeBytes;
+            this.Source = asset.Source;
+            this.AdditionalTags = asset.AdditionalTags;
+            this.Title = asset.Title;
+            this.Description = asset.Description;
+            this.Context = asset.Context;
+            this.IqdbHash = asset.IqdbHash;
+        }
+
+        public MediaAsset() {
+
+        }
 
         /// <summary>
         ///     temp guid the file is saved under
@@ -90,6 +117,53 @@ namespace honooru.Models.App {
             }
         }
 
+        public override bool Equals(object? obj) {
+            return obj is MediaAsset asset &&
+                   Guid.Equals(asset.Guid) &&
+                   PostID == asset.PostID &&
+                   MD5 == asset.MD5 &&
+                   Status == asset.Status &&
+                   FileName == asset.FileName &&
+                   FileExtension == asset.FileExtension &&
+                   FileType == asset.FileType &&
+                   Timestamp == asset.Timestamp &&
+                   FileSizeBytes == asset.FileSizeBytes &&
+                   Source == asset.Source &&
+                   AdditionalTags == asset.AdditionalTags &&
+                   Title == asset.Title &&
+                   Description == asset.Description &&
+                   Context == asset.Context &&
+                   IqdbHash == asset.IqdbHash;
+        }
+
+        public override int GetHashCode() {
+            HashCode hash = new HashCode();
+            hash.Add(Guid);
+            hash.Add(PostID);
+            hash.Add(MD5);
+            hash.Add(Status);
+            hash.Add(FileName);
+            hash.Add(FileExtension);
+            hash.Add(FileType);
+            hash.Add(Timestamp);
+            hash.Add(FileSizeBytes);
+            hash.Add(Source);
+            hash.Add(AdditionalTags);
+            hash.Add(Title);
+            hash.Add(Description);
+            hash.Add(Context);
+            hash.Add(IqdbHash);
+            hash.Add(FileLocation);
+            return hash.ToHashCode();
+        }
+
+        public static bool operator ==(MediaAsset? left, MediaAsset? right) {
+            return EqualityComparer<MediaAsset>.Default.Equals(left, right);
+        }
+
+        public static bool operator !=(MediaAsset? left, MediaAsset? right) {
+            return !(left == right);
+        }
     }
 
     public enum MediaAssetStatus {

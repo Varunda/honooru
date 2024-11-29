@@ -95,19 +95,25 @@ namespace honooru.Services.UploadStepHandler {
 
                     object worker = scope.ServiceProvider.GetRequiredService(workerType);
 
-                    MethodInfo? workMethod = workerType.GetMethod("Run");
-                    if (workMethod == null) {
-                        throw new MissingMethodException(workerType.FullName, "Run");
-                    }
+                    MethodInfo? workMethod = workerType.GetMethod("Run")
+                        ?? throw new MissingMethodException(workerType.FullName, "Run");
 
                     if (workMethod.ReturnType != typeof(Task<bool>)) {
                         throw new ArgumentException($"return type of Run must be a Task<bool>, got {workMethod.ReturnType.FullName} instead");
                     }
 
+                    // reload the asset on each step
+                    // this allows steps to change fields in the asset, even the reference to the asset
+                    MediaAsset stepAsset = await _MediaAssetRepository.GetByID(entry.MediaAssetID)
+                        ?? throw new Exception($"{nameof(MediaAsset)} {entry.MediaAssetID} must exist at this point");
+
+                    MediaAsset copy = new(stepAsset);
+
                     Stopwatch timer = Stopwatch.StartNew();
                     // force is safe, we know the return type will be a Task<bool>, not a |Task<bool>?|
                     Task<bool> task = (Task<bool>) workMethod.Invoke(worker, [
                         step,
+                        stepAsset,
                         (decimal progress) => {
                             if (entry.Current != null) {
                                 entry.Current.Percent = progress;
@@ -120,6 +126,12 @@ namespace honooru.Services.UploadStepHandler {
                     // not needed! read for more:
                     // https://devblogs.microsoft.com/pfxteam/do-i-need-to-dispose-of-tasks/
                     //task.Dispose();
+
+                    // this check must be done after the task is awaited
+                    if (copy != stepAsset) {
+                        _Logger.LogDebug($"detected change in asset, updating [ID={stepAsset.Guid}]");
+                        await _MediaAssetRepository.Upsert(stepAsset);
+                    }
 
                     _Logger.LogInformation($"took {timer.ElapsedMilliseconds}ms to process {workerType.FullName}");
                     if (entry.Current != null) {
@@ -144,7 +156,10 @@ namespace honooru.Services.UploadStepHandler {
                     cancel.ThrowIfCancellationRequested();
                 }
 
-                MediaAsset asset = steps.Asset;
+                // it's possible one of the extractors changed values on the media asset,
+                // so reload the fields from the repo
+                MediaAsset asset = await _MediaAssetRepository.GetByID(steps.Asset.Guid)
+                    ?? throw new Exception($"expected {nameof(MediaAsset)} {steps.Asset.Guid} to exist");
 
                 _Logger.LogDebug($"updating asset [asset.ID={asset.Guid}]");
 
@@ -162,8 +177,7 @@ namespace honooru.Services.UploadStepHandler {
                 _Logger.LogInformation($"completed upload steps [Guid={steps.Asset.Guid}] [FileType={asset.FileType}]");
             } catch (Exception ex) {
                 entry.Error = new ExceptionInfo(ex);
-                steps.Asset.Status = MediaAssetStatus.ERRORED;
-                await _MediaAssetRepository.Upsert(steps.Asset);
+                await _MediaAssetRepository.UpdateStatus(steps.Asset.Guid, MediaAssetStatus.ERRORED);
 
                 if (cancel.IsCancellationRequested == true) {
                     _Logger.LogWarning($"timeout occured when uploading {steps.Asset.Guid}: {ex.Message}");

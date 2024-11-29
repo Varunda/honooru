@@ -97,20 +97,40 @@ namespace honooru {
             services.Configure<HttpConfig>(Configuration.GetSection("Http"));
             services.Configure<StorageOptions>(Configuration.GetSection("Storage"));
             services.Configure<IqdbOptions>(Configuration.GetSection("Iqdb"));
-            services.Configure<GhostscriptOptions>(Configuration.GetSection("Ghostscript"));
+            services.Configure<ExtractorOptions>(Configuration.GetSection("Extractor"));
 
             // require all endpoints to be authorized unless another policy is defined
             services.AddAuthorization(options => {
-                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes("honooru-api-key")
+                    .AddAuthenticationSchemes(DiscordAuthenticationDefaults.AuthenticationScheme)
+                    .AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build();
+
+                options.AddPolicy("no-api-key", policy => {
+                    policy.AuthenticationSchemes.Clear();
+                    policy.AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme);
+                    policy.AddAuthenticationSchemes(DiscordAuthenticationDefaults.AuthenticationScheme);
+                    policy.RequireAuthenticatedUser();
+                });
             });
 
             services.AddAuthentication(options => {
-                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = DiscordAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultForbidScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             }).AddCookie(options => {
                 options.Cookie.Name = "honooru-auth";
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
                 options.Cookie.SameSite = SameSiteMode.Lax;
+
+                options.ForwardChallenge = DiscordAuthenticationDefaults.AuthenticationScheme;
+            }).AddScheme<ApiKeyAuthOptions, ApiKeyAuthHandler>("honooru-api-key", options => {
+                //options.ForwardForbid = "honooru-api-key";
+                //options.ForwardSignIn = "honooru-api-key";
+                //options.ForwardChallenge = "honooru-api-key";
             }).AddDiscord(options => {
                 DiscordOptions? dOpts = Configuration.GetSection("Discord").Get<DiscordOptions>();
                 if (dOpts == null) {

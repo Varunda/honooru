@@ -13,7 +13,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public string Name => "copy to /original";
 
-            public Order(MediaAsset asset, StorageOptions options) : base(asset, options) { }
+            public Order(Guid assetID, StorageOptions options) : base(assetID, options) { }
 
         }
 
@@ -25,9 +25,9 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger = logger;
             }
 
-            public Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
-                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
-                string output = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.FileLocation);
+            public Task<bool> Run(Order order, MediaAsset asset, Action<decimal> progressCallback, CancellationToken cancel) {
+                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
+                string output = Path.Combine(order.StorageOptions.RootDirectory, "original", asset.FileLocation);
                 Directory.CreateDirectory(Path.GetDirectoryName(output) ?? "");
 
                 _Logger.LogInformation($"copying media asset [input={input}] [output={output}]");

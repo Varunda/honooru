@@ -16,7 +16,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public string Name => "reencode to mp4";
 
-            public Order(MediaAsset asset, StorageOptions options, Codec videoFormat, Codec audioCodec) : base(asset, options) {
+            public Order(Guid assetID, StorageOptions options, Codec videoFormat, Codec audioCodec) : base(assetID, options) {
                 VideoFormat = videoFormat;
                 AudioCodec = audioCodec;
             }
@@ -35,31 +35,32 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger = logger;
             }
 
-            public async Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
-                if (order.Asset.FileExtension == "mp4" || order.Asset.FileExtension == "webm") {
-                    _Logger.LogDebug($"skipping re-encoding of file that is already web playable [FileExtension={order.Asset.FileExtension}] [id={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+            public async Task<bool> Run(Order order, MediaAsset asset, Action<decimal> progressCallback, CancellationToken cancel) {
+                if (asset.FileExtension == "mp4" || asset.FileExtension == "webm") {
+                    _Logger.LogDebug($"skipping re-encoding of file that is already web playable [FileExtension={asset.FileExtension}] [id={asset.Guid}] [md5={asset.MD5}]");
                     progressCallback(100m);
                     return true;
                 }
 
-                if (order.Asset.FileExtension == "png" || order.Asset.FileExtension == "jpg" || order.Asset.FileExtension == "jpeg") {
-                    _Logger.LogDebug($"skipping re-encoding of file that is not a video [FileExtension={order.Asset.FileExtension}] [id={order.Asset.Guid}] [md5={order.Asset.MD5}]");
+                if (asset.FileExtension == "png" || asset.FileExtension == "jpg" || asset.FileExtension == "jpeg") {
+                    _Logger.LogDebug($"skipping re-encoding of file that is not a video [FileExtension={asset.FileExtension}] [id={asset.Guid}] [md5={asset.MD5}]");
                     progressCallback(100m);
                     return true;
                 }
 
                 cancel.Register(() => {
-                    _Logger.LogWarning($"cancellation token called! [order.Asset={order.Asset.Guid}]");
+                    _Logger.LogWarning($"cancellation token called! [order.Asset={asset.Guid}]");
                 });
 
-                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + "." + order.Asset.FileExtension);
-                string output = Path.Combine(order.StorageOptions.RootDirectory, "work", order.Asset.MD5 + ".mp4");
+                string input = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5 + "." + asset.FileExtension);
+                string output = Path.Combine(order.StorageOptions.RootDirectory, "work", asset.MD5 + ".mp4");
 
                 _Logger.LogInformation($"performing re-encode work [videoFormat={order.VideoFormat.Name}] [audioFormat={order.AudioCodec.Name}] "
-                    + $"[fileExt={order.Asset.FileExtension}] [input={input}] [output={output}]");
+                    + $"[fileExt={asset.FileExtension}] [input={input}] [output={output}]");
 
                 if (File.Exists(output) == true) {
-                    _Logger.LogInformation($"re-encoded file already exists, skipping [output={output}] [md5={order.Asset.MD5}]");
+                    asset.FileExtension = "mp4";
+                    _Logger.LogInformation($"re-encoded file already exists, skipping [output={output}] [md5={asset.MD5}]");
                     return true;
                 }
 
@@ -78,6 +79,7 @@ namespace honooru.Models.App.MediaUploadStep {
                 cancel.ThrowIfCancellationRequested();
                 TimeSpan videoDuration = analysis.Duration;
                 _Logger.LogDebug($"input file length: {videoDuration.TotalSeconds} seconds [input={input}]");
+                _Logger.LogInformation($"NOTICE: just being ffmpeg is outputting something into stderr, it does not mean it is an error!");
 
                 cancel.ThrowIfCancellationRequested();
                 await FFMpegArguments.FromFileInput(input)
@@ -100,7 +102,7 @@ namespace honooru.Models.App.MediaUploadStep {
                         if (err.StartsWith("frame=")) {
                             return;
                         }
-                        _Logger.LogWarning($"ffmpeg error> {err}");
+                        _Logger.LogWarning($"ffmpeg stderr> {err}");
                     })
                     .CancellableThrough(cancel)
                     .ProcessAsynchronously();
@@ -114,8 +116,8 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Logger.LogDebug($"file deleted [input={input}]");
 
                 _Logger.LogDebug($"creating FileInfo [output={output}]");
-                order.Asset.FileSizeBytes = new FileInfo(output).Length;
-                order.Asset.FileExtension = "mp4";
+                asset.FileSizeBytes = new FileInfo(output).Length;
+                asset.FileExtension = "mp4";
 
                 return true;
             }

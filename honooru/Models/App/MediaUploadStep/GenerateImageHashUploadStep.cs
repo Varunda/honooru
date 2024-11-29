@@ -14,7 +14,7 @@ namespace honooru.Models.App.MediaUploadStep {
 
             public string Name => "generate image hash";
 
-            public Order(MediaAsset asset, StorageOptions options) : base(asset, options) { }
+            public Order(Guid assetID, StorageOptions options) : base(assetID, options) { }
 
         }
 
@@ -28,19 +28,19 @@ namespace honooru.Models.App.MediaUploadStep {
                 _Iqdb = iqdb;
             }
 
-            public async Task<bool> Run(Order order, Action<decimal> progressCallback, CancellationToken cancel) {
+            public async Task<bool> Run(Order order, MediaAsset asset, Action<decimal> progressCallback, CancellationToken cancel) {
                 progressCallback(0m);
 
-                _Logger.LogDebug($"generating image hash [md5={order.Asset.MD5}] [fileExtension={order.Asset.FileExtension}]");
-                string input = Path.Combine(order.StorageOptions.RootDirectory, "original", order.Asset.FileLocation);
+                _Logger.LogDebug($"generating image hash [md5={asset.MD5}] [fileExtension={asset.FileExtension}]");
+                string input = Path.Combine(order.StorageOptions.RootDirectory, "original", asset.FileLocation);
 
                 if ((await _Iqdb.CheckHealth()).Enabled == false) {
-                    _Logger.LogWarning($"IQDB service is not enabled, skipping IQDB hash set [md5={order.Asset.MD5}]");
-                    order.Asset.IqdbHash = "";
+                    _Logger.LogWarning($"IQDB service is not enabled, skipping IQDB hash set [md5={asset.MD5}]");
+                    asset.IqdbHash = "";
                 } else {
-                    IqdbEntry? response = await _Iqdb.Create(input, order.Asset.MD5, order.Asset.FileExtension);
+                    IqdbEntry? response = await _Iqdb.Create(input, asset.MD5, asset.FileExtension);
 
-                    order.Asset.IqdbHash = response?.Hash;
+                    asset.IqdbHash = response?.Hash;
                 }
 
                 progressCallback(100m);

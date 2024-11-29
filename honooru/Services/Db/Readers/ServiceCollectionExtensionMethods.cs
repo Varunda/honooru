@@ -4,6 +4,7 @@ using honooru.Models.Db;
 using honooru.Models.Health;
 using honooru.Models.App;
 using honooru.Models.Internal;
+using honooru_common.Models;
 
 namespace honooru.Services.Db.Readers {
 
@@ -16,6 +17,7 @@ namespace honooru.Services.Db.Readers {
             services.AddSingleton<IDataReader<AppGroup>, AppGroupReader>();
             services.AddSingleton<IDataReader<AppAccountGroupMembership>, AppAccountGroupMembershipReader>();
             services.AddSingleton<IDataReader<UserSetting>, UserSettingReader>();
+            services.AddSingleton<IDataReader<ApiKey>, ApiKeyReader>();
 
             services.AddSingleton<IDataReader<Post>, PostReader>();
             services.AddSingleton<IDataReader<MediaAsset>, MediaAssetReader>();
@@ -29,6 +31,7 @@ namespace honooru.Services.Db.Readers {
             services.AddSingleton<IDataReader<PostPool>, PostPoolReader>();
             services.AddSingleton<IDataReader<PostPoolEntry>, PostPoolEntryReader>();
             services.AddSingleton<IDataReader<ExtractorAuthorMapping>, ExtractorAuthorMappingReader>();
+            services.AddSingleton<IDataReader<DistributedJob>, DistributedJobReader>();
         }
 
     }

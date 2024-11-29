@@ -47,6 +47,24 @@ namespace honooru.Services.Repositories {
         }
 
         /// <summary>
+        ///     update only the <see cref="MediaAsset.Status"/> of a <see cref="MediaAsset"/>.
+        ///     if no <see cref="MediaAsset"/> with <see cref="MediaAsset.Guid"/> of <paramref name="assetID"/>
+        ///     exists, then no update is performed
+        /// </summary>
+        /// <param name="assetID">ID of the <see cref="MediaAsset"/> to update the status of</param>
+        /// <param name="status">new status to set the <see cref="MediaAsset"/> to</param>
+        /// <returns></returns>
+        public async Task UpdateStatus(Guid assetID, MediaAssetStatus status) {
+            MediaAsset? asset = await GetByID(assetID);
+            if (asset == null) {
+                return;
+            }
+
+            asset.Status = status;
+            await Upsert(asset);
+        }
+
+        /// <summary>
         ///     delete a <see cref="MediaAsset"/>. use <see cref="Erase(Guid)"/> if you want to remove the files as well
         /// </summary>
         /// <param name="assetID">ID of the asset to delete</param>

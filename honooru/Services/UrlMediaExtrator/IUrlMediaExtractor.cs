@@ -13,7 +13,7 @@ namespace honooru.Services.UrlMediaExtrator {
 
         bool CanHandle(Uri url);
 
-        Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress);
+        Task<MediaAsset> Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress);
 
     }
 }

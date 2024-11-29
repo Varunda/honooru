@@ -61,7 +61,7 @@ namespace honooru.Code {
             AppAccount? currentUser = await _CurrentUser.Get();
 
             string paramStr = parameters.Count == 0 ? "" : $"{string.Join(" ", parameters)}"; 
-            _Logger.LogInformation($"http request complete [url={url}] [timer={timerMs}ms] [controller={controllerName}] [action={actionName}]"
+            _Logger.LogInformation($"http request complete [url={url}] [status={context.Response.StatusCode}] [timer={timerMs}ms] [controller={controllerName}] [action={actionName}]"
                 + $" [user={currentUser?.Name}/{currentUser?.ID}] {paramStr}");
         }
 

@@ -32,7 +32,7 @@ namespace honooru.Services.UrlMediaExtrator {
                 || url.AbsolutePath.EndsWith(".webm");
         }
 
-        public async Task Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
+        public async Task<MediaAsset> Handle(Uri url, StorageOptions options, MediaAsset asset, Action<decimal> progress) {
             _Logger.LogInformation($"performing static file extraction [url={url}]");
 
             progress(0m);
@@ -43,7 +43,7 @@ namespace honooru.Services.UrlMediaExtrator {
 
             if (!response.IsSuccessStatusCode) {
                 _Logger.LogError($"failed to get static file [status={response.StatusCode}] [url={url}]");
-                return;
+                return asset;
             }
 
             string fileName = url.AbsolutePath.Split("/")[^1];
@@ -63,6 +63,8 @@ namespace honooru.Services.UrlMediaExtrator {
             asset.FileExtension = fileExtension;
             asset.FileName = fileName;
             asset.FileSizeBytes = file.Position;
+
+            return asset;
         }
 
     }
