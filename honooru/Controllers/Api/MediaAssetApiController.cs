@@ -155,26 +155,30 @@ namespace honooru.Controllers.Api {
 
             await _MediaAssetRepository.Upsert(asset);
 
-            if (_UrlExtractor.NeedsQueue(url)) {
-                asset.Status = MediaAssetStatus.EXTRACTING;
-                await _MediaAssetRepository.Upsert(asset);
+            asset.Status = MediaAssetStatus.EXTRACTING;
+            await _MediaAssetRepository.Upsert(asset);
 
-                UploadSteps steps = new(asset, _StorageOptions.Value);
-                steps.AddExtractStep(url);
-                steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
-                steps.AddFinalMoveStep();
-                steps.AddImageHashStep();
+            UploadSteps steps = new(asset, _StorageOptions.Value);
+            steps.AddExtractStep(url);
+            steps.AddReencodeStep(VideoCodec.LibX264, AudioCodec.Aac);
+            steps.AddFinalMoveStep();
+            steps.AddImageHashStep();
+
+            if (_UrlExtractor.NeedsQueue(url)) {
+                _Logger.LogDebug($"asset needs to be queued [asset={asset.Guid}] [url={url}]");
 
                 _UploadStepsQueue.Queue(steps);
 
                 return ApiOk(asset);
             } else {
-                // do nothing with the progress callback here, not needed
-                asset = await _UrlExtractor.HandleUrl(asset, url, (progress) => { });
+                _Logger.LogDebug($"asset can be processed right away [asset={asset.Guid}] [url={url}]");
 
-                ApiResponse<MediaAsset> r = await _HandleAsset(asset);
+                await _UploadStepsHandler.Run(steps, CancellationToken.None);
 
-                return r;
+                asset = await _MediaAssetRepository.GetByID(asset.Guid) 
+                    ?? throw new Exception($"failed to find asset {asset.Guid}");
+
+                return ApiOk(asset);
             }
         }
 

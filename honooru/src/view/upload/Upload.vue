@@ -447,7 +447,8 @@
                 if (data.state == "loaded") {
                     this.mediaAsset = data.data;
 
-                    if (data.data.status == 2 || data.data.status == 5) { // 2 = processing, 5 = errored
+                    // 0 = default, 2 = processing, 5 = errored
+                    if (data.data.status == 0 || data.data.status == 2 || data.data.status == 5) {
                         this.state = "processing";
                     } else if (data.data.status == 3) { // 3 = done
                         this.state = "view";
