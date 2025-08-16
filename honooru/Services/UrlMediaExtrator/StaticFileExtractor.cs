@@ -1,6 +1,7 @@
 ﻿using Grpc.Core;
 using honooru.Models.App;
 using honooru.Models.Config;
+using honooru.Services.Util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
@@ -16,11 +17,15 @@ namespace honooru.Services.UrlMediaExtrator {
         public bool NeedsQueue => false;
 
         private readonly ILogger<StaticFileExtractor> _Logger;
+        private readonly FileExtensionService _FileExtensionUtil;
 
         private static readonly HttpClient _HttpClient = new HttpClient();
 
-        public StaticFileExtractor(ILogger<StaticFileExtractor> logger) {
+        public StaticFileExtractor(ILogger<StaticFileExtractor> logger,
+            FileExtensionService fileExtensionUtil) {
+
             _Logger = logger;
+            _FileExtensionUtil = fileExtensionUtil;
         }
 
         public bool CanHandle(Uri url) {
@@ -62,6 +67,7 @@ namespace honooru.Services.UrlMediaExtrator {
 
             asset.FileExtension = fileExtension;
             asset.FileName = fileName;
+            asset.FileType = _FileExtensionUtil.GetFileType(asset.FileExtension) ?? "";
             asset.FileSizeBytes = file.Position;
 
             return asset;
