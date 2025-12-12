@@ -36,6 +36,10 @@
                     add
                 </button>
 
+                <button class="btn btn-sm btn-warning" @click="removeChild">
+                    remove
+                </button>
+
                 children
                 <span v-if="children.state == 'loaded'" class="text-muted">
                     ({{childPosts.length}})
@@ -151,7 +155,31 @@
                 } else {
                     console.error(`unchecked state of l: ${l.state}`);
                 }
+            },
+
+            removeChild: async function(): Promise<void> {
+                const input: string | null = prompt("enter ID of post to remove as child (leave blank to cancel)");
+                if (input == null || input == "") {
+                    return;
+                }
+
+                const num: number = Number.parseInt(input);
+                if (Number.isNaN(num) == true) {
+                    Toaster.add("bad input", `input ${input }is not a valid number (prased to ${num}})`, "danger");
+                    return;
+                }
+
+                const l: Loading<void> = await PostChildApi.removeChild(this.PostId, num);
+                if (l.state == "loaded") {
+                    Toaster.add("child removed", `successfully removed #${num} as a child to this post (#${this.PostId})`, "success");
+                    this.bindAll();
+                } else if (l.state == "error") {
+                    Loadable.toastError(l, "error removing child");
+                } else {
+                    console.error(`unchecked state of l: ${l.state}`);
+                }
             }
+
         },
 
         computed: {

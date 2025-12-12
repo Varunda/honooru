@@ -87,6 +87,40 @@ namespace honooru.Controllers.Api {
             return ApiOk(rel);
         }
 
+        [HttpDelete]
+        public async Task<ApiResponse> Remove([FromQuery] ulong parentID, [FromQuery] ulong childID) {
+            List<string> errors = new();
+            if (parentID == 0) { errors.Add($"{nameof(parentID)} cannot be 0"); }
+            if (childID == 0) { errors.Add($"{nameof(childID)} cannot be 0"); }
+            if (parentID == childID) { errors.Add($"{nameof(parentID)} cannot equal {nameof(childID)} ({parentID}={childID})"); }
+            if (errors.Count > 0) {
+                return ApiBadRequest($"{string.Join("\n", errors)}");
+            }
+
+            Post? parent = await _PostRepository.GetByID(parentID);
+            if (parent == null) {
+                return ApiNotFound($"{nameof(Post)} {parentID}");
+            }
+
+            Post? child = await _PostRepository.GetByID(childID);
+            if (child == null) {
+                return ApiNotFound($"{nameof(Post)} {childID}");
+            }
+
+            List<PostChild> parentChildren = await _PostChildRepository.GetByParentID(parentID);
+            if (parentChildren.Find(iter => iter.ChildPostID == childID) == null) {
+                return ApiBadRequest($"{childID} is not a parent of {parentID}");
+            }
+
+            PostChild rel = new();
+            rel.ParentPostID = parent.ID;
+            rel.ChildPostID = child.ID;
+
+            await _PostChildRepository.Remove(rel);
+
+            return ApiOk();
+        }
+
         private async Task<List<ExtendedPostChild>> _CreateExteneded(List<PostChild> rels) {
             List<ExtendedPostChild> ex = new();
 

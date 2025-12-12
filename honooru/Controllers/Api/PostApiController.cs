@@ -30,9 +30,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace honooru.Controllers.Api {
@@ -363,7 +360,7 @@ namespace honooru.Controllers.Api {
             [FromQuery] string? description = null,
             [FromQuery] string? source = "",
             [FromQuery] string? context = null
-            ) {
+        ) {
 
             AppAccount? currentUser = await _CurrentAccount.Get();
             if (currentUser == null) {
@@ -581,7 +578,7 @@ namespace honooru.Controllers.Api {
             [FromQuery] string? description = null,
             [FromQuery] string? source = null,
             [FromQuery] string? context = null
-            ) {
+        ) {
 
             Post? post = await _PostRepository.GetByID(postID);
             if (post == null) {

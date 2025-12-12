@@ -44,4 +44,8 @@ export class PostChildApi extends ApiWrapper<PostChild> {
         return PostChildApi.get().postReply(`/api/post-child?parentID=${parentID}&childID=${childID}`, PostChildApi.parse);
     }
 
+    public static removeChild(parentID: number, childID: number): Promise<Loading<void>> {
+        return PostChildApi.get().delete(`/api/post-child?parentID=${parentID}&childID=${childID}`);
+    }
+
 }
