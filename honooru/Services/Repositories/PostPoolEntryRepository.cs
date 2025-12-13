@@ -1,6 +1,7 @@
 ﻿using honooru.Models.App;
 using honooru.Models.Db;
 using honooru.Services.Db;
+using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -14,17 +15,17 @@ namespace honooru.Services.Repositories {
         private readonly PostPoolEntryDb _Db;
         private readonly IMemoryCache _Cache;
 
-        private readonly PostRepository _PostRepository;
+        private readonly UserSearchCache _SearchCache;
 
         public PostPoolEntryRepository(ILogger<PostPoolEntryRepository> logger,
             IMemoryCache cache, PostPoolEntryDb db,
-            PostRepository postRepository) {
+            UserSearchCache searchCache) {
 
             _Logger = logger;
             _Cache = cache;
             _Db = db;
 
-            _PostRepository = postRepository;
+            _SearchCache = searchCache;
         }
 
         public Task<List<PostPoolEntry>> GetByPoolID(ulong poolID) {
@@ -36,12 +37,12 @@ namespace honooru.Services.Repositories {
         }
 
         public Task Insert(PostPoolEntry entry) {
-            _PostRepository.RemovedCachedSearches();
+            _SearchCache.Clear();
             return _Db.Insert(entry);
         }
 
         public Task Delete(PostPoolEntry entry) {
-            _PostRepository.RemovedCachedSearches();
+            _SearchCache.Clear();
             return _Db.Delete(entry);
         }
 
@@ -51,7 +52,7 @@ namespace honooru.Services.Repositories {
         /// <param name="poolID">ID of the <see cref="PostPool"/> to remove all posts from</param>
         /// <returns></returns>
         public async Task DeleteByPoolID(ulong poolID) {
-            _PostRepository.RemovedCachedSearches();
+            _SearchCache.Clear();
             List<PostPoolEntry> entries = await GetByPoolID(poolID);
 
             foreach (PostPoolEntry entry in entries) {

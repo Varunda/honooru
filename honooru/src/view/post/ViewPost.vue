@@ -266,7 +266,19 @@
 
                             <template v-slot:body>
                                 <post-child-view :post-id="postID"></post-child-view>
+
+                                <hr class="border"/>
+
+                                <h4 class="mb-0">
+                                    <button class="btn btn-sm btn-primary mb-1" id="pool-trigger" data-bs-toggle="offcanvas" data-bs-target="#pool-offcanvas" title="hotkey is P">
+                                        view
+                                    </button>
+                                    pools
+                                </h4>
+
+                                <post-pools :post-id="postID"></post-pools>
                             </template>
+
                         </alert-collapse>
 
                         <div class="alert alert-secondary d-flex">
@@ -358,6 +370,7 @@
     import PostPoolView from "components/app/PostPoolView.vue";
 
     import PostInfo from "./components/PostInfo.vue";
+    import PostPools from "./components/PostPools.vue";
 
     import { Post, PostApi, PostOrdering } from "api/PostApi";
     import { ExtendedTag, TagApi } from "api/TagApi";
@@ -714,9 +727,8 @@
             InfoHover, ApiError, PermissionedButton, AlertCollapse,
             AppMenu,
             FileView, PostSearch, Similarity, PostChildView, PostPoolView,
-            PostInfo
+            PostInfo, PostPools
         }
-
     });
     export default ViewPost;
 

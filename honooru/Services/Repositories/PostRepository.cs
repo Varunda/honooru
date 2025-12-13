@@ -5,6 +5,7 @@ using honooru.Models.Config;
 using honooru.Models.Db;
 using honooru.Services.Db;
 using honooru.Services.Hosted.Startup;
+using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,7 @@ namespace honooru.Services.Repositories {
         private readonly ILogger<PostRepository> _Logger;
         private readonly PostTagRepository _PostTagRepository;
         private readonly PostDb _PostDb;
+        private readonly UserSearchCache _SearchCache;
 
         private readonly IOptions<StorageOptions> _StorageOptions;
 
@@ -32,7 +34,8 @@ namespace honooru.Services.Repositories {
 
         public PostRepository(ILogger<PostRepository> logger,
             IMemoryCache cache, PostDb postDb,
-            IOptions<StorageOptions> storageOptions, PostTagRepository postTagRepository) {
+            IOptions<StorageOptions> storageOptions, PostTagRepository postTagRepository,
+            UserSearchCache searchCache) {
 
             _Logger = logger;
 
@@ -40,6 +43,7 @@ namespace honooru.Services.Repositories {
             _PostDb = postDb;
             _StorageOptions = storageOptions;
             _PostTagRepository = postTagRepository;
+            _SearchCache = searchCache;
         }
 
         public Task<List<Post>> GetAll() {
@@ -62,19 +66,12 @@ namespace honooru.Services.Repositories {
         /// <returns></returns>
         public async Task<List<Post>> Search(SearchQuery query, AppAccount user) {
             // the whole result of a DB search is cached, and the offset//limit are taken after
-            string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, query.HashKey);
-            if (_Cache.TryGetValue(cacheKey, out List<Post>? posts) == false || posts == null) {
-                _Logger.LogDebug($"performing DB search as results are not cached [cacheKey={cacheKey}] [user={user.ID}/{user.Name}]");
+            if (_SearchCache.TryGet(user.ID, query.HashKey, out List<Post>? posts) == false || posts == null) {
+                _Logger.LogDebug($"performing DB search as results are not cached [user={user.ID}/{user.Name}]");
                 // not cached, do the search
                 posts = await _PostDb.Search(query, user);
 
-                // mark this key as cached, so when a post is updated, the cached data can be evicted
-                _CachedKeys.Add(cacheKey);
-                _Cache.Set(cacheKey, posts, new MemoryCacheEntryOptions() {
-                    SlidingExpiration = TimeSpan.FromMinutes(5)
-                });
-            } else {
-                _Logger.LogDebug($"post search was cached [cacheKey={cacheKey}] [user={user.ID}/{user.Name}]");
+                _SearchCache.Add(user.ID, query.HashKey, posts);
             }
 
             posts = posts.Skip((int)query.Offset)
@@ -84,23 +81,23 @@ namespace honooru.Services.Repositories {
         }
 
         public Task<ulong> Insert(Post post) {
-            RemovedCachedSearches();
+            _SearchCache.Clear();
             return _PostDb.Insert(post);
         }
 
         public Task Update(ulong postID, Post post) {
-            RemovedCachedSearches();
+            _SearchCache.Clear();
             return _PostDb.Update(postID, post);
         }
 
         public async Task Delete(ulong postID) {
             await _PostDb.UpdateStatus(postID, PostStatus.DELETED);
-            RemovedCachedSearches();
+            _SearchCache.Clear();
         }
 
         public async Task Restore(ulong postID) {
             await _PostDb.UpdateStatus(postID, PostStatus.OK);
-            RemovedCachedSearches();
+            _SearchCache.Clear();
         }
 
         public async Task Erase(ulong postID) {
@@ -109,7 +106,7 @@ namespace honooru.Services.Repositories {
                 return;
             }
 
-            RemovedCachedSearches();
+            _SearchCache.Clear();
 
             _DeletePossiblePath(Path.Combine(_StorageOptions.Value.RootDirectory, "original", post.FileLocation));
 
@@ -128,30 +125,6 @@ namespace honooru.Services.Repositories {
                 _Logger.LogDebug($"deleting file for media asset [path={path}]");
                 File.Delete(path);
             }
-        }
-
-        public void RemovedCachedSearches() {
-            _Logger.LogDebug($"removing old search queries due to post update [_CachedKeys.Count={_CachedKeys.Count}]");
-
-            int count = 0;
-            int had = 0;
-            int missing = 0;
-
-            foreach (string key in _CachedKeys) {
-                ++count;
-
-                bool has = _Cache.TryGetValue(key, out _);
-                if (has == true) {
-                    ++had;
-                } else {
-                    ++missing;
-                }
-
-                _Cache.Remove(key);
-            }
-
-            _Logger.LogInformation($"removed old cached search query results [count={count}] [had={had}] [missing={missing}]");
-
         }
 
     }

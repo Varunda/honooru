@@ -1,17 +1,13 @@
-﻿using Google.Protobuf.Reflection;
-using honooru.Code.Constants;
+﻿using honooru.Code.Constants;
 using honooru.Code.ExtensionMethods;
 using honooru.Models;
 using honooru.Models.Api;
 using honooru.Models.App;
 using honooru.Models.Db;
 using honooru.Models.Search;
-using honooru.Services.Db;
-using honooru.Services.Parsing;
 using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Any;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -32,7 +28,7 @@ namespace honooru.Services.Repositories {
 
         private readonly IMemoryCache _Cache;
 
-        private const string CACHE_KEY_SEARCH = "SearchQuery.{0}.{1}"; // {0} => user ID, {1} => hash key
+        private const string CACHE_KEY_SEARCH = "SearchQuery.{0}.{1}.{2}.{3}"; // {0} => user ID, {1} => hash key, {2} => unsafeHide, {3} => explicitHide
 
         public SearchQueryRepository(ILogger<SearchQueryRepository> logger,
             UserSettingRepository userSettingRepository, TagRepository tagRepository,
@@ -55,9 +51,13 @@ namespace honooru.Services.Repositories {
         /// <param name="user"></param>
         /// <returns></returns>
         public async Task<NpgsqlCommand> Compile(SearchQuery ast, AppAccount user) {
-            string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, ast.HashKey);
+            List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
+            bool unsafeHide = settings.FirstOrDefault(iter => iter.Name == "postings.unsafe.behavior")?.Value == "hidden";
+            bool explicitHide = settings.FirstOrDefault(iter => iter.Name == "postings.explicit.behavior")?.Value == "hidden";
+
+            string cacheKey = string.Format(CACHE_KEY_SEARCH, user.ID, ast.HashKey, unsafeHide, explicitHide);
             _Logger.LogTrace($"checking if query was already compiled [cacheKey={cacheKey}]");
-            if (_Cache.TryGetValue(cacheKey, out NpgsqlCommand? sqlCmd) == true && sqlCmd != null) {
+            if (_Cache.TryGetValue(cacheKey, out NpgsqlCommand? sqlCmd) == true && sqlCmd != null && false) {
                 return sqlCmd;
             }
 
@@ -78,10 +78,6 @@ namespace honooru.Services.Repositories {
 
             // if a query did not explicitly say what ratings to include, use the users settings to determine it
             if (query.SetRating == false) {
-                List<UserSetting> settings = await _UserSettingRepository.GetByAccountID(user.ID);
-                bool unsafeHide = settings.FirstOrDefault(iter => iter.Name == "postings.unsafe.behavior")?.Value == "hidden";
-                bool explicitHide = settings.FirstOrDefault(iter => iter.Name == "postings.explicit.behavior")?.Value == "hidden";
-
                 _Logger.LogTrace($"user did not specify rating, excluding based on user options [user.ID={user.ID}] [unsafeHide={unsafeHide}] [explicitHide={explicitHide}]");
 
                 // at this part in the query, additions to the WHERE clause are still possible

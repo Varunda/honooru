@@ -52,6 +52,7 @@ namespace honooru.Controllers.Api {
         private readonly TagImplicationRepository _TagImplicationRepository;
         private readonly TagInfoRepository _TagInfoRepository;
         private readonly IqdbClient _IqdbClient;
+        private readonly UserSearchCache _SearchCache;
 
         private readonly BaseQueue<ThumbnailCreationQueueEntry> _ThumbnailCreationQueue;
         private readonly BaseQueue<TagInfoUpdateQueueEntry> _TagInfoUpdateQueue;
@@ -70,7 +71,7 @@ namespace honooru.Controllers.Api {
             BaseQueue<ThumbnailCreationQueueEntry> thumbnailCreationQueue, TagRepository tagRepository,
             BaseQueue<TagInfoUpdateQueueEntry> tagInfoUpdateQueue, FileExtensionService fileExtensionHelper,
             TagImplicationRepository tagImplicationRepository, IqdbClient iqdbClient,
-            TagInfoRepository tagInfoRepository) {
+            TagInfoRepository tagInfoRepository, UserSearchCache searchCache) {
 
             _Logger = logger;
 
@@ -91,6 +92,7 @@ namespace honooru.Controllers.Api {
             _TagImplicationRepository = tagImplicationRepository;
             _IqdbClient = iqdbClient;
             _TagInfoRepository = tagInfoRepository;
+            _SearchCache = searchCache;
         }
 
         /// <summary>
@@ -722,7 +724,7 @@ namespace honooru.Controllers.Api {
                 }
 
                 if (tagsToAdd.Count > 0 || tagsToRemove.Count > 0) {
-                    _PostRepository.RemovedCachedSearches();
+                    _SearchCache.Clear();
                 }
 
             }

@@ -1,5 +1,6 @@
 ﻿using honooru.Models.App;
 using honooru.Services.Db;
+using honooru.Services.Util;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
@@ -14,6 +15,7 @@ namespace honooru.Services.Repositories {
         private readonly ILogger<UserSettingRepository> _Logger;
 
         private readonly UserSettingDb _UserSettingDb;
+        private readonly UserSearchCache _SearchCache;
 
         private readonly IMemoryCache _Cache;
 
@@ -27,11 +29,13 @@ namespace honooru.Services.Repositories {
         };
 
         public UserSettingRepository(ILogger<UserSettingRepository> logger,
-            UserSettingDb userSettingDb, IMemoryCache cache) {
+            UserSettingDb userSettingDb, IMemoryCache cache,
+            UserSearchCache searchCache) {
 
             _Logger = logger;
             _UserSettingDb = userSettingDb;
             _Cache = cache;
+            _SearchCache = searchCache;
         }
 
         /// <summary>
@@ -69,6 +73,8 @@ namespace honooru.Services.Repositories {
         public Task Upsert(UserSetting setting) {
             string cacheKey = string.Format(CACHE_KEY, setting.AccountID);
             _Cache.Remove(cacheKey);
+
+            _SearchCache.Clear();
 
             return _UserSettingDb.Upsert(setting);
         }

@@ -27,6 +27,10 @@ export class PostPoolApi extends ApiWrapper<PostPool> {
         return PostPoolApi.get().readSingle(`/api/post-pool/${poolID}`, PostPoolApi.parse);
     }
 
+    public static getByPostID(postID: number): Promise<Loading<PostPool[]>> {
+        return PostPoolApi.get().readList(`/api/post-pool/${postID}/pools`, PostPoolApi.parse);
+    }
+
     public static create(name: string): Promise<Loading<PostPool>> {
         return PostPoolApi.get().postReply(`/api/post-pool/?name=${name}`, PostPoolApi.parse);
     }

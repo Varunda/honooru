@@ -1,6 +1,7 @@
 ﻿using honooru.Code;
 using honooru.Models;
 using honooru.Models.App;
+using honooru.Models.Db;
 using honooru.Models.Internal;
 using honooru.Services;
 using honooru.Services.Repositories;
@@ -66,6 +67,31 @@ namespace honooru.Controllers.Api {
         }
 
         /// <summary>
+        ///     get all the <see cref="PostPool"/>s a post is a part of
+        /// </summary>
+        /// <param name="postID"></param>
+        /// <returns></returns>
+        [HttpGet("{postID}/pools")]
+        public async Task<ApiResponse<List<PostPool>>> GetByPostID(ulong postID) {
+            Post? post = await _PostRepository.GetByID(postID);
+            if (post == null) {
+                return ApiNotFound<List<PostPool>>($"{nameof(Post)} {postID}");
+            }
+
+            List<PostPoolEntry> entries = await _PoolEntryRepository.GetByPostID(postID);
+
+            List<PostPool> pools = [];
+            foreach (PostPoolEntry entry in entries) {
+                PostPool? pool = await _PoolRepository.GetByID(entry.PoolID);
+                if (pool != null) {
+                    pools.Add(pool);
+                }
+            }
+
+            return ApiOk(pools);
+        }
+
+        /// <summary>
         ///     create a new <see cref="PostPool"/> with a given <see cref="PostPool.Name"/>
         /// </summary>
         /// <param name="name">name of the pool to be created</param>
@@ -79,6 +105,10 @@ namespace honooru.Controllers.Api {
             AppAccount? currentUser = await _CurrentUser.Get();
             if (currentUser == null) {
                 return ApiAuthorize<PostPool>();
+            }
+
+            if (string.IsNullOrWhiteSpace(name)) {
+                return ApiBadRequest<PostPool>($"{nameof(name)} cannot be blank or only contain whitespace");
             }
 
             PostPool pool = new();
