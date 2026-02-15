@@ -54,6 +54,7 @@ namespace honooru.Services.Util {
                     || c == '.'
                     || c == '!'
                     || c == '-'
+                    || c == '/'
                     ) {
                     continue;
                 }
