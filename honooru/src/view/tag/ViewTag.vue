@@ -94,6 +94,8 @@
                                 loading...
                             </div>
 
+                            <div v-else-if="htmlDesc.state == 'loaded' && htmlDesc.data == ''" class="text-muted">no description given</div>
+
                             <div v-else-if="htmlDesc.state == 'loaded'" v-html="htmlDesc.data"></div>
 
                             <div v-else-if="htmlDesc.state == 'error'">

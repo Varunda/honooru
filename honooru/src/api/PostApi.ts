@@ -115,16 +115,18 @@ export class PostApi extends ApiWrapper<Post> {
         title: string | null, description: string | null, source: string, context: string): Promise<Loading<Post>> {
 
         let url: string = `/api/post/${mediaAssetID}`;
-        url += `?tags=${encodeURI(tags)}`;
+        url += `?tags=${encodeURIComponent(tags)}`;
         url += `&rating=${rating}`;
-        url += `&source=${encodeURI(source)}`;
+        url += `&source=${encodeURIComponent(source)}`;
         if (title != null) {
-            url += `&title=${encodeURI(title)}`;
+            url += `&title=${encodeURIComponent(title)}`;
         }
         if (description != null) {
-            url += `&description=${encodeURI(description)}`;
+            url += `&description=${encodeURIComponent(description)}`;
         }
-        url += `&context=${encodeURI(context)}`;
+        url += `&context=${encodeURIComponent(context)}`;
+
+        console.log(`PostApi> URL for uploading: "${url}"`);
 
         return PostApi.get().postReply(url, PostApi.parse);
     }
