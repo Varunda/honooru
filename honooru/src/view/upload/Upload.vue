@@ -434,6 +434,11 @@
 
                     MediaAssetApi.getReady().then((data: Loading<MediaAsset[]>) => {
                         this.upload.ready = data;
+                        if (this.upload.ready.state == "loaded") {
+                            this.upload.ready.data = this.upload.ready.data.sort((a, b) => {
+                                return a.timestamp.getTime() - b.timestamp.getTime();;
+                            });
+                        }
                     });
 
                     this.makeFile();

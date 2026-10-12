@@ -170,7 +170,7 @@ namespace honooru.Services.Parsing {
         /// <returns>
         ///     the newly created node
         /// </returns>
-        private Node _c(NodeType type, Token token, Node parent) => new Node(type, token, parent);
+        private static Node _c(NodeType type, Token token, Node parent) => new Node(type, token, parent);
 
         private Node _MakeMetaNode(Token iter, Node parent, TokenStream tokens) {
             _Logger.LogTrace($"look-ahead found META token");
